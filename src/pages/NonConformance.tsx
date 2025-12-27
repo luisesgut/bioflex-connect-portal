@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +34,15 @@ import {
   FileWarning,
   Calendar,
   Package,
-  Clock
+  Clock,
+  Upload,
+  X,
+  FileImage,
+  FileText,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data for existing NCRs
 const mockNCRs = [
@@ -106,9 +112,22 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const getFileIcon = (type: string) => {
+  if (type.startsWith("image/")) return FileImage;
+  return FileText;
+};
+
+interface UploadedFile {
+  file: File;
+  preview?: string;
+}
+
 export default function NonConformance() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     poNumber: "",
     issueType: "",
@@ -123,7 +142,73 @@ export default function NonConformance() {
       ncr.product.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles: UploadedFile[] = [];
+    
+    Array.from(files).forEach((file) => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return;
+      }
+
+      const uploadedFile: UploadedFile = { file };
+      
+      if (file.type.startsWith("image/")) {
+        uploadedFile.preview = URL.createObjectURL(file);
+      }
+      
+      newFiles.push(uploadedFile);
+    });
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles((prev) => {
+      const newFiles = [...prev];
+      if (newFiles[index].preview) {
+        URL.revokeObjectURL(newFiles[index].preview!);
+      }
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  const uploadFiles = async (): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+
+    for (const { file } of uploadedFiles) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `ncr-${formData.poNumber}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from("ncr-attachments")
+        .upload(filePath, file);
+
+      if (error) {
+        console.error("Upload error:", error);
+        throw new Error(`Failed to upload ${file.name}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("ncr-attachments")
+        .getPublicUrl(filePath);
+
+      uploadedUrls.push(urlData.publicUrl);
+    }
+
+    return uploadedUrls;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.poNumber || !formData.issueType || !formData.description) {
@@ -131,17 +216,40 @@ export default function NonConformance() {
       return;
     }
 
-    toast.success("Non-Conformance Report submitted successfully", {
-      description: `NCR for ${formData.poNumber} has been submitted for review.`,
-    });
-    
-    setFormData({
-      poNumber: "",
-      issueType: "",
-      affectedQuantity: "",
-      description: "",
-    });
-    setDialogOpen(false);
+    setIsUploading(true);
+
+    try {
+      let attachmentUrls: string[] = [];
+      
+      if (uploadedFiles.length > 0) {
+        attachmentUrls = await uploadFiles();
+      }
+
+      console.log("NCR submitted with attachments:", attachmentUrls);
+
+      toast.success("Non-Conformance Report submitted successfully", {
+        description: `NCR for ${formData.poNumber} has been submitted with ${uploadedFiles.length} attachment(s).`,
+      });
+      
+      // Cleanup previews
+      uploadedFiles.forEach((f) => {
+        if (f.preview) URL.revokeObjectURL(f.preview);
+      });
+
+      setFormData({
+        poNumber: "",
+        issueType: "",
+        affectedQuantity: "",
+        description: "",
+      });
+      setUploadedFiles([]);
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error("Failed to submit NCR. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -233,7 +341,7 @@ export default function NonConformance() {
                   <Textarea
                     id="description"
                     placeholder="Describe the issue in detail. Include lot numbers, specific defects observed, and any relevant measurements..."
-                    className="min-h-[120px]"
+                    className="min-h-[100px]"
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
@@ -241,15 +349,99 @@ export default function NonConformance() {
                   />
                 </div>
 
+                {/* File Upload Section */}
+                <div className="space-y-2">
+                  <Label>Attachments</Label>
+                  <div
+                    className="relative cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 transition-colors hover:border-muted-foreground/50"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <Upload className="h-8 w-8 text-muted-foreground/50" />
+                      <div>
+                        <p className="text-sm font-medium">Click to upload files</p>
+                        <p className="text-xs text-muted-foreground">
+                          Images, PDF, or documents up to 10MB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Uploaded Files Preview */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      {uploadedFiles.map((uploadedFile, index) => {
+                        const FileIcon = getFileIcon(uploadedFile.file.type);
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 rounded-lg border bg-muted/30 p-2"
+                          >
+                            {uploadedFile.preview ? (
+                              <img
+                                src={uploadedFile.preview}
+                                alt="Preview"
+                                className="h-10 w-10 rounded object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                                <FileIcon className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 overflow-hidden">
+                              <p className="truncate text-sm font-medium">
+                                {uploadedFile.file.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {(uploadedFile.file.size / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFile(index);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setDialogOpen(false)}
+                    disabled={isUploading}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">Submit Report</Button>
+                  <Button type="submit" disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      "Submit Report"
+                    )}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
