@@ -4,6 +4,7 @@ import {
   Package, 
   FileText, 
   Flame,
+  FileWarning,
   Settings,
   LogOut
 } from "lucide-react";
@@ -15,6 +16,7 @@ const navigation = [
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Hot Orders", href: "/hot-orders", icon: Flame },
+  { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
 ];
 
 const bottomNavigation = [

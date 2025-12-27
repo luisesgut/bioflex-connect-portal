@@ -10,6 +10,7 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import CreateOrder from "./pages/CreateOrder";
 import HotOrders from "./pages/HotOrders";
+import NonConformance from "./pages/NonConformance";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
             <Route path="/hot-orders" element={<ProtectedRoute><HotOrders /></ProtectedRoute>} />
+            <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
