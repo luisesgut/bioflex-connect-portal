@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Package, 
@@ -8,6 +8,7 @@ import {
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -22,6 +23,16 @@ const bottomNavigation = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const userInitials = user?.email?.substring(0, 2).toUpperCase() || 'U';
+  const userEmail = user?.email || 'user@example.com';
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground">
@@ -79,7 +90,10 @@ export function Sidebar() {
               {item.name}
             </Link>
           ))}
-          <button className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-destructive/20 hover:text-destructive">
+          <button 
+            onClick={handleSignOut}
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-destructive/20 hover:text-destructive"
+          >
             <LogOut className="h-5 w-5" />
             Sign Out
           </button>
@@ -89,11 +103,11 @@ export function Sidebar() {
         <div className="border-t border-sidebar-border p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold">
-              AC
+              {userInitials}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">Acme Corp</p>
-              <p className="truncate text-xs text-sidebar-foreground/60">john@acme.com</p>
+              <p className="truncate text-sm font-medium">Customer</p>
+              <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
             </div>
           </div>
         </div>
