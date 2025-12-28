@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ncr_submissions: {
+        Row: {
+          attachments: string[] | null
+          created_at: string
+          description: string
+          id: string
+          issue_type: string
+          po_number: string
+          priority: Database["public"]["Enums"]["ncr_priority"]
+          status: Database["public"]["Enums"]["ncr_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: string[] | null
+          created_at?: string
+          description: string
+          id?: string
+          issue_type: string
+          po_number: string
+          priority?: Database["public"]["Enums"]["ncr_priority"]
+          status?: Database["public"]["Enums"]["ncr_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attachments?: string[] | null
+          created_at?: string
+          description?: string
+          id?: string
+          issue_type?: string
+          po_number?: string
+          priority?: Database["public"]["Enums"]["ncr_priority"]
+          status?: Database["public"]["Enums"]["ncr_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +61,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      ncr_priority: "low" | "medium" | "high" | "critical"
+      ncr_status: "open" | "under_review" | "resolved" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +189,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ncr_priority: ["low", "medium", "high", "critical"],
+      ncr_status: ["open", "under_review", "resolved", "closed"],
+    },
   },
 } as const
