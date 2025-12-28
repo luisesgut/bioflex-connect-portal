@@ -6,10 +6,12 @@ import {
   Flame,
   FileWarning,
   Settings,
-  LogOut
+  LogOut,
+  ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -17,6 +19,10 @@ const navigation = [
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Hot Orders", href: "/hot-orders", icon: Flame },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
+];
+
+const adminNavigation = [
+  { name: "Product Codes", href: "/admin/products", icon: ShieldAlert },
 ];
 
 const bottomNavigation = [
@@ -27,6 +33,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
 
   const handleSignOut = async () => {
     await signOut();
@@ -78,6 +85,38 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Admin Section */}
+          {isAdmin && (
+            <>
+              <div className="mt-4 mb-2 px-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                  Admin
+                </span>
+              </div>
+              {adminNavigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-accent/20 text-accent"
+                        : "text-sidebar-foreground/70 hover:bg-accent/10 hover:text-accent"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "h-5 w-5",
+                      isActive && "text-accent"
+                    )} />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         {/* Bottom Navigation */}
