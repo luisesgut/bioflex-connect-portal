@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { 
   Plus, 
@@ -39,53 +49,25 @@ import {
   X,
   FileImage,
   FileText,
-  Loader2
+  Loader2,
+  Trash2,
+  Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-// Mock data for existing NCRs
-const mockNCRs = [
-  {
-    id: "NCR-2024-001",
-    poNumber: "PO-2024-1847",
-    product: "Stand-up Pouches - Coffee Blend",
-    issueType: "Print Quality",
-    description: "Color variation on logo - appears lighter than approved sample",
-    status: "Under Review",
-    submittedDate: "2024-01-15",
-    quantity: 5000,
-  },
-  {
-    id: "NCR-2024-002",
-    poNumber: "PO-2024-1832",
-    product: "Flat Pouches - Protein Bar",
-    issueType: "Seal Integrity",
-    description: "Weak bottom seal on approximately 3% of batch",
-    status: "Resolved",
-    submittedDate: "2024-01-10",
-    quantity: 2000,
-  },
-  {
-    id: "NCR-2024-003",
-    poNumber: "PO-2024-1820",
-    product: "Roll Stock - Snack Wrap",
-    issueType: "Dimension",
-    description: "Width is 2mm under specification",
-    status: "Pending",
-    submittedDate: "2024-01-08",
-    quantity: 10000,
-  },
-];
-
-// Mock data for previous POs
-const mockPreviousPOs = [
-  { id: "PO-2024-1847", product: "Stand-up Pouches - Coffee Blend" },
-  { id: "PO-2024-1832", product: "Flat Pouches - Protein Bar" },
-  { id: "PO-2024-1820", product: "Roll Stock - Snack Wrap" },
-  { id: "PO-2024-1815", product: "Ziplock Bags - Trail Mix" },
-  { id: "PO-2024-1801", product: "Vacuum Pouches - Meat Products" },
-];
+interface NCRSubmission {
+  id: string;
+  po_number: string;
+  issue_type: string;
+  priority: "low" | "medium" | "high" | "critical";
+  description: string;
+  status: "open" | "under_review" | "resolved" | "closed";
+  attachments: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 const issueTypes = [
   "Print Quality",
@@ -99,17 +81,44 @@ const issueTypes = [
   "Other",
 ];
 
+const priorityOptions = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "critical", label: "Critical" },
+];
+
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "Resolved":
+    case "resolved":
+    case "closed":
       return "bg-green-500/10 text-green-600 border-green-500/20";
-    case "Under Review":
+    case "under_review":
       return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-    case "Pending":
+    case "open":
       return "bg-blue-500/10 text-blue-600 border-blue-500/20";
     default:
       return "bg-muted text-muted-foreground";
   }
+};
+
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case "critical":
+      return "bg-red-500/10 text-red-600 border-red-500/20";
+    case "high":
+      return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+    case "medium":
+      return "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+    case "low":
+      return "bg-slate-500/10 text-slate-600 border-slate-500/20";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+};
+
+const formatStatus = (status: string) => {
+  return status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
 const getFileIcon = (type: string) => {
@@ -123,24 +132,78 @@ interface UploadedFile {
 }
 
 export default function NonConformance() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [editingNCR, setEditingNCR] = useState<NCRSubmission | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ncrToDelete, setNcrToDelete] = useState<NCRSubmission | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ncrs, setNcrs] = useState<NCRSubmission[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     poNumber: "",
     issueType: "",
-    affectedQuantity: "",
+    priority: "medium" as "low" | "medium" | "high" | "critical",
     description: "",
   });
 
-  const filteredNCRs = mockNCRs.filter(
+  // Fetch NCRs on mount
+  useEffect(() => {
+    fetchNCRs();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel("ncr-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "ncr_submissions",
+        },
+        () => {
+          fetchNCRs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchNCRs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("ncr_submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setNcrs(data || []);
+    } catch (error) {
+      console.error("Error fetching NCRs:", error);
+      toast.error("Failed to load NCRs");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredNCRs = ncrs.filter(
     (ncr) =>
       ncr.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ncr.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ncr.product.toLowerCase().includes(searchTerm.toLowerCase())
+      ncr.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ncr.issue_type.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const stats = {
+    open: ncrs.filter((n) => n.status === "open").length,
+    underReview: ncrs.filter((n) => n.status === "under_review").length,
+    resolved: ncrs.filter((n) => n.status === "resolved" || n.status === "closed").length,
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -181,13 +244,13 @@ export default function NonConformance() {
     });
   };
 
-  const uploadFiles = async (): Promise<string[]> => {
+  const uploadFiles = async (poNumber: string): Promise<string[]> => {
     const uploadedUrls: string[] = [];
 
     for (const { file } of uploadedFiles) {
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `ncr-${formData.poNumber}/${fileName}`;
+      const filePath = `${user?.id}/${poNumber}/${fileName}`;
 
       const { error } = await supabase.storage
         .from("ncr-attachments")
@@ -208,6 +271,40 @@ export default function NonConformance() {
     return uploadedUrls;
   };
 
+  const resetForm = () => {
+    setFormData({
+      poNumber: "",
+      issueType: "",
+      priority: "medium",
+      description: "",
+    });
+    uploadedFiles.forEach((f) => {
+      if (f.preview) URL.revokeObjectURL(f.preview);
+    });
+    setUploadedFiles([]);
+    setEditingNCR(null);
+  };
+
+  const handleOpenDialog = (ncr?: NCRSubmission) => {
+    if (ncr) {
+      setEditingNCR(ncr);
+      setFormData({
+        poNumber: ncr.po_number,
+        issueType: ncr.issue_type,
+        priority: ncr.priority,
+        description: ncr.description,
+      });
+    } else {
+      resetForm();
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -216,39 +313,83 @@ export default function NonConformance() {
       return;
     }
 
-    setIsUploading(true);
+    if (!user) {
+      toast.error("You must be logged in to submit an NCR");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      let attachmentUrls: string[] = [];
+      let attachmentUrls: string[] = editingNCR?.attachments || [];
       
       if (uploadedFiles.length > 0) {
-        attachmentUrls = await uploadFiles();
+        const newUrls = await uploadFiles(formData.poNumber);
+        attachmentUrls = [...attachmentUrls, ...newUrls];
       }
 
-      console.log("NCR submitted with attachments:", attachmentUrls);
+      if (editingNCR) {
+        // Update existing NCR
+        const { error } = await supabase
+          .from("ncr_submissions")
+          .update({
+            po_number: formData.poNumber,
+            issue_type: formData.issueType,
+            priority: formData.priority,
+            description: formData.description,
+            attachments: attachmentUrls,
+          })
+          .eq("id", editingNCR.id);
 
-      toast.success("Non-Conformance Report submitted successfully", {
-        description: `NCR for ${formData.poNumber} has been submitted with ${uploadedFiles.length} attachment(s).`,
-      });
-      
-      // Cleanup previews
-      uploadedFiles.forEach((f) => {
-        if (f.preview) URL.revokeObjectURL(f.preview);
-      });
+        if (error) throw error;
 
-      setFormData({
-        poNumber: "",
-        issueType: "",
-        affectedQuantity: "",
-        description: "",
-      });
-      setUploadedFiles([]);
-      setDialogOpen(false);
+        toast.success("NCR updated successfully");
+      } else {
+        // Create new NCR
+        const { error } = await supabase
+          .from("ncr_submissions")
+          .insert({
+            user_id: user.id,
+            po_number: formData.poNumber,
+            issue_type: formData.issueType,
+            priority: formData.priority,
+            description: formData.description,
+            attachments: attachmentUrls,
+          });
+
+        if (error) throw error;
+
+        toast.success("NCR submitted successfully", {
+          description: `NCR for ${formData.poNumber} has been submitted.`,
+        });
+      }
+
+      handleCloseDialog();
     } catch (error) {
       console.error("Submit error:", error);
-      toast.error("Failed to submit NCR. Please try again.");
+      toast.error(editingNCR ? "Failed to update NCR" : "Failed to submit NCR");
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!ncrToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("ncr_submissions")
+        .delete()
+        .eq("id", ncrToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("NCR deleted successfully");
+      setDeleteDialogOpen(false);
+      setNcrToDelete(null);
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete NCR");
     }
   };
 
@@ -263,7 +404,7 @@ export default function NonConformance() {
               Submit and track quality issues with previous orders
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => open ? handleOpenDialog() : handleCloseDialog()}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -274,73 +415,76 @@ export default function NonConformance() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <FileWarning className="h-5 w-5 text-amber-500" />
-                  Submit Non-Conformance Report
+                  {editingNCR ? "Edit NCR" : "Submit Non-Conformance Report"}
                 </DialogTitle>
                 <DialogDescription>
-                  Report a quality issue with a previous purchase order. Our team will review and respond within 48 hours.
+                  {editingNCR 
+                    ? "Update the details of this NCR." 
+                    : "Report a quality issue with a previous purchase order. Our team will review and respond within 48 hours."}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="poNumber">Purchase Order *</Label>
-                  <Select
-                    value={formData.poNumber}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, poNumber: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a PO" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockPreviousPOs.map((po) => (
-                        <SelectItem key={po.id} value={po.id}>
-                          {po.id} - {po.product}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="issueType">Issue Type *</Label>
-                  <Select
-                    value={formData.issueType}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, issueType: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select issue type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {issueTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="affectedQuantity">Affected Quantity</Label>
+                  <Label htmlFor="poNumber">Purchase Order Number *</Label>
                   <Input
-                    id="affectedQuantity"
-                    type="number"
-                    placeholder="Number of affected units"
-                    value={formData.affectedQuantity}
+                    id="poNumber"
+                    placeholder="e.g., PO-2024-1847"
+                    value={formData.poNumber}
                     onChange={(e) =>
-                      setFormData({ ...formData, affectedQuantity: e.target.value })
+                      setFormData({ ...formData, poNumber: e.target.value })
                     }
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="issueType">Issue Type *</Label>
+                    <Select
+                      value={formData.issueType}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, issueType: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {issueTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priority">Priority</Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value: "low" | "medium" | "high" | "critical") =>
+                        setFormData({ ...formData, priority: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priorityOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe the issue in detail. Include lot numbers, specific defects observed, and any relevant measurements..."
+                    placeholder="Describe the issue in detail..."
                     className="min-h-[100px]"
                     value={formData.description}
                     onChange={(e) =>
@@ -375,9 +519,33 @@ export default function NonConformance() {
                     </div>
                   </div>
 
-                  {/* Uploaded Files Preview */}
+                  {/* Existing Attachments */}
+                  {editingNCR && editingNCR.attachments.length > 0 && (
+                    <div className="space-y-2 pt-2">
+                      <p className="text-xs text-muted-foreground">Existing attachments:</p>
+                      {editingNCR.attachments.map((url, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-lg border bg-muted/30 p-2"
+                        >
+                          <FileImage className="h-5 w-5 text-muted-foreground" />
+                          <a 
+                            href={url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-1 truncate text-sm text-primary hover:underline"
+                          >
+                            Attachment {index + 1}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* New Uploaded Files Preview */}
                   {uploadedFiles.length > 0 && (
                     <div className="space-y-2 pt-2">
+                      <p className="text-xs text-muted-foreground">New files to upload:</p>
                       {uploadedFiles.map((uploadedFile, index) => {
                         const FileIcon = getFileIcon(uploadedFile.file.type);
                         return (
@@ -427,19 +595,19 @@ export default function NonConformance() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                    disabled={isUploading}
+                    onClick={handleCloseDialog}
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isUploading}>
-                    {isUploading ? (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Uploading...
+                        {editingNCR ? "Updating..." : "Submitting..."}
                       </>
                     ) : (
-                      "Submit Report"
+                      editingNCR ? "Update Report" : "Submit Report"
                     )}
                   </Button>
                 </div>
@@ -450,25 +618,25 @@ export default function NonConformance() {
 
         {/* Stats Cards */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-l-4 border-l-amber-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Review</p>
-                  <p className="text-2xl font-bold">2</p>
-                </div>
-                <Clock className="h-8 w-8 text-amber-500/50" />
-              </div>
-            </CardContent>
-          </Card>
           <Card className="border-l-4 border-l-blue-500">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Under Investigation</p>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-sm text-muted-foreground">Open</p>
+                  <p className="text-2xl font-bold">{stats.open}</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-blue-500/50" />
+                <Clock className="h-8 w-8 text-blue-500/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Under Review</p>
+                  <p className="text-2xl font-bold">{stats.underReview}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-amber-500/50" />
               </div>
             </CardContent>
           </Card>
@@ -476,8 +644,8 @@ export default function NonConformance() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Resolved This Month</p>
-                  <p className="text-2xl font-bold">1</p>
+                  <p className="text-sm text-muted-foreground">Resolved</p>
+                  <p className="text-2xl font-bold">{stats.resolved}</p>
                 </div>
                 <FileWarning className="h-8 w-8 text-green-500/50" />
               </div>
@@ -489,7 +657,7 @@ export default function NonConformance() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search NCRs by ID, PO, or product..."
+            placeholder="Search NCRs by ID, PO, or issue type..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -498,57 +666,106 @@ export default function NonConformance() {
 
         {/* NCR List */}
         <div className="space-y-4">
-          {filteredNCRs.map((ncr) => (
-            <Card key={ncr.id} className="transition-shadow hover:shadow-md">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-lg">{ncr.id}</CardTitle>
-                      <Badge className={getStatusColor(ncr.status)} variant="outline">
-                        {ncr.status}
-                      </Badge>
-                    </div>
-                    <CardDescription className="flex items-center gap-2">
-                      <Package className="h-3.5 w-3.5" />
-                      {ncr.poNumber} • {ncr.product}
-                    </CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    {ncr.issueType}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{ncr.description}</p>
-                <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Submitted: {new Date(ncr.submittedDate).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Package className="h-3.5 w-3.5" />
-                    Affected: {ncr.quantity.toLocaleString()} units
-                  </span>
-                </div>
+          {isLoading ? (
+            <Card className="py-12">
+              <CardContent className="flex flex-col items-center justify-center text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="mt-4 text-sm text-muted-foreground">Loading NCRs...</p>
               </CardContent>
             </Card>
-          ))}
-
-          {filteredNCRs.length === 0 && (
+          ) : filteredNCRs.length > 0 ? (
+            filteredNCRs.map((ncr) => (
+              <Card key={ncr.id} className="transition-shadow hover:shadow-md">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-lg">{ncr.po_number}</CardTitle>
+                        <Badge className={getStatusColor(ncr.status)} variant="outline">
+                          {formatStatus(ncr.status)}
+                        </Badge>
+                        <Badge className={getPriorityColor(ncr.priority)} variant="outline">
+                          {ncr.priority.charAt(0).toUpperCase() + ncr.priority.slice(1)}
+                        </Badge>
+                      </div>
+                      <CardDescription className="flex items-center gap-2">
+                        <Package className="h-3.5 w-3.5" />
+                        {ncr.issue_type}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleOpenDialog(ncr)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setNcrToDelete(ncr);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{ncr.description}</p>
+                  <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Submitted: {new Date(ncr.created_at).toLocaleDateString()}
+                    </span>
+                    {ncr.attachments.length > 0 && (
+                      <span className="flex items-center gap-1.5">
+                        <FileImage className="h-3.5 w-3.5" />
+                        {ncr.attachments.length} attachment(s)
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
             <Card className="py-12">
               <CardContent className="flex flex-col items-center justify-center text-center">
                 <FileWarning className="h-12 w-12 text-muted-foreground/30" />
                 <h3 className="mt-4 text-lg font-semibold">No NCRs Found</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  No non-conformance reports match your search criteria.
+                  {searchTerm 
+                    ? "No non-conformance reports match your search criteria."
+                    : "Submit your first NCR to track quality issues."}
                 </p>
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete NCR</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this NCR for {ncrToDelete?.po_number}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
