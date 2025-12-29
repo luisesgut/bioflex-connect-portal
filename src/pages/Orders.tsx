@@ -1,17 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Flame, MoreVertical, Download, Eye, Loader2, CheckCircle2, Clock, FileEdit } from "lucide-react";
+import { Search, Plus, FileText, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +12,7 @@ import { toast } from "sonner";
 import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { BulkOrdersManager } from "@/components/orders/BulkOrdersManager";
 import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
+import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { differenceInHours } from "date-fns";
 
 interface Order {
@@ -268,134 +261,18 @@ export default function Orders() {
                 </thead>
                 <tbody className="divide-y">
                   {filteredOrders.map((order) => (
-                    <tr key={order.id} className="transition-colors hover:bg-muted/20">
-                      <td className="whitespace-nowrap px-6 py-4">
-                        {order.pdf_url ? (
-                          <a 
-                            href={order.pdf_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="font-mono text-sm font-medium text-primary hover:underline"
-                          >
-                            {order.po_number}
-                          </a>
-                        ) : (
-                          <span className="font-mono text-sm font-medium text-card-foreground">
-                            {order.po_number}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-medium text-card-foreground">
-                          {order.product_name || "—"}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                        {order.quantity.toLocaleString()} units
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-card-foreground">
-                        {formatCurrency(order.total_price)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <Badge variant="outline" className={cn("font-medium", statusStyles[order.status] || statusStyles.pending)}>
-                          {statusLabels[order.status] || "Submitted"}
-                        </Badge>
-                      </td>
-                      {isAdmin && (
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <span className="font-mono text-sm text-muted-foreground">
-                            {order.sales_order_number || "—"}
-                          </span>
-                        </td>
-                      )}
-                      <td className="whitespace-nowrap px-6 py-4">
-                        {order.is_hot_order ? (
-                          <div className="flex items-center gap-1.5">
-                            <Flame className="h-4 w-4 text-accent animate-pulse" />
-                            <span className="text-sm font-semibold text-accent">Hot</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Normal</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                        {formatDate(order.requested_delivery_date)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                        {formatDate(order.estimated_delivery_date)}
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Admin: Show Accept button for pending/submitted orders */}
-                          {isAdmin && (order.status === "pending" || order.status === "submitted") && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="gap-1"
-                              onClick={() => handleAcceptOrder(order)}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              Accept
-                            </Button>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="gap-2">
-                                <Eye className="h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              {order.pdf_url && (
-                                <DropdownMenuItem className="gap-2" asChild>
-                                  <a href={order.pdf_url} target="_blank" rel="noopener noreferrer">
-                                    <Download className="h-4 w-4" />
-                                    Download PO PDF
-                                  </a>
-                                </DropdownMenuItem>
-                              )}
-                              {isAdmin && (order.status === "pending" || order.status === "submitted") && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    className="gap-2"
-                                    onClick={() => handleAcceptOrder(order)}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Accept Order
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {/* Show Request Change for accepted/in-production orders (non-admin users) */}
-                              {!isAdmin && (order.status === "accepted" || order.status === "in-production") && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    className="gap-2"
-                                    onClick={() => handleRequestChange(order)}
-                                  >
-                                    <FileEdit className="h-4 w-4" />
-                                    Request Change
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {!order.is_hot_order && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="gap-2 text-accent">
-                                    <Flame className="h-4 w-4" />
-                                    Mark as Hot
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    </tr>
+                    <EditableOrderRow
+                      key={order.id}
+                      order={order}
+                      isAdmin={isAdmin}
+                      statusStyles={statusStyles}
+                      statusLabels={statusLabels}
+                      formatDate={formatDate}
+                      formatCurrency={formatCurrency}
+                      onAcceptOrder={handleAcceptOrder}
+                      onRequestChange={handleRequestChange}
+                      onUpdated={fetchOrders}
+                    />
                   ))}
                 </tbody>
               </table>
