@@ -1518,8 +1518,8 @@ export default function LoadDetail() {
           </CardContent>
         </Card>
 
-        {/* Available Inventory Table - Shown for admins during assembling or pending_release */}
-        {isAdmin && (load.status === "assembling" || load.status === "pending_release") && (
+        {/* Available Inventory Table - Shown for admins at any non-delivered status */}
+        {isAdmin && load.status !== "delivered" && (
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
