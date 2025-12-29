@@ -77,6 +77,7 @@ interface LoadPallet {
   quantity: number;
   release_number: string | null;
   release_pdf_url: string | null;
+  is_on_hold: boolean;
   pallet: {
     pt_code: string;
     description: string;
@@ -189,6 +190,7 @@ export default function LoadDetail() {
           quantity,
           release_number,
           release_pdf_url,
+          is_on_hold,
           pallet:inventory_pallets(pt_code, description, traceability, bfx_order)
         `)
         .eq("load_id", id);
@@ -614,9 +616,10 @@ export default function LoadDetail() {
 
   const handleUpdateDestination = async (palletId: string, destination: string) => {
     try {
+      // When setting a destination, also clear the on_hold status
       const { error } = await supabase
         .from("load_pallets")
-        .update({ destination: destination as any })
+        .update({ destination: destination as any, is_on_hold: false })
         .eq("id", palletId);
 
       if (error) throw error;
@@ -625,6 +628,22 @@ export default function LoadDetail() {
     } catch (error) {
       console.error("Error updating destination:", error);
       toast.error("Failed to update destination");
+    }
+  };
+
+  const handleTogglePalletHold = async (palletId: string, isOnHold: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ is_on_hold: isOnHold })
+        .eq("id", palletId);
+
+      if (error) throw error;
+      toast.success(isOnHold ? "Pallet placed on hold" : "Pallet released from hold");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error toggling pallet hold:", error);
+      toast.error("Failed to update hold status");
     }
   };
 
@@ -1001,6 +1020,7 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Traceability</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Destination</TableHead>
                       <TableHead>Release #</TableHead>
                       <TableHead>Release PDF</TableHead>
@@ -1008,7 +1028,7 @@ export default function LoadDetail() {
                   </TableHeader>
                   <TableBody>
                     {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                      <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
                         <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {pallet.pallet.description}
@@ -1018,7 +1038,39 @@ export default function LoadDetail() {
                         </TableCell>
                         <TableCell className="text-right">{pallet.quantity}</TableCell>
                         <TableCell>
-                          {releaseRequest?.status === "approved" || isAdmin ? (
+                          {releaseRequest?.status === "pending" || isAdmin ? (
+                            <Select
+                              value={pallet.is_on_hold ? "hold" : "ship"}
+                              onValueChange={(val) => handleTogglePalletHold(pallet.id, val === "hold")}
+                            >
+                              <SelectTrigger className={`w-[100px] ${pallet.is_on_hold ? "border-red-500 text-red-600" : "border-green-500 text-green-600"}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ship">
+                                  <span className="flex items-center gap-1">
+                                    <Check className="h-3 w-3 text-green-600" />
+                                    Ship
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="hold">
+                                  <span className="flex items-center gap-1">
+                                    <X className="h-3 w-3 text-red-600" />
+                                    Hold
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant={pallet.is_on_hold ? "destructive" : "default"}>
+                              {pallet.is_on_hold ? "On Hold" : "Ship"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {pallet.is_on_hold ? (
+                            <span className="text-muted-foreground italic">N/A (on hold)</span>
+                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" || isAdmin ? (
                             <Select
                               value={pallet.destination || ""}
                               onValueChange={(val) => handleUpdateDestination(pallet.id, val)}
@@ -1038,12 +1090,14 @@ export default function LoadDetail() {
                             <span className="text-muted-foreground">
                               {pallet.destination
                                 ? destinations.find((d) => d.value === pallet.destination)?.label
-                                : "Pending approval"}
+                                : "Pending"}
                             </span>
                           )}
                         </TableCell>
                         <TableCell>
-                          {releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                          {pallet.is_on_hold ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
                             <Input
                               placeholder="Release #"
                               defaultValue={pallet.release_number || ""}
@@ -1061,7 +1115,9 @@ export default function LoadDetail() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                          {pallet.is_on_hold ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
                             <div className="flex items-center gap-2">
                               {pallet.release_pdf_url ? (
                                 <a
