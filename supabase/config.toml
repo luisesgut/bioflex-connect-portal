@@ -1,4 +1,1 @@
 project_id = "heevwrvyglhhydyinkol"
-
-[functions.parse-po-pdf]
-verify_jwt = false

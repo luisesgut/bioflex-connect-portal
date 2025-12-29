@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,24 +34,12 @@ interface Product {
   customer_item: string | null;
 }
 
-interface ParsedPOData {
-  poNumber: string | null;
-  poDate: string | null;
-  itemNumber: string | null;
-  productDescription: string | null;
-  quantity: number | null;
-  pricePerThousand: number | null;
-  requestedDeliveryDate: string | null;
-  customer: string | null;
-}
-
 export default function CreateOrder() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [poNumber, setPoNumber] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(10000);
@@ -99,7 +87,7 @@ export default function CreateOrder() {
     return Math.ceil(quantity / selectedProduct.pieces_per_pallet);
   }, [quantity, selectedProduct]);
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -108,72 +96,14 @@ export default function CreateOrder() {
       return;
     }
 
-    setUploadingPdf(true);
-    setUploadedFileName(file.name);
+    setUploadedFile(file);
+    toast.success('PDF attached successfully!');
+  };
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const { data, error } = await supabase.functions.invoke('parse-po-pdf', {
-        body: formData,
-      });
-
-      if (error) {
-        console.error('Error parsing PDF:', error);
-        toast.error('Failed to parse PDF');
-        return;
-      }
-
-      if (!data.success) {
-        toast.error(data.error || 'Failed to extract data from PDF');
-        return;
-      }
-
-      const parsedData: ParsedPOData = data.data;
-      console.log('Parsed PO data:', parsedData);
-
-      // Auto-fill form fields with extracted data
-      if (parsedData.poNumber) {
-        setPoNumber(parsedData.poNumber);
-      }
-      if (parsedData.poDate) {
-        setPoDate(parsedData.poDate);
-      }
-      if (parsedData.quantity) {
-        setQuantity(parsedData.quantity);
-      }
-      if (parsedData.pricePerThousand) {
-        setPricePerThousand(parsedData.pricePerThousand);
-      }
-      if (parsedData.requestedDeliveryDate) {
-        setRequestedDate(parsedData.requestedDeliveryDate);
-      }
-
-      // Try to match product by item number (customer_item)
-      if (parsedData.itemNumber) {
-        const matchedProduct = products.find(
-          p => p.customer_item?.toLowerCase() === parsedData.itemNumber?.toLowerCase() ||
-               p.sku?.toLowerCase() === parsedData.itemNumber?.toLowerCase() ||
-               p.name?.toLowerCase().includes(parsedData.productDescription?.toLowerCase() || '')
-        );
-        if (matchedProduct) {
-          setSelectedProductId(matchedProduct.id);
-          toast.success('Product matched automatically!');
-        } else {
-          toast.info('Please select the matching product manually');
-        }
-      }
-
-      toast.success('PO data extracted successfully!', {
-        description: 'Please review and confirm the details below.',
-      });
-
-    } catch (err) {
-      console.error('Error uploading PDF:', err);
-      toast.error('Failed to upload PDF');
-    } finally {
-      setUploadingPdf(false);
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -227,10 +157,10 @@ export default function CreateOrder() {
           <div className="rounded-xl border border-dashed border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 p-6 shadow-card animate-slide-up">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-4">
               <Upload className="h-5 w-5 text-accent" />
-              Quick Import
+              Attach PO Document
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Upload your PO PDF to automatically fill in the order details
+              Upload the PDF of your purchase order
             </p>
             
             <input
@@ -242,30 +172,30 @@ export default function CreateOrder() {
             />
             
             <div className="flex items-center gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPdf}
-                className="gap-2"
-              >
-                {uploadingPdf ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4" />
-                    Upload PO PDF
-                  </>
-                )}
-              </Button>
-              {uploadedFileName && !uploadingPdf && (
-                <span className="text-sm text-muted-foreground flex items-center gap-2">
+              {!uploadedFile ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Upload PO PDF
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
                   <FileText className="h-4 w-4 text-accent" />
-                  {uploadedFileName}
-                </span>
+                  <span className="text-sm text-card-foreground">{uploadedFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 ml-2"
+                    onClick={removeUploadedFile}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </div>
           </div>
