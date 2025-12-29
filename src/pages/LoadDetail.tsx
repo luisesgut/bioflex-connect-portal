@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft,
   Truck,
@@ -41,6 +43,7 @@ import {
   MapPin,
   FileText,
   Upload,
+  Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -88,6 +91,9 @@ interface AvailablePallet {
   description: string;
   stock: number;
   traceability: string;
+  fecha: string;
+  bfx_order: string | null;
+  unit: string;
 }
 
 const statusStyles: Record<string, string> = {
@@ -124,6 +130,9 @@ export default function LoadDetail() {
   const [releaseNumber, setReleaseNumber] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedPalletIds, setSelectedPalletIds] = useState<Set<string>>(new Set());
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [addingPallets, setAddingPallets] = useState(false);
 
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
@@ -175,7 +184,7 @@ export default function LoadDetail() {
       // Fetch available pallets excluding those already in any load
       const { data: availableData } = await supabase
         .from("inventory_pallets")
-        .select("id, pt_code, description, stock, traceability")
+        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit")
         .eq("status", "available");
 
       // Filter out pallets already assigned to any load
@@ -195,6 +204,85 @@ export default function LoadDetail() {
   useEffect(() => {
     fetchLoadData();
   }, [fetchLoadData]);
+
+  // Filter available pallets based on search
+  const filteredAvailablePallets = useMemo(() => {
+    if (!inventorySearch.trim()) return availablePallets;
+    const search = inventorySearch.toLowerCase();
+    return availablePallets.filter(
+      (p) =>
+        p.pt_code.toLowerCase().includes(search) ||
+        p.description.toLowerCase().includes(search) ||
+        p.traceability.toLowerCase().includes(search) ||
+        (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+    );
+  }, [availablePallets, inventorySearch]);
+
+  const handleTogglePallet = (palletId: string) => {
+    setSelectedPalletIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(palletId)) {
+        newSet.delete(palletId);
+      } else {
+        newSet.add(palletId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPalletIds.size === filteredAvailablePallets.length) {
+      setSelectedPalletIds(new Set());
+    } else {
+      setSelectedPalletIds(new Set(filteredAvailablePallets.map((p) => p.id)));
+    }
+  };
+
+  const handleAddSelectedPallets = async () => {
+    if (selectedPalletIds.size === 0 || !id) {
+      toast.error("Please select at least one pallet");
+      return;
+    }
+
+    setAddingPallets(true);
+    try {
+      const palletsToAdd = availablePallets.filter((p) => selectedPalletIds.has(p.id));
+
+      // Insert all pallets to load
+      const insertData = palletsToAdd.map((p) => ({
+        load_id: id,
+        pallet_id: p.id,
+        quantity: p.stock,
+      }));
+
+      const { error: insertError } = await supabase.from("load_pallets").insert(insertData);
+      if (insertError) throw insertError;
+
+      // Update pallets status to assigned
+      const palletIds = palletsToAdd.map((p) => p.id);
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "assigned" })
+        .in("id", palletIds);
+
+      // Update load total
+      const newTotal = (load?.total_pallets || 0) + palletsToAdd.length;
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`${palletsToAdd.length} pallet(s) added to load`);
+      setSelectedPalletIds(new Set());
+      fetchLoadData();
+    } catch (error: any) {
+      console.error("Error adding pallets:", error);
+      if (error.code === "23505") {
+        toast.error("Some pallets are already in the load");
+      } else {
+        toast.error("Failed to add pallets");
+      }
+    } finally {
+      setAddingPallets(false);
+    }
+  };
 
   const handleAddPallet = async () => {
     if (!selectedPalletId || !palletQuantity || !id) {
@@ -515,19 +603,13 @@ export default function LoadDetail() {
 
         {/* Pallets Table */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Pallets in Load</CardTitle>
-              <CardDescription>
-                Assign destinations to each pallet for delivery
-              </CardDescription>
-            </div>
-            {isAdmin && load.status === "assembling" && (
-              <Button onClick={() => setAddPalletDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Pallet
-              </Button>
-            )}
+          <CardHeader>
+            <CardTitle>Pallets in Load</CardTitle>
+            <CardDescription>
+              {load.status === "assembling" 
+                ? "Select pallets from the inventory below to add to this load"
+                : "Assign destinations to each pallet for delivery"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {pallets.length === 0 ? (
@@ -592,7 +674,112 @@ export default function LoadDetail() {
           </CardContent>
         </Card>
 
-        {/* Add Pallet Dialog */}
+        {/* Available Inventory Table - Only shown when assembling */}
+        {isAdmin && load.status === "assembling" && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Available Inventory</CardTitle>
+                  <CardDescription>
+                    Select pallets to add to this load ({availablePallets.length} available, {selectedPalletIds.size} selected)
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search inventory..."
+                      value={inventorySearch}
+                      onChange={(e) => setInventorySearch(e.target.value)}
+                      className="pl-8 w-[250px]"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleAddSelectedPallets}
+                    disabled={selectedPalletIds.size === 0 || addingPallets}
+                  >
+                    {addingPallets ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    Add Selected ({selectedPalletIds.size})
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredAvailablePallets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    {inventorySearch ? "No pallets match your search" : "No available pallets"}
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <ScrollArea className="h-[400px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]">
+                            <Checkbox
+                              checked={
+                                filteredAvailablePallets.length > 0 &&
+                                selectedPalletIds.size === filteredAvailablePallets.length
+                              }
+                              onCheckedChange={handleSelectAll}
+                            />
+                          </TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Traceability</TableHead>
+                          <TableHead>BFX Order</TableHead>
+                          <TableHead className="text-right">Stock</TableHead>
+                          <TableHead>Unit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAvailablePallets.map((pallet) => (
+                          <TableRow
+                            key={pallet.id}
+                            className={selectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedPalletIds.has(pallet.id)}
+                                onCheckedChange={() => handleTogglePallet(pallet.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {format(new Date(pallet.fecha), "MM/dd/yyyy")}
+                            </TableCell>
+                            <TableCell className="font-mono">{pallet.pt_code}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {pallet.description}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {pallet.traceability}
+                            </TableCell>
+                            <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {pallet.stock.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-sm">{pallet.unit}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Add Pallet Dialog - kept as fallback */}
         <Dialog open={addPalletDialogOpen} onOpenChange={setAddPalletDialogOpen}>
           <DialogContent>
             <DialogHeader>
