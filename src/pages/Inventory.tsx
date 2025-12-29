@@ -78,6 +78,28 @@ export default function Inventory() {
     fetchInventory();
   }, [fetchInventory]);
 
+  const parseExcelDate = (excelDate: any): string => {
+    if (!excelDate) return new Date().toISOString().split("T")[0];
+    // If it's a number (Excel serial date)
+    if (typeof excelDate === "number") {
+      const date = new Date((excelDate - 25569) * 86400 * 1000);
+      return date.toISOString().split("T")[0];
+    }
+    // If it's a string, try to parse it
+    const parsed = new Date(excelDate);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split("T")[0];
+    }
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const getUnitFromPalletType = (palletType: string): string => {
+    const type = (palletType || "").toUpperCase();
+    if (type === "CASES") return "bags";
+    if (type === "ROLLS") return "Impressions";
+    return "MIL";
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -89,21 +111,26 @@ export default function Inventory() {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      const pallets = jsonData.map((row: any) => ({
-        fecha: row["Fecha"] ? new Date(row["Fecha"]).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-        pt_code: row["PT"] || "",
-        description: row["Descripción"] || "",
-        stock: parseFloat(row["Stock"]) || 0,
-        unit: row["Unidad"] || "MIL",
-        gross_weight: parseFloat(row["Peso bruto"]) || null,
-        net_weight: parseFloat(row["Peso neto"]) || null,
-        traceability: row["Trazabilidad"] || "",
-        bfx_order: row["Orden BFX"] || null,
-        customer_lot: row["Lote cliente"] || null,
-        pieces: parseInt(row["Piezas"]) || null,
-        pallet_type: row["Pallet"] || "CASES",
-        status: "available" as const,
-      }));
+      const pallets = jsonData.map((row: any) => {
+        const palletType = row["Pallet"] || "CASES";
+        const stockValue = parseFloat(row["Stock"]) || 0;
+        
+        return {
+          fecha: parseExcelDate(row["Production Date"]),
+          pt_code: row["Codigo"] || "",
+          description: row["Descripción"] || "",
+          stock: stockValue * 1000, // Multiply by 1000 as values are in thousands
+          unit: getUnitFromPalletType(palletType),
+          gross_weight: parseFloat(row["Peso bruto"]) || null,
+          net_weight: parseFloat(row["Peso neto"]) || null,
+          traceability: row["Trazabilidad"] || "",
+          bfx_order: row["Sales Order"] || null,
+          customer_lot: row["Customer PO Number"] || null,
+          pieces: parseInt(row["Piezas"]) || null,
+          pallet_type: palletType,
+          status: "available" as const,
+        };
+      });
 
       const { error } = await supabase.from("inventory_pallets").insert(pallets);
 
@@ -168,7 +195,7 @@ export default function Inventory() {
                   <DialogTitle>Upload Inventory File</DialogTitle>
                   <DialogDescription>
                     Upload an Excel file (.xlsx) with your daily inventory data.
-                    The file should have columns: Fecha, PT, Descripción, Stock, Unidad, Peso bruto, Peso neto, Trazabilidad, Orden BFX, Lote cliente, Piezas, Pallet
+                    Expected columns: Production Date, Codigo, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Sales Order, Customer PO Number, Piezas, Pallet
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
