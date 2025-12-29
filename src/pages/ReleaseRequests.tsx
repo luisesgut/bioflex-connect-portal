@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Loader2, Eye, Clock, CheckCircle, XCircle, Truck } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FileText, Loader2, Eye, Clock, CheckCircle, XCircle, Truck, Package, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -30,6 +37,7 @@ interface ReleaseRequest {
     load_number: string;
     shipping_date: string;
     total_pallets: number;
+    status: string;
   };
 }
 
@@ -38,6 +46,8 @@ const statusStyles: Record<string, string> = {
   approved: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   on_hold: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   shipped: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  in_transit: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  delivered: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
 };
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -45,7 +55,16 @@ const statusIcons: Record<string, React.ReactNode> = {
   approved: <CheckCircle className="h-4 w-4" />,
   on_hold: <XCircle className="h-4 w-4" />,
   shipped: <Truck className="h-4 w-4" />,
+  in_transit: <Package className="h-4 w-4" />,
+  delivered: <MapPin className="h-4 w-4" />,
 };
+
+const loadStatusOptions = [
+  { value: "pending_release", label: "Pending Release" },
+  { value: "approved", label: "Released" },
+  { value: "in_transit", label: "In Transit" },
+  { value: "delivered", label: "Delivered" },
+];
 
 export default function ReleaseRequests() {
   const { isAdmin } = useAdmin();
@@ -64,7 +83,7 @@ export default function ReleaseRequests() {
           response_at,
           release_number,
           is_hot_order,
-          load:shipping_loads(load_number, shipping_date, total_pallets)
+          load:shipping_loads(load_number, shipping_date, total_pallets, status)
         `)
         .order("requested_at", { ascending: false });
 
@@ -105,6 +124,48 @@ export default function ReleaseRequests() {
         text: `${days}d until ship`,
         className: "text-muted-foreground",
       };
+    }
+  };
+
+  const handleStatusChange = async (request: ReleaseRequest, newLoadStatus: string) => {
+    try {
+      // Map load status to release request status
+      type ReleaseStatus = "pending" | "approved" | "on_hold" | "shipped";
+      type LoadStatus = "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
+      
+      const releaseStatusMap: Record<string, ReleaseStatus> = {
+        pending_release: "pending",
+        approved: "approved",
+        in_transit: "shipped",
+        delivered: "shipped",
+      };
+
+      const newReleaseStatus: ReleaseStatus = releaseStatusMap[newLoadStatus] || "pending";
+
+      // Update load status
+      const { error: loadError } = await supabase
+        .from("shipping_loads")
+        .update({ status: newLoadStatus as LoadStatus })
+        .eq("id", request.load_id);
+
+      if (loadError) throw loadError;
+
+      // Update release request status
+      const { error: requestError } = await supabase
+        .from("release_requests")
+        .update({ 
+          status: newReleaseStatus,
+          response_at: newReleaseStatus !== "pending" ? new Date().toISOString() : null
+        })
+        .eq("id", request.id);
+
+      if (requestError) throw requestError;
+
+      toast.success(`Status updated to ${newLoadStatus.replace("_", " ")}`);
+      fetchRequests();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
     }
   };
 
@@ -181,7 +242,7 @@ export default function ReleaseRequests() {
                   <TableHead>Requested</TableHead>
                   <TableHead>Ship Date</TableHead>
                   <TableHead className="text-center">Pallets</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Load Status</TableHead>
                   <TableHead>Release #</TableHead>
                   <TableHead>Urgency</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -212,10 +273,28 @@ export default function ReleaseRequests() {
                         {request.load.total_pallets}
                       </TableCell>
                       <TableCell>
-                        <Badge className={statusStyles[request.status]} variant="secondary">
-                          <span className="mr-1">{statusIcons[request.status]}</span>
-                          {request.status.replace("_", " ")}
-                        </Badge>
+                        {isAdmin ? (
+                          <Select
+                            value={request.load.status}
+                            onValueChange={(value) => handleStatusChange(request, value)}
+                          >
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {loadStatusOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge className={statusStyles[request.load.status] || statusStyles[request.status]} variant="secondary">
+                            <span className="mr-1">{statusIcons[request.load.status] || statusIcons[request.status]}</span>
+                            {(request.load.status || request.status).replace("_", " ")}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>{request.release_number || "-"}</TableCell>
                       <TableCell>

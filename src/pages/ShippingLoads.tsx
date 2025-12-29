@@ -23,6 +23,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Truck, Plus, Search, Loader2, CalendarIcon, Eye, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -62,6 +69,14 @@ const statusLabels: Record<string, string> = {
   in_transit: "In Transit",
   delivered: "Delivered",
 };
+
+const loadStatusOptions = [
+  { value: "assembling", label: "Assembling" },
+  { value: "pending_release", label: "Pending Release" },
+  { value: "approved", label: "Released" },
+  { value: "in_transit", label: "In Transit" },
+  { value: "delivered", label: "Delivered" },
+];
 
 export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
@@ -158,6 +173,49 @@ export default function ShippingLoads() {
     } catch (error) {
       console.error("Error sending release request:", error);
       toast.error("Failed to send release request");
+    }
+  };
+
+  const handleStatusChange = async (load: ShippingLoad, newStatus: string) => {
+    try {
+      type LoadStatus = "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
+      type ReleaseStatus = "pending" | "approved" | "on_hold" | "shipped";
+
+      // Update load status
+      const { error: loadError } = await supabase
+        .from("shipping_loads")
+        .update({ status: newStatus as LoadStatus })
+        .eq("id", load.id);
+
+      if (loadError) throw loadError;
+
+      // If the load has a release request, update its status too
+      const releaseStatusMap: Record<string, ReleaseStatus> = {
+        pending_release: "pending",
+        approved: "approved",
+        in_transit: "shipped",
+        delivered: "shipped",
+      };
+
+      if (releaseStatusMap[newStatus]) {
+        const { error: requestError } = await supabase
+          .from("release_requests")
+          .update({ 
+            status: releaseStatusMap[newStatus],
+            response_at: releaseStatusMap[newStatus] !== "pending" ? new Date().toISOString() : null
+          })
+          .eq("load_id", load.id);
+
+        if (requestError) {
+          console.log("No release request to update or error:", requestError);
+        }
+      }
+
+      toast.success(`Status updated to ${statusLabels[newStatus]}`);
+      fetchLoads();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
     }
   };
 
@@ -275,9 +333,27 @@ export default function ShippingLoads() {
                     </TableCell>
                     <TableCell className="text-center">{load.total_pallets}</TableCell>
                     <TableCell>
-                      <Badge className={statusStyles[load.status]} variant="secondary">
-                        {statusLabels[load.status]}
-                      </Badge>
+                      {isAdmin ? (
+                        <Select
+                          value={load.status}
+                          onValueChange={(value) => handleStatusChange(load, value)}
+                        >
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {loadStatusOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge className={statusStyles[load.status]} variant="secondary">
+                          {statusLabels[load.status]}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>{load.release_number || "-"}</TableCell>
                     <TableCell className="text-muted-foreground">
