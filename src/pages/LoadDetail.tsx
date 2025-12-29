@@ -78,10 +78,11 @@ interface LoadPallet {
   release_number: string | null;
   release_pdf_url: string | null;
   is_on_hold: boolean;
+  status: "pending" | "ship" | "hold";
   pallet: {
     pt_code: string;
     description: string;
-    traceability: string;
+    customer_lot: string | null;
     bfx_order: string | null;
   };
 }
@@ -191,7 +192,7 @@ export default function LoadDetail() {
           release_number,
           release_pdf_url,
           is_on_hold,
-          pallet:inventory_pallets(pt_code, description, traceability, bfx_order)
+          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order)
         `)
         .eq("load_id", id);
 
@@ -1018,7 +1019,7 @@ export default function LoadDetail() {
                     <TableRow>
                       <TableHead>PT Code</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Traceability</TableHead>
+                      <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Destination</TableHead>
@@ -1027,26 +1028,39 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
+                    {pallets.map((pallet) => {
+                      const palletStatus = pallet.is_on_hold ? "hold" : (releaseRequest?.status === "pending" && !pallet.destination ? "pending" : "ship");
+                      return (
                       <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
                         <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {pallet.pallet.description}
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {pallet.pallet.traceability}
+                          {pallet.pallet.customer_lot || "-"}
                         </TableCell>
-                        <TableCell className="text-right">{pallet.quantity}</TableCell>
+                        <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           {releaseRequest?.status === "pending" || isAdmin ? (
                             <Select
-                              value={pallet.is_on_hold ? "hold" : "ship"}
+                              value={palletStatus}
                               onValueChange={(val) => handleTogglePalletHold(pallet.id, val === "hold")}
                             >
-                              <SelectTrigger className={`w-[100px] ${pallet.is_on_hold ? "border-red-500 text-red-600" : "border-green-500 text-green-600"}`}>
+                              <SelectTrigger className={`w-[110px] ${
+                                palletStatus === "hold" 
+                                  ? "border-red-500 text-red-600" 
+                                  : palletStatus === "pending" 
+                                    ? "border-yellow-500 text-yellow-600" 
+                                    : "border-green-500 text-green-600"
+                              }`}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="pending" disabled>
+                                  <span className="flex items-center gap-1 text-yellow-600">
+                                    Pending
+                                  </span>
+                                </SelectItem>
                                 <SelectItem value="ship">
                                   <span className="flex items-center gap-1">
                                     <Check className="h-3 w-3 text-green-600" />
@@ -1165,7 +1179,8 @@ export default function LoadDetail() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>
