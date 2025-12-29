@@ -22,12 +22,22 @@ interface LoadDetail {
   quantity: number;
 }
 
+interface ShippedLoadDetail {
+  load_number: string;
+  load_id: string;
+  pallet_count: number;
+  quantity: number;
+  delivery_date: string | null;
+  shipped_at: string;
+}
+
 interface InventoryStats {
   inFloor: number;
   shipped: number;
   pending: number;
   percentProduced: number;
   loadDetails: LoadDetail[];
+  shippedLoadDetails: ShippedLoadDetail[];
 }
 
 interface Order {
@@ -124,6 +134,8 @@ export default function Orders() {
     let inventoryByPO: Record<string, { inFloor: number; shipped: number }> = {};
     // Load details map - keyed by po_number
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
+    // Shipped load details map - keyed by po_number
+    let shippedLoadDetailsByPO: Record<string, ShippedLoadDetail[]> = {};
     
     // Fetch current inventory by bfx_order (matches sales_order_number)
     if (salesOrderNumbers.length > 0) {
@@ -223,10 +235,20 @@ export default function Orders() {
         });
       }
 
-      // Fetch shipped pallets by customer_lot
+      // Fetch shipped pallets by customer_lot with load details
       const { data: shippedByLotData, error: shippedByLotError } = await supabase
         .from("shipped_pallets")
-        .select("customer_lot, quantity")
+        .select(`
+          customer_lot,
+          quantity,
+          load_id,
+          delivery_date,
+          shipped_at,
+          shipping_loads:load_id (
+            id,
+            load_number
+          )
+        `)
         .in("customer_lot", poNumbers);
 
       if (!shippedByLotError && shippedByLotData) {
@@ -238,6 +260,29 @@ export default function Orders() {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
           }
           inventoryByPO[poNum].shipped += pallet.quantity || 0;
+
+          // Track shipped load details
+          const loadInfo = pallet.shipping_loads;
+          if (loadInfo) {
+            if (!shippedLoadDetailsByPO[poNum]) {
+              shippedLoadDetailsByPO[poNum] = [];
+            }
+            
+            const existingLoad = shippedLoadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
+            if (existingLoad) {
+              existingLoad.pallet_count += 1;
+              existingLoad.quantity += pallet.quantity || 0;
+            } else {
+              shippedLoadDetailsByPO[poNum].push({
+                load_id: loadInfo.id,
+                load_number: loadInfo.load_number,
+                pallet_count: 1,
+                quantity: pallet.quantity || 0,
+                delivery_date: pallet.delivery_date,
+                shipped_at: pallet.shipped_at,
+              });
+            }
+          }
         });
       }
     }
@@ -258,6 +303,7 @@ export default function Orders() {
       
       // Get load details for this PO
       const loadDetails = loadDetailsByPO[order.po_number] || [];
+      const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
 
       return {
         id: order.id,
@@ -279,6 +325,7 @@ export default function Orders() {
           pending,
           percentProduced,
           loadDetails,
+          shippedLoadDetails,
         },
       };
     });
