@@ -9,20 +9,27 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText, ChevronDown, X } from "lucide-react";
+import { Upload, Download, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText, ChevronDown, X } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminFilters {
-  customer: string;
-  item_type: string;
-  activa: string;
-  has_pc_file: string;
+  codigo_producto: string[];
+  nombre_producto_2: string[];
+  print_card: string[];
+  has_pc_file: string[];
+  activa: string[];
+  customer_item: string[];
+  item_description: string[];
+  customer: string[];
+  item_type: string[];
+  pieces_per_pallet: string[];
 }
 
 interface Product {
@@ -122,10 +129,16 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<AdminFilters>({
-    customer: "all",
-    item_type: "all",
-    activa: "all",
-    has_pc_file: "all",
+    codigo_producto: [],
+    nombre_producto_2: [],
+    print_card: [],
+    has_pc_file: [],
+    activa: [],
+    customer_item: [],
+    item_description: [],
+    customer: [],
+    item_type: [],
+    pieces_per_pallet: [],
   });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -487,9 +500,27 @@ export default function AdminProducts() {
     }
   };
 
-  // Get unique values for filters
-  const customers = [...new Set(products.map(p => p.customer).filter(Boolean) as string[])].sort();
-  const itemTypes = [...new Set(products.map(p => p.item_type).filter(Boolean) as string[])].sort();
+  // Get unique values for each column
+  const getUniqueValues = (key: keyof Product) => {
+    const values = products.map(p => {
+      const val = p[key];
+      if (val === null || val === undefined) return null;
+      if (typeof val === 'boolean') return val ? 'Active' : 'Inactive';
+      return String(val);
+    }).filter(Boolean) as string[];
+    return [...new Set(values)].sort();
+  };
+
+  const uniqueCodigos = getUniqueValues('codigo_producto');
+  const uniqueNombres = getUniqueValues('nombre_producto_2');
+  const uniquePrintCards = getUniqueValues('print_card');
+  const uniqueCustomerItems = getUniqueValues('customer_item');
+  const uniqueDescriptions = getUniqueValues('item_description');
+  const uniqueCustomers = getUniqueValues('customer');
+  const uniqueItemTypes = getUniqueValues('item_type');
+  const uniquePieces = getUniqueValues('pieces_per_pallet');
+  const activaOptions = ["Active", "Inactive"];
+  const pcFileOptions = ["Has File", "No File"];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
@@ -497,24 +528,155 @@ export default function AdminProducts() {
       product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCustomer = filters.customer === "all" || product.customer === filters.customer;
-    const matchesItemType = filters.item_type === "all" || product.item_type === filters.item_type;
-    const matchesActiva = filters.activa === "all" || 
-      (filters.activa === "yes" && product.activa) ||
-      (filters.activa === "no" && !product.activa);
-    const matchesPcFile = filters.has_pc_file === "all" || 
-      (filters.has_pc_file === "yes" && product.print_card_url) ||
-      (filters.has_pc_file === "no" && !product.print_card_url);
-    return matchesSearch && matchesCustomer && matchesItemType && matchesActiva && matchesPcFile;
+    
+    const matchesCodigo = filters.codigo_producto.length === 0 || 
+      (product.codigo_producto && filters.codigo_producto.includes(product.codigo_producto));
+    const matchesNombre = filters.nombre_producto_2.length === 0 || 
+      (product.nombre_producto_2 && filters.nombre_producto_2.includes(product.nombre_producto_2));
+    const matchesPrintCard = filters.print_card.length === 0 || 
+      (product.print_card && filters.print_card.includes(product.print_card));
+    const matchesPcFile = filters.has_pc_file.length === 0 || 
+      (filters.has_pc_file.includes("Has File") && product.print_card_url) ||
+      (filters.has_pc_file.includes("No File") && !product.print_card_url);
+    const matchesActiva = filters.activa.length === 0 || 
+      (filters.activa.includes("Active") && product.activa) ||
+      (filters.activa.includes("Inactive") && !product.activa);
+    const matchesCustomerItem = filters.customer_item.length === 0 || 
+      (product.customer_item && filters.customer_item.includes(product.customer_item));
+    const matchesDescription = filters.item_description.length === 0 || 
+      (product.item_description && filters.item_description.includes(product.item_description));
+    const matchesCustomer = filters.customer.length === 0 || 
+      (product.customer && filters.customer.includes(product.customer));
+    const matchesItemType = filters.item_type.length === 0 || 
+      (product.item_type && filters.item_type.includes(product.item_type));
+    const matchesPieces = filters.pieces_per_pallet.length === 0 || 
+      (product.pieces_per_pallet !== null && filters.pieces_per_pallet.includes(String(product.pieces_per_pallet)));
+
+    return matchesSearch && matchesCodigo && matchesNombre && matchesPrintCard && matchesPcFile && 
+           matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
+           matchesItemType && matchesPieces;
   });
 
   const clearFilters = () => {
-    setFilters({ customer: "all", item_type: "all", activa: "all", has_pc_file: "all" });
+    setFilters({
+      codigo_producto: [],
+      nombre_producto_2: [],
+      print_card: [],
+      has_pc_file: [],
+      activa: [],
+      customer_item: [],
+      item_description: [],
+      customer: [],
+      item_type: [],
+      pieces_per_pallet: [],
+    });
     setSearchQuery("");
   };
 
-  const hasActiveFilters = filters.customer !== "all" || filters.item_type !== "all" || 
-    filters.activa !== "all" || filters.has_pc_file !== "all" || searchQuery;
+  const hasActiveFilters = Object.values(filters).some(f => f.length > 0) || searchQuery;
+
+  const toggleFilter = (filterKey: keyof AdminFilters, value: string) => {
+    setFilters(prev => {
+      const current = prev[filterKey];
+      const updated = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, [filterKey]: updated };
+    });
+  };
+
+  const clearColumnFilter = (filterKey: keyof AdminFilters) => {
+    setFilters(prev => ({ ...prev, [filterKey]: [] }));
+  };
+
+  const ColumnFilterHeader = ({ 
+    label, 
+    filterKey, 
+    options,
+    isGreen = false,
+    className = ""
+  }: { 
+    label: string; 
+    filterKey: keyof AdminFilters; 
+    options: string[];
+    isGreen?: boolean;
+    className?: string;
+  }) => {
+    const activeFilters = filters[filterKey];
+    const isFiltered = activeFilters.length > 0;
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredOptions = options.filter(opt => 
+      opt.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const baseClass = isGreen ? "bg-green-500/10" : "";
+    const textClass = isGreen 
+      ? (isFiltered ? "text-green-900 font-bold" : "text-green-700")
+      : (isFiltered ? "text-primary font-bold" : "");
+
+    return (
+      <TableHead className={`${baseClass} ${className}`}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={`inline-flex items-center gap-1 hover:opacity-80 transition-opacity ${textClass}`}>
+              {label}
+              {isFiltered && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilters.length}</Badge>}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-0">
+            <div className="p-2 border-b">
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="p-2 border-b flex justify-between">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => setFilters(prev => ({ ...prev, [filterKey]: filteredOptions }))}
+              >
+                Select All
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => clearColumnFilter(filterKey)}
+              >
+                Clear
+              </Button>
+            </div>
+            <ScrollArea className="h-48">
+              <div className="p-2 space-y-1">
+                {filteredOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No options</p>
+                ) : (
+                  filteredOptions.map(option => (
+                    <label 
+                      key={option} 
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                    >
+                      <Checkbox 
+                        checked={activeFilters.includes(option)}
+                        onCheckedChange={() => toggleFilter(filterKey, option)}
+                      />
+                      <span className="truncate">{option}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
+      </TableHead>
+    );
+  };
 
   if (adminLoading) {
     return (
@@ -646,78 +808,16 @@ export default function AdminProducts() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Nombre Producto</TableHead>
-                      <TableHead>Print Card</TableHead>
-                      <TableHead className="bg-green-500/10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.has_pc_file !== 'all' ? 'font-bold' : ''}`}>
-                              PC File
-                              <ChevronDown className="h-3 w-3" />
-                              {filters.has_pc_file !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50">
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "all" }))} className={filters.has_pc_file === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "yes" }))} className={filters.has_pc_file === "yes" ? "bg-muted" : ""}>Has File</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "no" }))} className={filters.has_pc_file === "no" ? "bg-muted" : ""}>No File</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableHead>
-                      <TableHead>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center gap-1 hover:text-primary ${filters.activa !== 'all' ? 'text-primary font-bold' : ''}`}>
-                              Activa
-                              <ChevronDown className="h-3 w-3" />
-                              {filters.activa !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50">
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "all" }))} className={filters.activa === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "yes" }))} className={filters.activa === "yes" ? "bg-muted" : ""}>Active</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "no" }))} className={filters.activa === "no" ? "bg-muted" : ""}>Inactive</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">Customer Item</TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">Item Description</TableHead>
-                      <TableHead className="bg-green-500/10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.customer !== 'all' ? 'font-bold' : ''}`}>
-                              Customer
-                              <ChevronDown className="h-3 w-3" />
-                              {filters.customer !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50 max-h-64 overflow-y-auto">
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, customer: "all" }))} className={filters.customer === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
-                            {customers.map(c => (
-                              <DropdownMenuItem key={c} onClick={() => setFilters(f => ({ ...f, customer: c }))} className={filters.customer === c ? "bg-muted" : ""}>{c}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableHead>
-                      <TableHead className="bg-green-500/10">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.item_type !== 'all' ? 'font-bold' : ''}`}>
-                              Item Type
-                              <ChevronDown className="h-3 w-3" />
-                              {filters.item_type !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50 max-h-64 overflow-y-auto">
-                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, item_type: "all" }))} className={filters.item_type === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
-                            {itemTypes.map(t => (
-                              <DropdownMenuItem key={t} onClick={() => setFilters(f => ({ ...f, item_type: t }))} className={filters.item_type === t ? "bg-muted" : ""}>{t}</DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">Pcs/Pallet</TableHead>
+                      <ColumnFilterHeader label="Código" filterKey="codigo_producto" options={uniqueCodigos} />
+                      <ColumnFilterHeader label="Nombre Producto" filterKey="nombre_producto_2" options={uniqueNombres} />
+                      <ColumnFilterHeader label="Print Card" filterKey="print_card" options={uniquePrintCards} />
+                      <ColumnFilterHeader label="PC File" filterKey="has_pc_file" options={pcFileOptions} isGreen />
+                      <ColumnFilterHeader label="Activa" filterKey="activa" options={activaOptions} />
+                      <ColumnFilterHeader label="Customer Item" filterKey="customer_item" options={uniqueCustomerItems} isGreen />
+                      <ColumnFilterHeader label="Item Description" filterKey="item_description" options={uniqueDescriptions} isGreen />
+                      <ColumnFilterHeader label="Customer" filterKey="customer" options={uniqueCustomers} isGreen />
+                      <ColumnFilterHeader label="Item Type" filterKey="item_type" options={uniqueItemTypes} isGreen />
+                      <ColumnFilterHeader label="Pcs/Pallet" filterKey="pieces_per_pallet" options={uniquePieces} isGreen className="text-right" />
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
