@@ -15,6 +15,7 @@ import {
   Truck,
   ClipboardCheck
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -97,66 +98,68 @@ export function Sidebar() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                )}
-              >
-                <item.icon className={cn(
-                  "h-5 w-5",
-                  isActive && "text-sidebar-primary"
-                )} />
-                {item.name}
-                {item.name === "Hot Orders" && (
-                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
-                    3
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+        <ScrollArea className="flex-1">
+          <nav className="space-y-1 px-3 py-4">
+            {navigation.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5",
+                    isActive && "text-sidebar-primary"
+                  )} />
+                  {item.name}
+                  {item.name === "Hot Orders" && (
+                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+                      3
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
 
-          {/* Admin Section */}
-          {isAdmin && (
-            <>
-              <div className="mt-4 mb-2 px-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                  Admin
-                </span>
-              </div>
-              {adminNavigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      isActive
-                        ? "bg-accent/20 text-accent"
-                        : "text-sidebar-foreground/70 hover:bg-accent/10 hover:text-accent"
-                    )}
-                  >
-                    <item.icon className={cn(
-                      "h-5 w-5",
-                      isActive && "text-accent"
-                    )} />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </>
-          )}
-        </nav>
+            {/* Admin Section */}
+            {isAdmin && (
+              <>
+                <div className="mt-4 mb-2 px-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                    Admin
+                  </span>
+                </div>
+                {adminNavigation.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-accent/20 text-accent"
+                          : "text-sidebar-foreground/70 hover:bg-accent/10 hover:text-accent"
+                      )}
+                    >
+                      <item.icon className={cn(
+                        "h-5 w-5",
+                        isActive && "text-accent"
+                      )} />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </nav>
+        </ScrollArea>
 
         {/* Bottom Navigation */}
         <div className="border-t border-sidebar-border px-3 py-4">
