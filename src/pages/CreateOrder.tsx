@@ -202,7 +202,7 @@ export default function CreateOrder() {
         price_per_thousand: pricePerThousand || null,
         total_price: totalPrice || null,
         pallets_needed: palletsNeeded || null,
-        requested_delivery_date: requestedDate || null,
+        requested_delivery_date: requestedDate === "ASAP" ? null : (requestedDate || null),
         is_hot_order: isHotOrder,
         notes: notes || null,
         pdf_url: pdfUrl,
@@ -485,17 +485,6 @@ export default function CreateOrder() {
             </h2>
             
             <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="date">Requested Delivery Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={requestedDate}
-                  onChange={(e) => setRequestedDate(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-
               <div className={cn(
                 "flex items-center justify-between rounded-lg border p-4 transition-all duration-300",
                 isHotOrder 
@@ -524,8 +513,60 @@ export default function CreateOrder() {
                 <Switch
                   id="hot-order"
                   checked={isHotOrder}
-                  onCheckedChange={setIsHotOrder}
+                  onCheckedChange={(checked) => {
+                    setIsHotOrder(checked);
+                    if (checked) {
+                      setRequestedDate("ASAP");
+                    } else if (requestedDate === "ASAP") {
+                      setRequestedDate("");
+                    }
+                  }}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date">Requested Delivery Date</Label>
+                {isHotOrder ? (
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant={requestedDate === "ASAP" ? "default" : "outline"}
+                      className={cn(
+                        "flex-1 h-12",
+                        requestedDate === "ASAP" && "bg-accent text-accent-foreground hover:bg-accent/90"
+                      )}
+                      onClick={() => setRequestedDate("ASAP")}
+                    >
+                      <Flame className="mr-2 h-4 w-4" />
+                      ASAP
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={requestedDate !== "ASAP" && requestedDate !== "" ? "default" : "outline"}
+                      className={cn(
+                        "flex-1 h-12",
+                        requestedDate !== "ASAP" && requestedDate !== "" && "bg-accent text-accent-foreground hover:bg-accent/90"
+                      )}
+                      onClick={() => setRequestedDate("")}
+                    >
+                      Specific Date
+                    </Button>
+                  </div>
+                ) : null}
+                {(!isHotOrder || (isHotOrder && requestedDate !== "ASAP")) && (
+                  <Input
+                    id="date"
+                    type="date"
+                    value={requestedDate === "ASAP" ? "" : requestedDate}
+                    onChange={(e) => setRequestedDate(e.target.value)}
+                    className="h-12"
+                  />
+                )}
+                {isHotOrder && requestedDate === "ASAP" && (
+                  <p className="text-sm text-muted-foreground">
+                    This order will be prioritized. Bioflex will confirm the delivery date within 2 days.
+                  </p>
+                )}
               </div>
             </div>
           </div>
