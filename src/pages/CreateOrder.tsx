@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Command,
   CommandEmpty,
@@ -36,11 +37,15 @@ interface Product {
 
 export default function CreateOrder() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [poNumber, setPoNumber] = useState("");
+  const [poNumberError, setPoNumberError] = useState<string | null>(null);
+  const [checkingPoNumber, setCheckingPoNumber] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(10000);
   const [pricePerThousand, setPricePerThousand] = useState<number>(0);
@@ -70,6 +75,35 @@ export default function CreateOrder() {
     fetchProducts();
   }, []);
 
+  // Check for duplicate PO number with debounce
+  useEffect(() => {
+    if (!poNumber.trim()) {
+      setPoNumberError(null);
+      return;
+    }
+
+    const checkDuplicate = async () => {
+      setCheckingPoNumber(true);
+      const { data, error } = await supabase
+        .from("purchase_orders")
+        .select("id")
+        .eq("po_number", poNumber.trim())
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking PO number:", error);
+      } else if (data) {
+        setPoNumberError("This PO number already exists");
+      } else {
+        setPoNumberError(null);
+      }
+      setCheckingPoNumber(false);
+    };
+
+    const debounceTimer = setTimeout(checkDuplicate, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [poNumber]);
+
   const selectedProduct = useMemo(() => {
     return products.find(p => p.id === selectedProductId);
   }, [products, selectedProductId]);
@@ -82,8 +116,6 @@ export default function CreateOrder() {
     if (!selectedProduct?.piezas_totales_por_caja || !selectedProduct?.pieces_per_pallet) {
       return null;
     }
-    const bagsPerPallet = selectedProduct.piezas_totales_por_caja * (selectedProduct.pieces_per_pallet / selectedProduct.piezas_totales_por_caja);
-    // pieces_per_pallet is total pieces per pallet
     return Math.ceil(quantity / selectedProduct.pieces_per_pallet);
   }, [quantity, selectedProduct]);
 
@@ -107,8 +139,23 @@ export default function CreateOrder() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error("You must be logged in to create an order");
+      return;
+    }
+
+    if (!poNumber.trim()) {
+      toast.error("Please enter a PO number");
+      return;
+    }
+
+    if (poNumberError) {
+      toast.error("Please use a unique PO number");
+      return;
+    }
     
     if (!selectedProductId) {
       toast.error("Please select a product");
@@ -120,11 +167,68 @@ export default function CreateOrder() {
       return;
     }
 
-    toast.success("Purchase order created successfully!", {
-      description: `PO for ${quantity.toLocaleString()} ${selectedProduct?.units || 'units'} of ${selectedProduct?.name}`,
-    });
-    
-    navigate("/orders");
+    setSubmitting(true);
+
+    try {
+      // Upload PDF if attached
+      let pdfUrl: string | null = null;
+      if (uploadedFile) {
+        const fileName = `${user.id}/${poNumber.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+        const { error: uploadError } = await supabase.storage
+          .from('ncr-attachments')
+          .upload(fileName, uploadedFile);
+
+        if (uploadError) {
+          console.error('Error uploading PDF:', uploadError);
+          toast.error('Failed to upload PDF');
+          setSubmitting(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('ncr-attachments')
+          .getPublicUrl(fileName);
+        pdfUrl = urlData.publicUrl;
+      }
+
+      // Insert purchase order
+      const { error } = await supabase.from("purchase_orders").insert({
+        user_id: user.id,
+        po_number: poNumber.trim(),
+        po_date: poDate,
+        product_id: selectedProductId,
+        quantity,
+        price_per_thousand: pricePerThousand || null,
+        total_price: totalPrice || null,
+        pallets_needed: palletsNeeded || null,
+        requested_delivery_date: requestedDate || null,
+        is_hot_order: isHotOrder,
+        notes: notes || null,
+        pdf_url: pdfUrl,
+      });
+
+      if (error) {
+        console.error("Error creating order:", error);
+        if (error.code === '23505') {
+          toast.error("This PO number already exists");
+          setPoNumberError("This PO number already exists");
+        } else {
+          toast.error("Failed to create order");
+        }
+        return;
+      }
+
+      toast.success("Purchase order created successfully!", {
+        description: `PO #${poNumber} for ${quantity.toLocaleString()} ${selectedProduct?.units || 'units'} of ${selectedProduct?.name}`,
+      });
+      
+      navigate("/orders");
+    } catch (err) {
+      console.error("Error submitting order:", err);
+      toast.error("Failed to create order");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const adjustQuantity = (amount: number) => {
@@ -209,15 +313,23 @@ export default function CreateOrder() {
             
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="po-number">PO Number</Label>
-                <Input
-                  id="po-number"
-                  type="text"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  placeholder="Enter PO number"
-                  className="h-12"
-                />
+                <Label htmlFor="po-number">PO Number *</Label>
+                <div className="relative">
+                  <Input
+                    id="po-number"
+                    type="text"
+                    value={poNumber}
+                    onChange={(e) => setPoNumber(e.target.value)}
+                    placeholder="Enter PO number"
+                    className={cn("h-12", poNumberError && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  {checkingPoNumber && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+                {poNumberError && (
+                  <p className="text-sm text-destructive">{poNumberError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="po-date">PO Order Date</Label>
@@ -499,8 +611,21 @@ export default function CreateOrder() {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" variant="accent" size="lg" className="w-full sm:w-auto gap-2">
-              Submit Purchase Order
+            <Button 
+              type="submit" 
+              variant="accent" 
+              size="lg" 
+              className="w-full sm:w-auto gap-2"
+              disabled={submitting || !!poNumberError}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Purchase Order"
+              )}
             </Button>
           </div>
         </form>
