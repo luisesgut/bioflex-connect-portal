@@ -48,6 +48,7 @@ export default function CreateOrder() {
   const [checkingPoNumber, setCheckingPoNumber] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(10000);
+  const [quantityInput, setQuantityInput] = useState<string>("10,000");
   const [pricePerThousand, setPricePerThousand] = useState<number>(0);
   const [isHotOrder, setIsHotOrder] = useState(false);
   const [notes, setNotes] = useState("");
@@ -234,6 +235,7 @@ export default function CreateOrder() {
   const adjustQuantity = (amount: number) => {
     const newQuantity = Math.max(1000, quantity + amount);
     setQuantity(newQuantity);
+    setQuantityInput(newQuantity.toLocaleString());
   };
 
   return (
@@ -425,11 +427,17 @@ export default function CreateOrder() {
                     id="quantity"
                     type="text"
                     inputMode="numeric"
-                    value={quantity.toLocaleString()}
+                    value={quantityInput}
                     onChange={(e) => {
-                      const rawValue = e.target.value.replace(/,/g, '');
-                      const numValue = parseInt(rawValue) || 0;
-                      setQuantity(Math.max(1000, numValue));
+                      const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                      setQuantityInput(rawValue ? parseInt(rawValue).toLocaleString() : '');
+                      setQuantity(parseInt(rawValue) || 0);
+                    }}
+                    onBlur={() => {
+                      if (quantity < 1000) {
+                        setQuantity(1000);
+                        setQuantityInput("1,000");
+                      }
                     }}
                     className="text-center text-lg font-semibold h-12"
                   />
