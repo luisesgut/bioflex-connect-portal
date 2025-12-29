@@ -240,18 +240,14 @@ export default function ReleaseRequests() {
                 <TableRow>
                   <TableHead>Load #</TableHead>
                   <TableHead>Requested</TableHead>
-                  <TableHead>Ship Date</TableHead>
+                  <TableHead>Est. Delivery</TableHead>
                   <TableHead className="text-center">Pallets</TableHead>
                   <TableHead>Load Status</TableHead>
-                  <TableHead>Release #</TableHead>
-                  <TableHead>Urgency</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((request) => {
-                  const urgency = getUrgencyInfo(request);
-                  return (
+                {requests.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -296,12 +292,6 @@ export default function ReleaseRequests() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>{request.release_number || "-"}</TableCell>
-                      <TableCell>
-                        {urgency && (
-                          <span className={urgency.className}>{urgency.text}</span>
-                        )}
-                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild>
                           <Link to={`/shipping-loads/${request.load_id}`}>
@@ -310,8 +300,7 @@ export default function ReleaseRequests() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                ))}
               </TableBody>
             </Table>
           </div>

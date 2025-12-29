@@ -316,10 +316,9 @@ export default function ShippingLoads() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Load #</TableHead>
-                  <TableHead>Shipping Date</TableHead>
+                  <TableHead>Est. Delivery</TableHead>
                   <TableHead className="text-center">Pallets</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Release #</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -355,7 +354,6 @@ export default function ShippingLoads() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{load.release_number || "-"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {format(new Date(load.created_at), "MMM d, yyyy")}
                     </TableCell>
