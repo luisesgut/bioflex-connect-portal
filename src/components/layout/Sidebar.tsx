@@ -8,11 +8,15 @@ import {
   Settings,
   LogOut,
   ShieldAlert,
-  FileEdit
+  FileEdit,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -35,7 +39,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isActualAdmin, isViewingAsCustomer, toggleViewMode } = useAdmin();
 
   const handleSignOut = async () => {
     await signOut();
@@ -58,6 +62,33 @@ export function Sidebar() {
             <p className="text-xs text-sidebar-foreground/60">Customer Portal</p>
           </div>
         </div>
+
+        {/* Admin View Toggle */}
+        {isActualAdmin && (
+          <div className="border-b border-sidebar-border px-4 py-3">
+            <div className={cn(
+              "flex items-center justify-between rounded-lg px-3 py-2 transition-colors",
+              isViewingAsCustomer ? "bg-accent/20" : "bg-sidebar-accent/50"
+            )}>
+              <div className="flex items-center gap-2">
+                {isViewingAsCustomer ? (
+                  <Eye className="h-4 w-4 text-accent" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-sidebar-foreground/60" />
+                )}
+                <Label htmlFor="view-toggle" className="text-xs font-medium cursor-pointer">
+                  {isViewingAsCustomer ? "Customer View" : "Admin View"}
+                </Label>
+              </div>
+              <Switch
+                id="view-toggle"
+                checked={isViewingAsCustomer}
+                onCheckedChange={toggleViewMode}
+                className="scale-75"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
@@ -149,7 +180,9 @@ export function Sidebar() {
               {userInitials}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">Customer</p>
+              <p className="truncate text-sm font-medium">
+                {isActualAdmin ? (isViewingAsCustomer ? "Viewing as Customer" : "Admin") : "Customer"}
+              </p>
               <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
             </div>
           </div>
