@@ -125,6 +125,7 @@ const statusStyles: Record<string, string> = {
 };
 
 const destinations = [
+  { value: "tbd", label: "TBD" },
   { value: "salinas", label: "Salinas, CA" },
   { value: "bakersfield", label: "Bakersfield, CA" },
   { value: "coachella", label: "Coachella, CA" },
