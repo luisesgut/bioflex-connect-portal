@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,7 @@ interface Order {
   id: string;
   po_number: string;
   quantity: number;
+  do_not_delay?: boolean;
 }
 
 interface ChangeRequestDialogProps {
@@ -37,7 +38,7 @@ export function ChangeRequestDialog({
   onSubmitted,
 }: ChangeRequestDialogProps) {
   const { user } = useAuth();
-  const [requestType, setRequestType] = useState<"volume_change" | "cancellation">("volume_change");
+  const [requestType, setRequestType] = useState<"volume_change" | "cancellation" | "do_not_delay">("volume_change");
   const [newQuantity, setNewQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -60,6 +61,11 @@ export function ChangeRequestDialog({
         toast.error("New quantity must be different from current quantity");
         return;
       }
+    }
+
+    if (requestType === "do_not_delay" && order.do_not_delay) {
+      toast.error("This order is already marked as Do Not Delay");
+      return;
     }
 
     setSubmitting(true);
@@ -115,7 +121,7 @@ export function ChangeRequestDialog({
             <Label>Request Type</Label>
             <RadioGroup
               value={requestType}
-              onValueChange={(val) => setRequestType(val as "volume_change" | "cancellation")}
+              onValueChange={(val) => setRequestType(val as "volume_change" | "cancellation" | "do_not_delay")}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="volume_change" id="volume_change" />
@@ -127,6 +133,14 @@ export function ChangeRequestDialog({
                 <RadioGroupItem value="cancellation" id="cancellation" />
                 <Label htmlFor="cancellation" className="font-normal cursor-pointer">
                   Cancel Order
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="do_not_delay" id="do_not_delay" disabled={order?.do_not_delay} />
+                <Label htmlFor="do_not_delay" className="font-normal cursor-pointer flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  Mark as Do Not Delay
+                  {order?.do_not_delay && <span className="text-xs text-muted-foreground">(Already set)</span>}
                 </Label>
               </div>
             </RadioGroup>
@@ -160,6 +174,8 @@ export function ChangeRequestDialog({
               placeholder={
                 requestType === "cancellation"
                   ? "Please explain why you need to cancel this order..."
+                  : requestType === "do_not_delay"
+                  ? "Please explain why this order should not be delayed..."
                   : "Please explain why you need to change the quantity..."
               }
               rows={3}

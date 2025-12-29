@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { toast } from "sonner";
 interface ChangeRequest {
   id: string;
   purchase_order_id: string;
-  request_type: "volume_change" | "cancellation";
+  request_type: "volume_change" | "cancellation" | "do_not_delay";
   current_quantity: number;
   requested_quantity: number | null;
   reason: string;
@@ -80,6 +80,13 @@ export function ReviewChangeRequestDialog({
             .eq("id", request.purchase_order_id);
 
           if (poError) throw poError;
+        } else if (request.request_type === "do_not_delay") {
+          const { error: poError } = await supabase
+            .from("purchase_orders")
+            .update({ do_not_delay: true })
+            .eq("id", request.purchase_order_id);
+
+          if (poError) throw poError;
         }
       }
 
@@ -121,10 +128,23 @@ export function ReviewChangeRequestDialog({
             )}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Request Type</span>
-              <Badge variant={request.request_type === "cancellation" ? "destructive" : "secondary"}>
-                {request.request_type === "cancellation" ? "Cancellation" : "Volume Change"}
+              <Badge 
+                variant={request.request_type === "cancellation" ? "destructive" : "secondary"}
+                className={request.request_type === "do_not_delay" ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" : ""}
+              >
+                {request.request_type === "cancellation" 
+                  ? "Cancellation" 
+                  : request.request_type === "do_not_delay"
+                  ? "Do Not Delay"
+                  : "Volume Change"}
               </Badge>
             </div>
+            {request.request_type === "do_not_delay" && (
+              <div className="flex items-center gap-2 text-sm text-yellow-600">
+                <Clock className="h-4 w-4" />
+                <span>Customer requests this order not be delayed</span>
+              </div>
+            )}
             {request.request_type === "volume_change" && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Quantity Change</span>
