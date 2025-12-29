@@ -199,7 +199,10 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
           created_at: string
+          estimated_delivery_date: string | null
           id: string
           is_hot_order: boolean
           notes: string | null
@@ -211,13 +214,17 @@ export type Database = {
           product_id: string | null
           quantity: number
           requested_delivery_date: string | null
+          sales_order_number: string | null
           status: string
           total_price: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
+          estimated_delivery_date?: string | null
           id?: string
           is_hot_order?: boolean
           notes?: string | null
@@ -229,13 +236,17 @@ export type Database = {
           product_id?: string | null
           quantity: number
           requested_delivery_date?: string | null
+          sales_order_number?: string | null
           status?: string
           total_price?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
+          estimated_delivery_date?: string | null
           id?: string
           is_hot_order?: boolean
           notes?: string | null
@@ -247,6 +258,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           requested_delivery_date?: string | null
+          sales_order_number?: string | null
           status?: string
           total_price?: number | null
           updated_at?: string

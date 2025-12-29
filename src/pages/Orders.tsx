@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Flame, MoreVertical, Download, Eye, Loader2 } from "lucide-react";
+import { Search, Plus, FileText, Flame, MoreVertical, Download, Eye, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,10 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
+import { differenceInHours } from "date-fns";
 
 interface Order {
   id: string;
@@ -26,6 +29,7 @@ interface Order {
   status: string;
   is_hot_order: boolean;
   requested_delivery_date: string | null;
+  estimated_delivery_date: string | null;
   created_at: string;
   pdf_url: string | null;
 }
@@ -33,6 +37,7 @@ interface Order {
 const statusStyles: Record<string, string> = {
   pending: "bg-info/10 text-info border-info/20",
   submitted: "bg-info/10 text-info border-info/20",
+  accepted: "bg-success/10 text-success border-success/20",
   "in-production": "bg-warning/10 text-warning border-warning/20",
   shipped: "bg-accent/10 text-accent border-accent/20",
   delivered: "bg-success/10 text-success border-success/20",
@@ -41,71 +46,90 @@ const statusStyles: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "Submitted",
   submitted: "Submitted",
+  accepted: "Accepted",
   "in-production": "In Production",
   shipped: "Shipped",
   delivered: "Delivered",
 };
 
-const statusFilters = ["All", "Submitted", "In Production", "Shipped", "Delivered"];
+const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped", "Delivered"];
 
 export default function Orders() {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
+  const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const fetchOrders = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("purchase_orders")
+      .select(`
+        id,
+        po_number,
+        quantity,
+        total_price,
+        status,
+        is_hot_order,
+        requested_delivery_date,
+        estimated_delivery_date,
+        created_at,
+        pdf_url,
+        products (name)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders");
+    } else {
+      const formattedOrders = (data || []).map((order: any) => ({
+        id: order.id,
+        po_number: order.po_number,
+        product_name: order.products?.name || null,
+        quantity: order.quantity,
+        total_price: order.total_price,
+        status: order.status,
+        is_hot_order: order.is_hot_order,
+        requested_delivery_date: order.requested_delivery_date,
+        estimated_delivery_date: order.estimated_delivery_date,
+        created_at: order.created_at,
+        pdf_url: order.pdf_url,
+      }));
+      setOrders(formattedOrders);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (!user) return;
-
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          id,
-          po_number,
-          quantity,
-          total_price,
-          status,
-          is_hot_order,
-          requested_delivery_date,
-          created_at,
-          pdf_url,
-          products (name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        toast.error("Failed to load orders");
-      } else {
-        const formattedOrders = (data || []).map((order: any) => ({
-          id: order.id,
-          po_number: order.po_number,
-          product_name: order.products?.name || null,
-          quantity: order.quantity,
-          total_price: order.total_price,
-          status: order.status,
-          is_hot_order: order.is_hot_order,
-          requested_delivery_date: order.requested_delivery_date,
-          created_at: order.created_at,
-          pdf_url: order.pdf_url,
-        }));
-        setOrders(formattedOrders);
-      }
-      setLoading(false);
-    };
-
     fetchOrders();
   }, [user]);
 
   const getStatusFilter = (status: string): string => {
     if (status === "pending" || status === "submitted") return "Submitted";
+    if (status === "accepted") return "Accepted";
     if (status === "in-production") return "In Production";
     if (status === "shipped") return "Shipped";
     if (status === "delivered") return "Delivered";
     return "Submitted";
+  };
+
+  const getAcceptanceDeadline = (createdAt: string) => {
+    const created = new Date(createdAt);
+    const deadline = new Date(created.getTime() + 24 * 60 * 60 * 1000); // 1 day
+    const hoursLeft = differenceInHours(deadline, new Date());
+    return hoursLeft;
+  };
+
+  const handleAcceptOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setAcceptDialogOpen(true);
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -266,35 +290,65 @@ export default function Orders() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                        {formatDate(order.requested_delivery_date)}
+                        {formatDate(order.estimated_delivery_date || order.requested_delivery_date)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Admin: Show Accept button for pending/submitted orders */}
+                          {isAdmin && (order.status === "pending" || order.status === "submitted") && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1"
+                              onClick={() => handleAcceptOrder(order)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Accept
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                              <Eye className="h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            {order.pdf_url && (
-                              <DropdownMenuItem className="gap-2" asChild>
-                                <a href={order.pdf_url} target="_blank" rel="noopener noreferrer">
-                                  <Download className="h-4 w-4" />
-                                  Download PO PDF
-                                </a>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem className="gap-2">
+                                <Eye className="h-4 w-4" />
+                                View Details
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 text-accent">
-                              <Flame className="h-4 w-4" />
-                              Mark as Hot
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {order.pdf_url && (
+                                <DropdownMenuItem className="gap-2" asChild>
+                                  <a href={order.pdf_url} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4" />
+                                    Download PO PDF
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              {isAdmin && (order.status === "pending" || order.status === "submitted") && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="gap-2"
+                                    onClick={() => handleAcceptOrder(order)}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Accept Order
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {!order.is_hot_order && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="gap-2 text-accent">
+                                    <Flame className="h-4 w-4" />
+                                    Mark as Hot
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -323,6 +377,14 @@ export default function Orders() {
             )}
           </div>
         )}
+
+        {/* Accept Order Dialog */}
+        <AcceptOrderDialog
+          open={acceptDialogOpen}
+          onOpenChange={setAcceptDialogOpen}
+          order={selectedOrder}
+          onAccepted={fetchOrders}
+        />
       </div>
     </MainLayout>
   );
