@@ -331,6 +331,7 @@ export function EditableOrderRow({
             className="h-8 w-28"
           />
         </td>
+        {/* Value column - admin only in edit mode */}
         <td className="whitespace-nowrap px-6 py-2">
           <Input
             type="number"
@@ -601,9 +602,11 @@ export function EditableOrderRow({
       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
         {order.quantity.toLocaleString()} units
       </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-card-foreground">
-        {formatCurrency(order.total_price)}
-      </td>
+      {isAdmin && (
+        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-card-foreground">
+          {formatCurrency(order.total_price)}
+        </td>
+      )}
       <td className="whitespace-nowrap px-6 py-4">
         <Badge variant="outline" className={cn("font-medium", statusStyles[order.status] || statusStyles.pending)}>
           {statusLabels[order.status] || "Submitted"}

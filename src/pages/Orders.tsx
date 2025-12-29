@@ -618,9 +618,11 @@ export default function Orders() {
                         <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Quantity
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Value
-                        </th>
+                        {isAdmin && (
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Value
+                          </th>
+                        )}
                         <FilterableColumnHeader
                           title="Status"
                           options={filterOptions.statuses}
@@ -757,9 +759,11 @@ export default function Orders() {
                       <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Quantity
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Value
-                      </th>
+                      {isAdmin && (
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Value
+                        </th>
+                      )}
                       <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Status
                       </th>
