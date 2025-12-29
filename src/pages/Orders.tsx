@@ -31,6 +31,11 @@ interface ShippedLoadDetail {
   shipped_at: string;
 }
 
+interface ExcessStockDetail {
+  pallet_count: number;
+  total_quantity: number;
+}
+
 interface InventoryStats {
   inFloor: number;
   shipped: number;
@@ -38,12 +43,14 @@ interface InventoryStats {
   percentProduced: number;
   loadDetails: LoadDetail[];
   shippedLoadDetails: ShippedLoadDetail[];
+  excessStock: ExcessStockDetail | null;
 }
 
 interface Order {
   id: string;
   po_number: string;
   product_name: string | null;
+  product_pt_code: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -109,7 +116,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name)
+        products (name, pt_code)
       `)
       .order("created_at", { ascending: false });
 
@@ -287,6 +294,33 @@ export default function Orders() {
       }
     }
 
+    // Fetch excess stock by PT code (for admin view)
+    const ptCodes = (ordersData || [])
+      .map((o: any) => o.products?.pt_code)
+      .filter((pt: string | null): pt is string => pt !== null && pt !== "");
+    
+    let excessStockByPT: Record<string, ExcessStockDetail> = {};
+    
+    if (ptCodes.length > 0) {
+      const { data: excessData, error: excessError } = await supabase
+        .from("inventory_pallets")
+        .select("pt_code, stock")
+        .in("pt_code", ptCodes);
+      
+      if (!excessError && excessData) {
+        excessData.forEach((pallet: any) => {
+          const ptCode = pallet.pt_code;
+          if (!ptCode) return;
+          
+          if (!excessStockByPT[ptCode]) {
+            excessStockByPT[ptCode] = { pallet_count: 0, total_quantity: 0 };
+          }
+          excessStockByPT[ptCode].pallet_count += 1;
+          excessStockByPT[ptCode].total_quantity += pallet.stock || 0;
+        });
+      }
+    }
+
     const formattedOrders = (ordersData || []).map((order: any) => {
       // Combine stats from both matching methods (bfx_order → sales_order AND customer_lot → po_number)
       const statsBySalesOrder = inventoryBySalesOrder[order.sales_order_number] || { inFloor: 0, shipped: 0 };
@@ -304,11 +338,16 @@ export default function Orders() {
       // Get load details for this PO
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
+      
+      // Get excess stock by PT code
+      const productPtCode = order.products?.pt_code || null;
+      const excessStock = productPtCode ? excessStockByPT[productPtCode] || null : null;
 
       return {
         id: order.id,
         po_number: order.po_number,
         product_name: order.products?.name || null,
+        product_pt_code: productPtCode,
         quantity: order.quantity,
         total_price: order.total_price,
         status: order.status,
@@ -326,6 +365,7 @@ export default function Orders() {
           percentProduced,
           loadDetails,
           shippedLoadDetails,
+          excessStock,
         },
       };
     });
@@ -481,6 +521,11 @@ export default function Orders() {
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Bioflex Delivery
                     </th>
+                    {isAdmin && (
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Excess Stock
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       In Floor
                     </th>
