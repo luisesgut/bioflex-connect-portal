@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2 } from "lucide-react";
+import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ interface InventoryPallet {
   pieces: number | null;
   pallet_type: string | null;
   status: "available" | "assigned" | "shipped";
+  created_at: string;
 }
 
 const statusStyles: Record<string, string> = {
@@ -56,13 +57,40 @@ export default function Inventory() {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [latestUploadDate, setLatestUploadDate] = useState<string | null>(null);
 
   const fetchInventory = useCallback(async () => {
     try {
+      // First, get the latest upload timestamp
+      const { data: latestRecord, error: latestError } = await supabase
+        .from("inventory_pallets")
+        .select("created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestError) throw latestError;
+
+      if (!latestRecord) {
+        setInventory([]);
+        setLatestUploadDate(null);
+        setLoading(false);
+        return;
+      }
+
+      // Get the date part of the latest upload (to group by upload batch)
+      const latestCreatedAt = new Date(latestRecord.created_at);
+      const uploadDateStart = new Date(latestCreatedAt);
+      uploadDateStart.setMinutes(uploadDateStart.getMinutes() - 5); // 5 min window for upload batch
+
+      setLatestUploadDate(latestCreatedAt.toISOString());
+
+      // Fetch only records from the latest upload batch
       const { data, error } = await supabase
         .from("inventory_pallets")
         .select("*")
-        .order("fecha", { ascending: false });
+        .gte("created_at", uploadDateStart.toISOString())
+        .order("pt_code", { ascending: true });
 
       if (error) throw error;
       setInventory(data || []);
@@ -181,6 +209,14 @@ export default function Inventory() {
             <p className="text-muted-foreground">
               Manage production inventory and pallets
             </p>
+            {latestUploadDate && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  Last updated: {new Date(latestUploadDate).toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
           {isAdmin && (
             <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
