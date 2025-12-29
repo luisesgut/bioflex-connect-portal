@@ -197,6 +197,71 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          id: string
+          is_hot_order: boolean
+          notes: string | null
+          pallets_needed: number | null
+          pdf_url: string | null
+          po_date: string
+          po_number: string
+          price_per_thousand: number | null
+          product_id: string | null
+          quantity: number
+          requested_delivery_date: string | null
+          status: string
+          total_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_hot_order?: boolean
+          notes?: string | null
+          pallets_needed?: number | null
+          pdf_url?: string | null
+          po_date?: string
+          po_number: string
+          price_per_thousand?: number | null
+          product_id?: string | null
+          quantity: number
+          requested_delivery_date?: string | null
+          status?: string
+          total_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_hot_order?: boolean
+          notes?: string | null
+          pallets_needed?: number | null
+          pdf_url?: string | null
+          po_date?: string
+          po_number?: string
+          price_per_thousand?: number | null
+          product_id?: string | null
+          quantity?: number
+          requested_delivery_date?: string | null
+          status?: string
+          total_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
