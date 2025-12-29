@@ -33,6 +33,7 @@ interface Product {
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
   customer_item: string | null;
+  item_description: string | null;
 }
 
 export default function CreateOrder() {
@@ -63,7 +64,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item")
+        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item, item_description")
         .order("name");
 
       if (error) {
@@ -375,7 +376,7 @@ export default function CreateOrder() {
                     >
                       {selectedProduct ? (
                         <div className="flex flex-col items-start">
-                          <span>{selectedProduct.name}</span>
+                          <span>{[selectedProduct.customer_item, selectedProduct.item_description].filter(Boolean).join(' - ') || selectedProduct.name}</span>
                           <span className="text-xs text-muted-foreground">
                             Unit: {selectedProduct.units || '-'} • {selectedProduct.pieces_per_pallet?.toLocaleString() || '-'} per pallet
                           </span>
@@ -394,23 +395,26 @@ export default function CreateOrder() {
                       <CommandList>
                         <CommandEmpty>No product found.</CommandEmpty>
                         <CommandGroup>
-                          {products.map((product) => (
-                            <CommandItem
-                              key={product.id}
-                              value={product.name}
-                              onSelect={() => {
-                                setSelectedProductId(product.id);
-                                setOpen(false);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span>{product.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  Unit: {product.units || '-'} • {product.pieces_per_pallet?.toLocaleString() || '-'} per pallet
-                                </span>
-                              </div>
-                            </CommandItem>
-                          ))}
+                          {products.map((product) => {
+                            const displayName = [product.customer_item, product.item_description].filter(Boolean).join(' - ') || product.name;
+                            return (
+                              <CommandItem
+                                key={product.id}
+                                value={displayName}
+                                onSelect={() => {
+                                  setSelectedProductId(product.id);
+                                  setOpen(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span>{displayName}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    Unit: {product.units || '-'} • {product.pieces_per_pallet?.toLocaleString() || '-'} per pallet
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>
