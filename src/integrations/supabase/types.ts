@@ -113,6 +113,7 @@ export type Database = {
       load_pallets: {
         Row: {
           created_at: string
+          delivery_date: string | null
           destination: Database["public"]["Enums"]["customer_location"] | null
           id: string
           is_on_hold: boolean
@@ -124,6 +125,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_date?: string | null
           destination?: Database["public"]["Enums"]["customer_location"] | null
           id?: string
           is_on_hold?: boolean
@@ -135,6 +137,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_date?: string | null
           destination?: Database["public"]["Enums"]["customer_location"] | null
           id?: string
           is_on_hold?: boolean
@@ -632,6 +635,8 @@ export type Database = {
         | "approved"
         | "on_hold"
         | "shipped"
+        | "in_transit"
+        | "delivered"
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
       release_status: "pending" | "approved" | "on_hold" | "shipped"
@@ -773,6 +778,8 @@ export const Constants = {
         "approved",
         "on_hold",
         "shipped",
+        "in_transit",
+        "delivered",
       ],
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],

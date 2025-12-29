@@ -35,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,11 +108,16 @@ interface ShippingLoad {
   id: string;
   load_number: string;
   shipping_date: string;
-  status: "assembling" | "pending_release" | "approved" | "on_hold" | "shipped";
+  status: "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
   total_pallets: number;
   release_number: string | null;
   release_pdf_url: string | null;
   notes: string | null;
+}
+
+interface DeliveryDateEntry {
+  destination: string;
+  date: Date | null;
 }
 
 interface ReleaseRequest {
@@ -142,7 +147,19 @@ const statusStyles: Record<string, string> = {
   approved: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   on_hold: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   shipped: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  in_transit: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  delivered: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+};
+
+const statusLabels: Record<string, string> = {
+  assembling: "Assembling",
+  pending_release: "Pending Release",
+  approved: "Released",
+  on_hold: "On Hold",
+  shipped: "Shipped",
+  in_transit: "In Transit",
+  delivered: "Delivered",
 };
 
 const destinations = [
@@ -164,13 +181,8 @@ export default function LoadDetail() {
   const [loading, setLoading] = useState(true);
   const [availablePallets, setAvailablePallets] = useState<AvailablePallet[]>([]);
   const [addPalletDialogOpen, setAddPalletDialogOpen] = useState(false);
-  const [respondDialogOpen, setRespondDialogOpen] = useState(false);
   const [selectedPalletId, setSelectedPalletId] = useState("");
   const [palletQuantity, setPalletQuantity] = useState("");
-  const [responseAction, setResponseAction] = useState<"approve" | "hold">("approve");
-  const [releaseNumber, setReleaseNumber] = useState("");
-  const [customerNotes, setCustomerNotes] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [selectedPalletIds, setSelectedPalletIds] = useState<Set<string>>(new Set());
   const [inventorySearch, setInventorySearch] = useState("");
   const [addingPallets, setAddingPallets] = useState(false);
@@ -187,6 +199,10 @@ export default function LoadDetail() {
   const [deletingLoad, setDeletingLoad] = useState(false);
   const [deletingHoldPallets, setDeletingHoldPallets] = useState(false);
   const [selectedPalletsToDelete, setSelectedPalletsToDelete] = useState<Set<string>>(new Set());
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -754,84 +770,6 @@ export default function LoadDetail() {
     }
   };
 
-  const handleRespondToRelease = async () => {
-    if (!releaseRequest || !user) return;
-
-    try {
-      const newStatus = responseAction === "approve" ? "approved" : "on_hold";
-
-      // Update release request
-      const { error: requestError } = await supabase
-        .from("release_requests")
-        .update({
-          status: newStatus,
-          response_at: new Date().toISOString(),
-          responded_by: user.id,
-          release_number: responseAction === "approve" ? releaseNumber : null,
-          customer_notes: customerNotes || null,
-        })
-        .eq("id", releaseRequest.id);
-
-      if (requestError) throw requestError;
-
-      // Update load status
-      const { error: loadError } = await supabase
-        .from("shipping_loads")
-        .update({
-          status: newStatus,
-          release_number: responseAction === "approve" ? releaseNumber : null,
-        })
-        .eq("id", id);
-
-      if (loadError) throw loadError;
-
-      toast.success(
-        responseAction === "approve"
-          ? "Release approved"
-          : "Load placed on hold"
-      );
-      setRespondDialogOpen(false);
-      setReleaseNumber("");
-      setCustomerNotes("");
-      fetchLoadData();
-    } catch (error) {
-      console.error("Error responding to release:", error);
-      toast.error("Failed to update release request");
-    }
-  };
-
-  const handleReleasePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !releaseRequest) return;
-
-    setUploading(true);
-    try {
-      const fileName = `${releaseRequest.id}/${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("release-documents")
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("release-documents")
-        .getPublicUrl(fileName);
-
-      await supabase
-        .from("release_requests")
-        .update({ release_pdf_url: urlData.publicUrl })
-        .eq("id", releaseRequest.id);
-
-      toast.success("Release PDF uploaded");
-      fetchLoadData();
-    } catch (error) {
-      console.error("Error uploading PDF:", error);
-      toast.error("Failed to upload PDF");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSendReleaseRequest = async () => {
     if (!id || !user || pallets.length === 0) {
       toast.error("Please add pallets to the load before sending a release request");
@@ -867,38 +805,6 @@ export default function LoadDetail() {
     }
   };
 
-  const handleMarkAsShipped = async () => {
-    if (!id) return;
-
-    try {
-      // Update load status
-      await supabase
-        .from("shipping_loads")
-        .update({ status: "shipped" })
-        .eq("id", id);
-
-      // Update release request status
-      if (releaseRequest) {
-        await supabase
-          .from("release_requests")
-          .update({ status: "shipped" })
-          .eq("id", releaseRequest.id);
-      }
-
-      // Update all pallets to shipped
-      const palletIds = pallets.map((p) => p.pallet_id);
-      await supabase
-        .from("inventory_pallets")
-        .update({ status: "shipped" })
-        .in("id", palletIds);
-
-      toast.success("Load marked as shipped");
-      fetchLoadData();
-    } catch (error) {
-      console.error("Error marking as shipped:", error);
-      toast.error("Failed to update load status");
-    }
-  };
 
   const handleDeleteLoad = async () => {
     if (!id) return;
@@ -1055,6 +961,93 @@ export default function LoadDetail() {
     }
   };
 
+  // Get unique destinations from pallets for delivery date dialog
+  const uniqueDestinations = useMemo(() => {
+    const destinations = pallets
+      .filter((p) => p.destination && p.destination !== "tbd" && !p.is_on_hold)
+      .map((p) => p.destination as string);
+    return [...new Set(destinations)];
+  }, [pallets]);
+
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === "delivered") {
+      // Initialize delivery dates for each destination
+      const initialDates = uniqueDestinations.map((dest) => ({
+        destination: dest,
+        date: null as Date | null,
+      }));
+      setDeliveryDates(initialDates);
+      setPendingStatus(newStatus);
+      setStatusDialogOpen(true);
+    } else {
+      // For other statuses, update directly
+      handleUpdateLoadStatus(newStatus);
+    }
+  };
+
+  const handleUpdateLoadStatus = async (newStatus: string, deliveryDatesData?: DeliveryDateEntry[]) => {
+    if (!id) return;
+
+    setUpdatingStatus(true);
+    try {
+      // Update load status
+      const { error: loadError } = await supabase
+        .from("shipping_loads")
+        .update({ status: newStatus as any })
+        .eq("id", id);
+
+      if (loadError) throw loadError;
+
+      // If delivered, update pallet delivery dates and inventory status
+      if (newStatus === "delivered" && deliveryDatesData) {
+        for (const entry of deliveryDatesData) {
+          if (entry.date) {
+            // Update load_pallets with delivery date
+            const palletIdsForDest = pallets
+              .filter((p) => p.destination === entry.destination && !p.is_on_hold)
+              .map((p) => p.id);
+
+            if (palletIdsForDest.length > 0) {
+              await supabase
+                .from("load_pallets")
+                .update({ delivery_date: entry.date.toISOString().split("T")[0] })
+                .in("id", palletIdsForDest);
+            }
+          }
+        }
+
+        // Update all non-hold pallets to shipped status in inventory
+        const palletIds = pallets.filter((p) => !p.is_on_hold).map((p) => p.pallet_id);
+        if (palletIds.length > 0) {
+          await supabase
+            .from("inventory_pallets")
+            .update({ status: "shipped" })
+            .in("id", palletIds);
+        }
+      }
+
+      toast.success(`Load status updated to ${statusLabels[newStatus] || newStatus}`);
+      setStatusDialogOpen(false);
+      setPendingStatus(null);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error updating load status:", error);
+      toast.error("Failed to update load status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleConfirmDelivery = () => {
+    // Check all destinations have dates
+    const missingDates = deliveryDates.filter((d) => !d.date);
+    if (missingDates.length > 0) {
+      toast.error("Please select delivery dates for all destinations");
+      return;
+    }
+    handleUpdateLoadStatus("delivered", deliveryDates);
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -1090,7 +1083,7 @@ export default function LoadDetail() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-tight">{load.load_number}</h1>
               <Badge className={statusStyles[load.status]} variant="secondary">
-                {load.status.replace("_", " ")}
+                {statusLabels[load.status] || load.status.replace("_", " ")}
               </Badge>
             </div>
             <p className="text-muted-foreground">
@@ -1098,6 +1091,28 @@ export default function LoadDetail() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Admin Status Change Dropdown */}
+            {isAdmin && load.status !== "assembling" && load.status !== "delivered" && (
+              <Select
+                value={load.status}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Change status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {load.status === "pending_release" && (
+                    <SelectItem value="approved">Released</SelectItem>
+                  )}
+                  {(load.status === "pending_release" || load.status === "approved") && (
+                    <SelectItem value="in_transit">In Transit</SelectItem>
+                  )}
+                  {(load.status === "pending_release" || load.status === "approved" || load.status === "in_transit") && (
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
             {isAdmin && load.status === "assembling" && pallets.length > 0 && (
               <Button onClick={handleSendReleaseRequest} disabled={sendingRelease}>
                 {sendingRelease ? (
@@ -1105,13 +1120,7 @@ export default function LoadDetail() {
                 ) : (
                   <Send className="mr-2 h-4 w-4" />
                 )}
-                Send Release Request
-              </Button>
-            )}
-            {isAdmin && load.status === "approved" && (
-              <Button onClick={handleMarkAsShipped}>
-                <Truck className="mr-2 h-4 w-4" />
-                Mark as Shipped
+                Send for Release
               </Button>
             )}
             {isAdmin && (
@@ -1146,59 +1155,6 @@ export default function LoadDetail() {
           </div>
         </div>
 
-        {/* Release Request Card */}
-        {(releaseRequest || load.status === "pending_release") && (
-          <Card className={releaseRequest?.status === "pending" ? "border-yellow-500" : ""}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Release Request
-              </CardTitle>
-              <CardDescription>
-                {releaseRequest?.status === "pending"
-                  ? "Awaiting customer response"
-                  : releaseRequest?.status === "approved"
-                  ? `Approved with release #${releaseRequest.release_number}`
-                  : releaseRequest?.status === "on_hold"
-                  ? "Customer has placed this load on hold"
-                  : "Released and shipped"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4">
-                {releaseRequest?.status === "pending" && (
-                  <Button onClick={() => setRespondDialogOpen(true)}>
-                    Respond to Request
-                  </Button>
-                )}
-                {releaseRequest?.release_pdf_url && (
-                  <Button variant="outline" asChild>
-                    <a href={releaseRequest.release_pdf_url} target="_blank" rel="noreferrer">
-                      View Release PDF
-                    </a>
-                  </Button>
-                )}
-                {releaseRequest?.status === "approved" && !releaseRequest.release_pdf_url && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleReleasePdfUpload}
-                      disabled={uploading}
-                      className="max-w-xs"
-                    />
-                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  </div>
-                )}
-              </div>
-              {releaseRequest?.customer_notes && (
-                <p className="mt-4 text-sm text-muted-foreground">
-                  <strong>Customer Notes:</strong> {releaseRequest.customer_notes}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Load Summary */}
         <div className="grid gap-4 md:grid-cols-3">
@@ -1714,65 +1670,67 @@ export default function LoadDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* Respond to Release Dialog */}
-        <Dialog open={respondDialogOpen} onOpenChange={setRespondDialogOpen}>
+        {/* Delivery Date Dialog */}
+        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Respond to Release Request</DialogTitle>
+              <DialogTitle>Confirm Delivery</DialogTitle>
               <DialogDescription>
-                Approve the shipment and provide a release number, or place on hold.
+                Enter the delivery date for each destination in this load.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="flex gap-4">
-                <Button
-                  variant={responseAction === "approve" ? "default" : "outline"}
-                  className="flex-1"
-                  onClick={() => setResponseAction("approve")}
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button
-                  variant={responseAction === "hold" ? "destructive" : "outline"}
-                  className="flex-1"
-                  onClick={() => setResponseAction("hold")}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Hold
-                </Button>
-              </div>
-              {responseAction === "approve" && (
-                <div className="space-y-2">
-                  <Label htmlFor="releaseNumber">Release Number</Label>
-                  <Input
-                    id="releaseNumber"
-                    value={releaseNumber}
-                    onChange={(e) => setReleaseNumber(e.target.value)}
-                    placeholder="e.g., REL-2024-001"
-                  />
-                </div>
+              {deliveryDates.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No destinations assigned to pallets in this load.
+                </p>
+              ) : (
+                deliveryDates.map((entry, index) => (
+                  <div key={entry.destination} className="space-y-2">
+                    <Label className="capitalize">{entry.destination}</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !entry.date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {entry.date ? format(entry.date, "PPP") : "Select delivery date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={entry.date || undefined}
+                          onSelect={(date) => {
+                            setDeliveryDates((prev) =>
+                              prev.map((d, i) =>
+                                i === index ? { ...d, date: date || null } : d
+                              )
+                            );
+                          }}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                ))
               )}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={customerNotes}
-                  onChange={(e) => setCustomerNotes(e.target.value)}
-                  placeholder="Any additional notes..."
-                  rows={3}
-                />
-              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRespondDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={handleRespondToRelease}
-                variant={responseAction === "hold" ? "destructive" : "default"}
+                onClick={handleConfirmDelivery}
+                disabled={updatingStatus || deliveryDates.length === 0}
               >
-                {responseAction === "approve" ? "Approve Release" : "Place on Hold"}
+                {updatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Delivery
               </Button>
             </DialogFooter>
           </DialogContent>
