@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes } from "lucide-react";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -117,6 +117,9 @@ export function EditableOrderRow({
 }: EditableOrderRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedOrder, setEditedOrder] = useState({
     quantity: order.quantity,
     total_price: order.total_price,
@@ -128,31 +131,85 @@ export function EditableOrderRow({
     sales_order_number: order.sales_order_number || "",
   });
 
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+
+    setUploadedFile(file);
+    toast.success('PDF selected. Save to upload.');
+  };
+
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("purchase_orders")
-      .update({
-        quantity: editedOrder.quantity,
-        total_price: editedOrder.total_price,
-        status: editedOrder.status,
-        is_hot_order: editedOrder.is_hot_order,
-        do_not_delay: editedOrder.do_not_delay,
-        requested_delivery_date: editedOrder.requested_delivery_date || null,
-        estimated_delivery_date: editedOrder.estimated_delivery_date || null,
-        sales_order_number: editedOrder.sales_order_number || null,
-      })
-      .eq("id", order.id);
 
-    setSaving(false);
+    try {
+      let pdfUrl = order.pdf_url;
 
-    if (error) {
-      console.error("Error updating order:", error);
-      toast.error("Failed to update order");
-    } else {
-      toast.success("Order updated successfully");
-      setIsEditing(false);
-      onUpdated();
+      // Upload PDF if a new file was selected
+      if (uploadedFile) {
+        setUploadingPdf(true);
+        const fileName = `po-documents/${order.id}/${order.po_number.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+        const { error: uploadError } = await supabase.storage
+          .from('ncr-attachments')
+          .upload(fileName, uploadedFile);
+
+        if (uploadError) {
+          console.error('Error uploading PDF:', uploadError);
+          toast.error('Failed to upload PDF');
+          setSaving(false);
+          setUploadingPdf(false);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('ncr-attachments')
+          .getPublicUrl(fileName);
+        pdfUrl = urlData.publicUrl;
+        setUploadingPdf(false);
+      }
+
+      const { error } = await supabase
+        .from("purchase_orders")
+        .update({
+          quantity: editedOrder.quantity,
+          total_price: editedOrder.total_price,
+          status: editedOrder.status,
+          is_hot_order: editedOrder.is_hot_order,
+          do_not_delay: editedOrder.do_not_delay,
+          requested_delivery_date: editedOrder.requested_delivery_date || null,
+          estimated_delivery_date: editedOrder.estimated_delivery_date || null,
+          sales_order_number: editedOrder.sales_order_number || null,
+          pdf_url: pdfUrl,
+        })
+        .eq("id", order.id);
+
+      setSaving(false);
+
+      if (error) {
+        console.error("Error updating order:", error);
+        toast.error("Failed to update order");
+      } else {
+        toast.success("Order updated successfully");
+        setIsEditing(false);
+        setUploadedFile(null);
+        onUpdated();
+      }
+    } catch (err) {
+      console.error("Error saving order:", err);
+      toast.error("Failed to save order");
+      setSaving(false);
     }
   };
 
@@ -167,6 +224,10 @@ export function EditableOrderRow({
       estimated_delivery_date: order.estimated_delivery_date || "",
       sales_order_number: order.sales_order_number || "",
     });
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setIsEditing(false);
   };
 
@@ -174,20 +235,73 @@ export function EditableOrderRow({
     return (
       <tr className="transition-colors bg-accent/5">
         <td className="whitespace-nowrap px-6 py-4">
-          {order.pdf_url ? (
-            <a 
-              href={order.pdf_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="font-mono text-sm font-medium text-primary hover:underline"
-            >
-              {order.po_number}
-            </a>
-          ) : (
-            <span className="font-mono text-sm font-medium text-card-foreground">
-              {order.po_number}
-            </span>
-          )}
+          <div className="flex flex-col gap-2">
+            {order.pdf_url ? (
+              <a 
+                href={order.pdf_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-mono text-sm font-medium text-primary hover:underline"
+              >
+                {order.po_number}
+              </a>
+            ) : (
+              <span className="font-mono text-sm font-medium text-card-foreground">
+                {order.po_number}
+              </span>
+            )}
+            
+            {/* PDF Upload - show if no PDF attached or allow replacing */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
+            />
+            
+            {!order.pdf_url && !uploadedFile && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-1 h-7 text-xs"
+              >
+                <Upload className="h-3 w-3" />
+                Attach PDF
+              </Button>
+            )}
+            
+            {uploadedFile && (
+              <div className="flex items-center gap-1 rounded border bg-muted/50 px-2 py-1">
+                <FileText className="h-3 w-3 text-accent" />
+                <span className="text-xs text-card-foreground truncate max-w-[80px]">{uploadedFile.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-4 w-4 ml-1"
+                  onClick={removeUploadedFile}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            
+            {order.pdf_url && !uploadedFile && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-1 h-6 text-xs text-muted-foreground"
+              >
+                <Upload className="h-3 w-3" />
+                Replace
+              </Button>
+            )}
+          </div>
         </td>
         <td className="px-6 py-4">
           <span className="text-sm font-medium text-card-foreground">
