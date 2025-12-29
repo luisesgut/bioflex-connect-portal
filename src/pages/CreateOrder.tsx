@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,12 +31,28 @@ interface Product {
   units: string | null;
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
+  customer_item: string | null;
+}
+
+interface ParsedPOData {
+  poNumber: string | null;
+  poDate: string | null;
+  itemNumber: string | null;
+  productDescription: string | null;
+  quantity: number | null;
+  pricePerThousand: number | null;
+  requestedDeliveryDate: string | null;
+  customer: string | null;
 }
 
 export default function CreateOrder() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [poNumber, setPoNumber] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(10000);
   const [pricePerThousand, setPricePerThousand] = useState<number>(0);
@@ -51,7 +67,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet")
+        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item")
         .order("name");
 
       if (error) {
@@ -82,6 +98,84 @@ export default function CreateOrder() {
     // pieces_per_pallet is total pieces per pallet
     return Math.ceil(quantity / selectedProduct.pieces_per_pallet);
   }, [quantity, selectedProduct]);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+
+    setUploadingPdf(true);
+    setUploadedFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data, error } = await supabase.functions.invoke('parse-po-pdf', {
+        body: formData,
+      });
+
+      if (error) {
+        console.error('Error parsing PDF:', error);
+        toast.error('Failed to parse PDF');
+        return;
+      }
+
+      if (!data.success) {
+        toast.error(data.error || 'Failed to extract data from PDF');
+        return;
+      }
+
+      const parsedData: ParsedPOData = data.data;
+      console.log('Parsed PO data:', parsedData);
+
+      // Auto-fill form fields with extracted data
+      if (parsedData.poNumber) {
+        setPoNumber(parsedData.poNumber);
+      }
+      if (parsedData.poDate) {
+        setPoDate(parsedData.poDate);
+      }
+      if (parsedData.quantity) {
+        setQuantity(parsedData.quantity);
+      }
+      if (parsedData.pricePerThousand) {
+        setPricePerThousand(parsedData.pricePerThousand);
+      }
+      if (parsedData.requestedDeliveryDate) {
+        setRequestedDate(parsedData.requestedDeliveryDate);
+      }
+
+      // Try to match product by item number (customer_item)
+      if (parsedData.itemNumber) {
+        const matchedProduct = products.find(
+          p => p.customer_item?.toLowerCase() === parsedData.itemNumber?.toLowerCase() ||
+               p.sku?.toLowerCase() === parsedData.itemNumber?.toLowerCase() ||
+               p.name?.toLowerCase().includes(parsedData.productDescription?.toLowerCase() || '')
+        );
+        if (matchedProduct) {
+          setSelectedProductId(matchedProduct.id);
+          toast.success('Product matched automatically!');
+        } else {
+          toast.info('Please select the matching product manually');
+        }
+      }
+
+      toast.success('PO data extracted successfully!', {
+        description: 'Please review and confirm the details below.',
+      });
+
+    } catch (err) {
+      console.error('Error uploading PDF:', err);
+      toast.error('Failed to upload PDF');
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,22 +223,82 @@ export default function CreateOrder() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* PO Date */}
+          {/* PDF Upload Section */}
+          <div className="rounded-xl border border-dashed border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 p-6 shadow-card animate-slide-up">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-4">
+              <Upload className="h-5 w-5 text-accent" />
+              Quick Import
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload your PO PDF to automatically fill in the order details
+            </p>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
+            />
+            
+            <div className="flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPdf}
+                className="gap-2"
+              >
+                {uploadingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    Upload PO PDF
+                  </>
+                )}
+              </Button>
+              {uploadedFileName && !uploadingPdf && (
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-accent" />
+                  {uploadedFileName}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* PO Information */}
           <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.05s" }}>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-6">
               <Calendar className="h-5 w-5 text-accent" />
               PO Information
             </h2>
             
-            <div className="space-y-2">
-              <Label htmlFor="po-date">PO Order Date</Label>
-              <Input
-                id="po-date"
-                type="date"
-                value={poDate}
-                onChange={(e) => setPoDate(e.target.value)}
-                className="h-12 max-w-xs"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="po-number">PO Number</Label>
+                <Input
+                  id="po-number"
+                  type="text"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="Enter PO number"
+                  className="h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="po-date">PO Order Date</Label>
+                <Input
+                  id="po-date"
+                  type="date"
+                  value={poDate}
+                  onChange={(e) => setPoDate(e.target.value)}
+                  className="h-12"
+                />
+              </div>
             </div>
           </div>
 
@@ -348,6 +502,14 @@ export default function CreateOrder() {
             </h2>
             
             <div className="space-y-3">
+              {poNumber && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">PO Number</span>
+                  <span className="font-medium text-card-foreground">
+                    {poNumber}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">PO Date</span>
                 <span className="font-medium text-card-foreground">
