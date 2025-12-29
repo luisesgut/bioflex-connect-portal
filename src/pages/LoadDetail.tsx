@@ -1234,103 +1234,102 @@ export default function LoadDetail() {
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           {releaseRequest?.status === "pending" || isAdmin ? (
-                            <div className="flex items-center gap-2">
-                              {palletStatus === "hold" ? (
-                                <>
-                                  <Badge variant="destructive" className="flex items-center gap-1">
-                                    <X className="h-3 w-3" />
-                                    Hold
-                                  </Badge>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 text-xs text-green-600 hover:text-green-700"
-                                    onClick={() => handleTogglePalletHold(pallet.id, pallet.pallet_id, false)}
-                                  >
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Ship
-                                  </Button>
-                                </>
-                              ) : palletStatus === "pending" ? (
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                                    Pending
-                                  </Badge>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-7 text-xs text-green-600 hover:text-green-700"
-                                    onClick={() => handleTogglePalletHold(pallet.id, pallet.pallet_id, false)}
-                                  >
-                                    <Check className="h-3 w-3 mr-1" />
-                                    Ship
-                                  </Button>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-7 text-xs text-red-600 hover:text-red-700"
-                                      >
-                                        <X className="h-3 w-3 mr-1" />
+                            palletStatus === "hold" ? (
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value="hold"
+                                  onValueChange={(val) => {
+                                    if (val === "ship") {
+                                      handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[120px] border-red-500 text-red-600">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ship">
+                                      <span className="flex items-center gap-1">
+                                        <Check className="h-3 w-3 text-green-600" />
+                                        Ship
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="hold">
+                                      <span className="flex items-center gap-1">
+                                        <X className="h-3 w-3 text-red-600" />
                                         Hold
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-4" align="start">
-                                      <div className="space-y-3">
-                                        <p className="text-sm font-medium">When will this pallet be released?</p>
-                                        <Calendar
-                                          mode="single"
-                                          selected={pallet.release_date ? new Date(pallet.release_date) : undefined}
-                                          onSelect={(date) => {
-                                            if (date) {
-                                              handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
-                                            }
-                                          }}
-                                          disabled={(date) => date < new Date()}
-                                          initialFocus
-                                        />
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1">
-                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 flex items-center gap-1">
-                                    <Check className="h-3 w-3" />
-                                    Ship
-                                  </Badge>
-                                  <Popover>
+                                      </span>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {pallet.release_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Until {format(new Date(pallet.release_date), "MMM d")}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <Popover>
+                                <Select
+                                  value={palletStatus}
+                                  onValueChange={(val) => {
+                                    if (val === "ship") {
+                                      handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
+                                    }
+                                    // Hold selection is handled by popover trigger below
+                                  }}
+                                >
+                                  <SelectTrigger className={`w-[120px] ${
+                                    palletStatus === "pending" 
+                                      ? "border-yellow-500 text-yellow-600" 
+                                      : "border-green-500 text-green-600"
+                                  }`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending" disabled>
+                                      <span className="flex items-center gap-1 text-yellow-600">
+                                        Pending
+                                      </span>
+                                    </SelectItem>
+                                    <SelectItem value="ship">
+                                      <span className="flex items-center gap-1">
+                                        <Check className="h-3 w-3 text-green-600" />
+                                        Ship
+                                      </span>
+                                    </SelectItem>
                                     <PopoverTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-7 text-xs text-red-600 hover:text-red-700"
+                                      <div 
+                                        className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
-                                        <X className="h-3 w-3 mr-1" />
-                                        Hold
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-4" align="start">
-                                      <div className="space-y-3">
-                                        <p className="text-sm font-medium">When will this pallet be released?</p>
-                                        <Calendar
-                                          mode="single"
-                                          selected={pallet.release_date ? new Date(pallet.release_date) : undefined}
-                                          onSelect={(date) => {
-                                            if (date) {
-                                              handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
-                                            }
-                                          }}
-                                          disabled={(date) => date < new Date()}
-                                          initialFocus
-                                        />
+                                        <span className="flex items-center gap-1">
+                                          <X className="h-3 w-3 text-red-600" />
+                                          Hold
+                                        </span>
                                       </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              )}
-                            </div>
+                                    </PopoverTrigger>
+                                  </SelectContent>
+                                </Select>
+                                <PopoverContent className="w-auto p-4 pointer-events-auto" align="start">
+                                  <div className="space-y-3">
+                                    <p className="text-sm font-medium">When will this pallet be released?</p>
+                                    <Calendar
+                                      mode="single"
+                                      selected={pallet.release_date ? new Date(pallet.release_date) : undefined}
+                                      onSelect={(date) => {
+                                        if (date) {
+                                          handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
+                                        }
+                                      }}
+                                      disabled={(date) => date < new Date()}
+                                      initialFocus
+                                      className="pointer-events-auto"
+                                    />
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )
                           ) : (
                             <Badge variant={pallet.is_on_hold ? "destructive" : "default"}>
                               {pallet.is_on_hold ? "On Hold" : "Ship"}
