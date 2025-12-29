@@ -1300,7 +1300,8 @@ export default function LoadDetail() {
                   </TableHeader>
                   <TableBody>
                     {pallets.map((pallet) => {
-                      const palletStatus = pallet.is_on_hold ? "hold" : (releaseRequest?.status === "pending" ? "pending" : "ship");
+                      // Status is "pending" when load is assembling or release request is pending, unless customer chose hold/ship
+                      const palletStatus = pallet.is_on_hold ? "hold" : (load?.status === "assembling" || releaseRequest?.status === "pending" ? "pending" : "ship");
                       return (
                       <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
                         {isAdmin && (
