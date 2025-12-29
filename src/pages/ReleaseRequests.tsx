@@ -48,6 +48,7 @@ interface ReleaseRequest {
 
 const statusStyles: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+  pending_release: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
   approved: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   on_hold: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   shipped: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
@@ -57,11 +58,22 @@ const statusStyles: Record<string, string> = {
 
 const statusIcons: Record<string, React.ReactNode> = {
   pending: <Clock className="h-4 w-4" />,
+  pending_release: <Clock className="h-4 w-4" />,
   approved: <CheckCircle className="h-4 w-4" />,
   on_hold: <XCircle className="h-4 w-4" />,
   shipped: <Truck className="h-4 w-4" />,
   in_transit: <Package className="h-4 w-4" />,
   delivered: <MapPin className="h-4 w-4" />,
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "Pending",
+  pending_release: "Pending Release",
+  approved: "Released",
+  on_hold: "On Hold",
+  shipped: "Shipped",
+  in_transit: "In Transit",
+  delivered: "Delivered",
 };
 
 const loadStatusOptions = [
@@ -354,7 +366,7 @@ export default function ReleaseRequests() {
                         ) : (
                           <Badge className={statusStyles[request.load.status] || statusStyles[request.status]} variant="secondary">
                             <span className="mr-1">{statusIcons[request.load.status] || statusIcons[request.status]}</span>
-                            {(request.load.status || request.status).replace("_", " ")}
+                            {statusLabels[request.load.status] || statusLabels[request.status] || request.load.status}
                           </Badge>
                         )}
                       </TableCell>
