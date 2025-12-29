@@ -207,6 +207,143 @@ export default function ReleaseRequests() {
   const approvedCount = requests.filter((r) => r.status === "approved").length;
   const onHoldCount = requests.filter((r) => r.status === "on_hold").length;
 
+  // Split requests into categories based on load status
+  const pendingLoads = requests.filter((r) => 
+    r.load.status === "pending_release" || r.load.status === "approved" || r.load.status === "on_hold"
+  );
+  const inTransitLoads = requests.filter((r) => r.load.status === "in_transit");
+  const deliveredLoads = requests.filter((r) => r.load.status === "delivered");
+
+  const renderTable = (items: ReleaseRequest[], emptyMessage: string) => {
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="rounded-md border overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Load #</TableHead>
+              <TableHead>Ship Date</TableHead>
+              <TableHead>Delivery Date</TableHead>
+              <TableHead className="text-center">Pallets</TableHead>
+              <TableHead>Load Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {request.load.load_number}
+                    {request.is_hot_order && (
+                      <Badge variant="destructive" className="text-xs">
+                        HOT
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {isAdmin ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                          <CalendarIcon className="mr-1 h-3 w-3" />
+                          {format(new Date(request.load.shipping_date), "MMM d, yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={new Date(request.load.shipping_date)}
+                          onSelect={(date) => date && handleDateChange(request.load.id, 'shipping_date', date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    format(new Date(request.load.shipping_date), "MMM d, yyyy")
+                  )}
+                </TableCell>
+                <TableCell>
+                  {isAdmin ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                          <CalendarIcon className="mr-1 h-3 w-3" />
+                          {request.load.estimated_delivery_date 
+                            ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
+                            : "Set date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={request.load.estimated_delivery_date ? new Date(request.load.estimated_delivery_date) : undefined}
+                          onSelect={(date) => date && handleDateChange(request.load.id, 'estimated_delivery_date', date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    request.load.estimated_delivery_date 
+                      ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
+                      : "-"
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {request.load.total_pallets}
+                </TableCell>
+                <TableCell>
+                  {isAdmin ? (
+                    <Select
+                      value={request.load.status}
+                      onValueChange={(value) => handleStatusChange(request, value)}
+                    >
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loadStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge className={statusStyles[request.load.status] || statusStyles[request.status]} variant="secondary">
+                      <span className="mr-1">{statusIcons[request.load.status] || statusIcons[request.status]}</span>
+                      {statusLabels[request.load.status] || statusLabels[request.status] || request.load.status}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={`/shipping-loads/${request.load_id}`}>
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -252,7 +389,7 @@ export default function ReleaseRequests() {
           </Card>
         </div>
 
-        {/* Table */}
+        {/* Loading State */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -268,119 +405,36 @@ export default function ReleaseRequests() {
             </CardContent>
           </Card>
         ) : (
-          <div className="rounded-md border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Load #</TableHead>
-                  <TableHead>Ship Date</TableHead>
-                  <TableHead>Delivery Date</TableHead>
-                  <TableHead className="text-center">Pallets</TableHead>
-                  <TableHead>Load Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {request.load.load_number}
-                          {request.is_hot_order && (
-                            <Badge variant="destructive" className="text-xs">
-                              HOT
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {isAdmin ? (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
-                                <CalendarIcon className="mr-1 h-3 w-3" />
-                                {format(new Date(request.load.shipping_date), "MMM d, yyyy")}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={new Date(request.load.shipping_date)}
-                                onSelect={(date) => date && handleDateChange(request.load.id, 'shipping_date', date)}
-                                initialFocus
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        ) : (
-                          format(new Date(request.load.shipping_date), "MMM d, yyyy")
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isAdmin ? (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
-                                <CalendarIcon className="mr-1 h-3 w-3" />
-                                {request.load.estimated_delivery_date 
-                                  ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
-                                  : "Set date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={request.load.estimated_delivery_date ? new Date(request.load.estimated_delivery_date) : undefined}
-                                onSelect={(date) => date && handleDateChange(request.load.id, 'estimated_delivery_date', date)}
-                                initialFocus
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        ) : (
-                          request.load.estimated_delivery_date 
-                            ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
-                            : "-"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {request.load.total_pallets}
-                      </TableCell>
-                      <TableCell>
-                        {isAdmin ? (
-                          <Select
-                            value={request.load.status}
-                            onValueChange={(value) => handleStatusChange(request, value)}
-                          >
-                            <SelectTrigger className="w-[160px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {loadStatusOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge className={statusStyles[request.load.status] || statusStyles[request.status]} variant="secondary">
-                            <span className="mr-1">{statusIcons[request.load.status] || statusIcons[request.status]}</span>
-                            {statusLabels[request.load.status] || statusLabels[request.status] || request.load.status}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/shipping-loads/${request.load_id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-8">
+            {/* Pending Loads Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <h2 className="text-lg font-semibold">Pending Loads</h2>
+                <span className="text-sm text-muted-foreground">({pendingLoads.length})</span>
+              </div>
+              {renderTable(pendingLoads, "No pending loads")}
+            </div>
+
+            {/* In Transit Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-purple-600" />
+                <h2 className="text-lg font-semibold">In Transit</h2>
+                <span className="text-sm text-muted-foreground">({inTransitLoads.length})</span>
+              </div>
+              {renderTable(inTransitLoads, "No loads in transit")}
+            </div>
+
+            {/* Delivered Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-emerald-600" />
+                <h2 className="text-lg font-semibold">Delivered</h2>
+                <span className="text-sm text-muted-foreground">({deliveredLoads.length})</span>
+              </div>
+              {renderTable(deliveredLoads, "No delivered loads")}
+            </div>
           </div>
         )}
       </div>
