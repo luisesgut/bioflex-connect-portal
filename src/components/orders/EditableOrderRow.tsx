@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,15 +19,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface LoadDetail {
+  load_number: string;
+  load_id: string;
+  pallet_count: number;
+  quantity: number;
+}
 
 interface InventoryStats {
   inFloor: number;
   shipped: number;
   pending: number;
   percentProduced: number;
+  loadDetails: LoadDetail[];
 }
 
 interface Order {
@@ -237,7 +251,41 @@ export function EditableOrderRow({
           />
         </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
-          {order.inventoryStats.inFloor.toLocaleString()}
+          {order.inventoryStats.inFloor > 0 && order.inventoryStats.loadDetails.length > 0 ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">
+                  {order.inventoryStats.inFloor.toLocaleString()}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64" align="end">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Loads with this material</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {order.inventoryStats.loadDetails.map((load) => (
+                      <Link
+                        key={load.load_id}
+                        to={`/shipping-loads/${load.load_id}`}
+                        className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted transition-colors"
+                      >
+                        <span className="font-medium text-primary hover:underline">
+                          {load.load_number}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {load.pallet_count} pallet{load.pallet_count !== 1 ? "s" : ""} · {load.quantity.toLocaleString()}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            order.inventoryStats.inFloor.toLocaleString()
+          )}
         </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
           {order.inventoryStats.shipped.toLocaleString()}
@@ -353,7 +401,41 @@ export function EditableOrderRow({
         {formatDate(order.estimated_delivery_date)}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
-        {order.inventoryStats.inFloor.toLocaleString()}
+        {order.inventoryStats.inFloor > 0 && order.inventoryStats.loadDetails.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <span className="cursor-help underline decoration-dotted underline-offset-2">
+                {order.inventoryStats.inFloor.toLocaleString()}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-64" align="end">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Loads with this material</span>
+                </div>
+                <div className="space-y-1.5">
+                  {order.inventoryStats.loadDetails.map((load) => (
+                    <Link
+                      key={load.load_id}
+                      to={`/shipping-loads/${load.load_id}`}
+                      className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted transition-colors"
+                    >
+                      <span className="font-medium text-primary hover:underline">
+                        {load.load_number}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {load.pallet_count} pallet{load.pallet_count !== 1 ? "s" : ""} · {load.quantity.toLocaleString()}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          order.inventoryStats.inFloor.toLocaleString()
+        )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
         {order.inventoryStats.shipped.toLocaleString()}
