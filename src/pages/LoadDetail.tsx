@@ -526,11 +526,12 @@ export default function LoadDetail() {
     try {
       const palletsToAdd = availablePallets.filter((p) => selectedPalletIds.has(p.id));
 
-      // Insert all pallets to load
+      // Insert all pallets to load with TBD as default destination
       const insertData = palletsToAdd.map((p) => ({
         load_id: id,
         pallet_id: p.id,
         quantity: p.stock,
+        destination: "tbd" as const,
       }));
 
       const { error: insertError } = await supabase.from("load_pallets").insert(insertData);
@@ -569,11 +570,12 @@ export default function LoadDetail() {
     }
 
     try {
-      // Add pallet to load
+      // Add pallet to load with TBD as default destination
       const { error: insertError } = await supabase.from("load_pallets").insert({
         load_id: id,
         pallet_id: selectedPalletId,
         quantity: parseFloat(palletQuantity),
+        destination: "tbd" as const,
       });
 
       if (insertError) throw insertError;
