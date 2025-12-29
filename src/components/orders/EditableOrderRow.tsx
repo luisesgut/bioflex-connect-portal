@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2 } from "lucide-react";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ interface Order {
   total_price: number | null;
   status: string;
   is_hot_order: boolean;
+  do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
   created_at: string;
@@ -77,6 +78,7 @@ export function EditableOrderRow({
     total_price: order.total_price,
     status: order.status,
     is_hot_order: order.is_hot_order,
+    do_not_delay: order.do_not_delay,
     requested_delivery_date: order.requested_delivery_date || "",
     estimated_delivery_date: order.estimated_delivery_date || "",
     sales_order_number: order.sales_order_number || "",
@@ -91,6 +93,7 @@ export function EditableOrderRow({
         total_price: editedOrder.total_price,
         status: editedOrder.status,
         is_hot_order: editedOrder.is_hot_order,
+        do_not_delay: editedOrder.do_not_delay,
         requested_delivery_date: editedOrder.requested_delivery_date || null,
         estimated_delivery_date: editedOrder.estimated_delivery_date || null,
         sales_order_number: editedOrder.sales_order_number || null,
@@ -115,6 +118,7 @@ export function EditableOrderRow({
       total_price: order.total_price,
       status: order.status,
       is_hot_order: order.is_hot_order,
+      do_not_delay: order.do_not_delay,
       requested_delivery_date: order.requested_delivery_date || "",
       estimated_delivery_date: order.estimated_delivery_date || "",
       sales_order_number: order.sales_order_number || "",
@@ -191,12 +195,21 @@ export function EditableOrderRow({
           />
         </td>
         <td className="whitespace-nowrap px-6 py-2">
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={editedOrder.is_hot_order}
-              onCheckedChange={(checked) => setEditedOrder({ ...editedOrder, is_hot_order: checked })}
-            />
-            {editedOrder.is_hot_order && <Flame className="h-4 w-4 text-accent" />}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Switch
+                checked={editedOrder.is_hot_order}
+                onCheckedChange={(checked) => setEditedOrder({ ...editedOrder, is_hot_order: checked })}
+              />
+              {editedOrder.is_hot_order && <Flame className="h-4 w-4 text-accent" />}
+            </div>
+            <div className="flex items-center gap-1">
+              <Switch
+                checked={editedOrder.do_not_delay}
+                onCheckedChange={(checked) => setEditedOrder({ ...editedOrder, do_not_delay: checked })}
+              />
+              {editedOrder.do_not_delay && <Clock className="h-4 w-4 text-yellow-600" />}
+            </div>
           </div>
         </td>
         <td className="whitespace-nowrap px-6 py-2">
@@ -281,14 +294,23 @@ export function EditableOrderRow({
         </td>
       )}
       <td className="whitespace-nowrap px-6 py-4">
-        {order.is_hot_order ? (
-          <div className="flex items-center gap-1.5">
-            <Flame className="h-4 w-4 text-accent animate-pulse" />
-            <span className="text-sm font-semibold text-accent">Hot</span>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">Normal</span>
-        )}
+        <div className="flex items-center gap-2">
+          {order.is_hot_order && (
+            <div className="flex items-center gap-1">
+              <Flame className="h-4 w-4 text-accent animate-pulse" />
+              <span className="text-sm font-semibold text-accent">Hot</span>
+            </div>
+          )}
+          {order.do_not_delay && (
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              <span className="text-sm font-semibold text-yellow-600">DND</span>
+            </div>
+          )}
+          {!order.is_hot_order && !order.do_not_delay && (
+            <span className="text-sm text-muted-foreground">Normal</span>
+          )}
+        </div>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
         {formatDate(order.requested_delivery_date)}

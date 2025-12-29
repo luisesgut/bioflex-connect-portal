@@ -370,7 +370,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       change_request_status: "pending" | "approved" | "rejected"
-      change_request_type: "volume_change" | "cancellation"
+      change_request_type: "volume_change" | "cancellation" | "do_not_delay"
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
     }
@@ -502,7 +502,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       change_request_status: ["pending", "approved", "rejected"],
-      change_request_type: ["volume_change", "cancellation"],
+      change_request_type: ["volume_change", "cancellation", "do_not_delay"],
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],
     },
