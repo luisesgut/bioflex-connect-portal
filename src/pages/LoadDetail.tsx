@@ -101,6 +101,9 @@ interface LoadPallet {
     customer_lot: string | null;
     bfx_order: string | null;
     release_date: string | null;
+    unit: string;
+    traceability: string;
+    fecha: string;
   };
 }
 
@@ -229,7 +232,7 @@ export default function LoadDetail() {
           release_number,
           release_pdf_url,
           is_on_hold,
-          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date)
+          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha)
         `)
         .eq("load_id", id);
 
@@ -1007,6 +1010,38 @@ export default function LoadDetail() {
 
       if (loadError) throw loadError;
 
+      // When transitioning to in_transit, record pallets to shipped_pallets table
+      if (newStatus === "in_transit") {
+        const palletsToShip = pallets.filter((p) => !p.is_on_hold);
+        
+        if (palletsToShip.length > 0) {
+          const shippedRecords = palletsToShip.map((p) => ({
+            original_pallet_id: p.pallet_id,
+            load_pallet_id: p.id,
+            load_id: id,
+            pt_code: p.pallet.pt_code,
+            description: p.pallet.description,
+            customer_lot: p.pallet.customer_lot,
+            bfx_order: p.pallet.bfx_order,
+            quantity: p.quantity,
+            unit: p.pallet.unit,
+            traceability: p.pallet.traceability,
+            fecha: p.pallet.fecha,
+            destination: p.destination,
+            shipped_at: new Date().toISOString(),
+          }));
+
+          const { error: shippedError } = await supabase
+            .from("shipped_pallets")
+            .insert(shippedRecords);
+
+          if (shippedError) {
+            console.error("Error recording shipped pallets:", shippedError);
+            // Don't throw, just log - the status change is more important
+          }
+        }
+      }
+
       // If delivered, update pallet delivery dates and inventory status
       if (newStatus === "delivered" && deliveryDatesData) {
         for (const entry of deliveryDatesData) {
@@ -1021,6 +1056,12 @@ export default function LoadDetail() {
                 .from("load_pallets")
                 .update({ delivery_date: entry.date.toISOString().split("T")[0] })
                 .in("id", palletIdsForDest);
+
+              // Also update shipped_pallets with delivery date
+              await supabase
+                .from("shipped_pallets")
+                .update({ delivery_date: entry.date.toISOString().split("T")[0] })
+                .in("load_pallet_id", palletIdsForDest);
             }
           }
         }

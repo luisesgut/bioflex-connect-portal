@@ -107,27 +107,17 @@ export default function Orders() {
       .map((o: any) => o.sales_order_number)
       .filter((son: string | null): son is string => son !== null && son !== "");
 
-    // Fetch inventory with load statuses for all relevant sales orders
+    // Fetch inventory (in floor) and shipped pallets separately
     let inventoryMap: Record<string, { inFloor: number; shipped: number }> = {};
     
     if (salesOrderNumbers.length > 0) {
+      // Fetch current inventory (this is what's "in floor")
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventory_pallets")
-        .select(`
-          id,
-          bfx_order,
-          stock,
-          load_pallets (
-            load_id,
-            shipping_loads (
-              status
-            )
-          )
-        `)
+        .select("bfx_order, stock")
         .in("bfx_order", salesOrderNumbers);
 
       if (!inventoryError && inventoryData) {
-        // Process inventory data to calculate in_floor and shipped per sales_order
         inventoryData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
@@ -135,19 +125,25 @@ export default function Orders() {
           if (!inventoryMap[salesOrder]) {
             inventoryMap[salesOrder] = { inFloor: 0, shipped: 0 };
           }
+          inventoryMap[salesOrder].inFloor += pallet.stock || 0;
+        });
+      }
 
-          const stock = pallet.stock || 0;
-          
-          // Check if pallet is in a load with in_transit or delivered status
-          const loadPallet = pallet.load_pallets?.[0];
-          const loadStatus = loadPallet?.shipping_loads?.status;
-          
-          if (loadStatus === "in_transit" || loadStatus === "delivered") {
-            inventoryMap[salesOrder].shipped += stock;
-          } else {
-            // All other statuses (available, assigned, or loads with other statuses) = in floor
-            inventoryMap[salesOrder].inFloor += stock;
+      // Fetch shipped pallets (permanent record of shipped product)
+      const { data: shippedData, error: shippedError } = await supabase
+        .from("shipped_pallets")
+        .select("bfx_order, quantity")
+        .in("bfx_order", salesOrderNumbers);
+
+      if (!shippedError && shippedData) {
+        shippedData.forEach((pallet: any) => {
+          const salesOrder = pallet.bfx_order;
+          if (!salesOrder) return;
+
+          if (!inventoryMap[salesOrder]) {
+            inventoryMap[salesOrder] = { inFloor: 0, shipped: 0 };
           }
+          inventoryMap[salesOrder].shipped += pallet.quantity || 0;
         });
       }
     }
