@@ -61,7 +61,7 @@ export default function Inventory() {
 
   const fetchInventory = useCallback(async () => {
     try {
-      // First, get the latest upload timestamp
+      // Get the latest upload timestamp for display
       const { data: latestRecord, error: latestError } = await supabase
         .from("inventory_pallets")
         .select("created_at")
@@ -71,25 +71,16 @@ export default function Inventory() {
 
       if (latestError) throw latestError;
 
-      if (!latestRecord) {
-        setInventory([]);
+      if (latestRecord) {
+        setLatestUploadDate(latestRecord.created_at);
+      } else {
         setLatestUploadDate(null);
-        setLoading(false);
-        return;
       }
 
-      // Get the date part of the latest upload (to group by upload batch)
-      const latestCreatedAt = new Date(latestRecord.created_at);
-      const uploadDateStart = new Date(latestCreatedAt);
-      uploadDateStart.setMinutes(uploadDateStart.getMinutes() - 5); // 5 min window for upload batch
-
-      setLatestUploadDate(latestCreatedAt.toISOString());
-
-      // Fetch only records from the latest upload batch
+      // Fetch all current inventory
       const { data, error } = await supabase
         .from("inventory_pallets")
         .select("*")
-        .gte("created_at", uploadDateStart.toISOString())
         .order("pt_code", { ascending: true });
 
       if (error) throw error;
@@ -160,11 +151,19 @@ export default function Inventory() {
         };
       });
 
+      // Delete all existing available inventory before inserting new data
+      const { error: deleteError } = await supabase
+        .from("inventory_pallets")
+        .delete()
+        .eq("status", "available");
+
+      if (deleteError) throw deleteError;
+
       const { error } = await supabase.from("inventory_pallets").insert(pallets);
 
       if (error) throw error;
 
-      toast.success(`Successfully uploaded ${pallets.length} inventory records`);
+      toast.success(`Successfully uploaded ${pallets.length} inventory records (replaced previous inventory)`);
       setUploadDialogOpen(false);
       fetchInventory();
     } catch (error) {
