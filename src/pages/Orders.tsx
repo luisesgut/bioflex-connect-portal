@@ -224,9 +224,20 @@ export default function Orders() {
                   {filteredOrders.map((order) => (
                     <tr key={order.id} className="transition-colors hover:bg-muted/20">
                       <td className="whitespace-nowrap px-6 py-4">
-                        <span className="font-mono text-sm font-medium text-card-foreground">
-                          {order.po_number}
-                        </span>
+                        {order.pdf_url ? (
+                          <a 
+                            href={order.pdf_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-mono text-sm font-medium text-primary hover:underline"
+                          >
+                            {order.po_number}
+                          </a>
+                        ) : (
+                          <span className="font-mono text-sm font-medium text-card-foreground">
+                            {order.po_number}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-card-foreground">
