@@ -28,6 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,12 +49,25 @@ import {
   FileText,
   Upload,
   Search,
+  ChevronDown,
+  ArrowUpDown,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+interface InventoryFilters {
+  fecha: string[];
+  pt_code: string[];
+  description: string[];
+  traceability: string[];
+  bfx_order: string[];
+  unit: string[];
+}
 
 interface LoadPallet {
   id: string;
@@ -133,6 +151,15 @@ export default function LoadDetail() {
   const [selectedPalletIds, setSelectedPalletIds] = useState<Set<string>>(new Set());
   const [inventorySearch, setInventorySearch] = useState("");
   const [addingPallets, setAddingPallets] = useState(false);
+  const [inventoryFilters, setInventoryFilters] = useState<InventoryFilters>({
+    fecha: [],
+    pt_code: [],
+    description: [],
+    traceability: [],
+    bfx_order: [],
+    unit: [],
+  });
+  const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>("desc");
 
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
@@ -205,18 +232,267 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
-  // Filter available pallets based on search
-  const filteredAvailablePallets = useMemo(() => {
-    if (!inventorySearch.trim()) return availablePallets;
-    const search = inventorySearch.toLowerCase();
-    return availablePallets.filter(
-      (p) =>
-        p.pt_code.toLowerCase().includes(search) ||
-        p.description.toLowerCase().includes(search) ||
-        p.traceability.toLowerCase().includes(search) ||
-        (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+  // Get unique values for filter options
+  const uniqueDates = useMemo(() => [...new Set(availablePallets.map(p => format(new Date(p.fecha), "MM/dd/yyyy")))].sort(), [availablePallets]);
+  const uniquePtCodes = useMemo(() => [...new Set(availablePallets.map(p => p.pt_code))].filter(Boolean).sort(), [availablePallets]);
+  const uniqueDescriptions = useMemo(() => [...new Set(availablePallets.map(p => p.description))].filter(Boolean).sort(), [availablePallets]);
+  const uniqueTraceability = useMemo(() => [...new Set(availablePallets.map(p => p.traceability))].filter(Boolean).sort(), [availablePallets]);
+  const uniqueBfxOrders = useMemo(() => [...new Set(availablePallets.map(p => p.bfx_order || "-"))].sort(), [availablePallets]);
+  const uniqueUnits = useMemo(() => [...new Set(availablePallets.map(p => p.unit))].filter(Boolean).sort(), [availablePallets]);
+
+  // Filter toggle function
+  const toggleInventoryFilter = (filterKey: keyof InventoryFilters, value: string) => {
+    setInventoryFilters(prev => {
+      const current = prev[filterKey];
+      if (current.includes(value)) {
+        return { ...prev, [filterKey]: current.filter(v => v !== value) };
+      } else {
+        return { ...prev, [filterKey]: [...current, value] };
+      }
+    });
+  };
+
+  const clearColumnFilter = (filterKey: keyof InventoryFilters) => {
+    setInventoryFilters(prev => ({ ...prev, [filterKey]: [] }));
+  };
+
+  const clearAllInventoryFilters = () => {
+    setInventoryFilters({
+      fecha: [],
+      pt_code: [],
+      description: [],
+      traceability: [],
+      bfx_order: [],
+      unit: [],
+    });
+    setInventorySearch("");
+  };
+
+  const hasActiveFilters = Object.values(inventoryFilters).some(arr => arr.length > 0) || inventorySearch.length > 0;
+
+  // Column Filter Header Component
+  const ColumnFilterHeader = ({ 
+    label, 
+    filterKey, 
+    options,
+    className = ""
+  }: { 
+    label: string; 
+    filterKey: keyof InventoryFilters; 
+    options: string[];
+    className?: string;
+  }) => {
+    const activeFilters = inventoryFilters[filterKey];
+    const isFiltered = activeFilters.length > 0;
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredOptions = options.filter(opt => 
+      opt.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [availablePallets, inventorySearch]);
+
+    return (
+      <TableHead className={className}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isFiltered ? 'text-primary font-bold' : ''}`}>
+              {label}
+              {isFiltered && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilters.length}</Badge>}
+              <ChevronDown className={`h-3 w-3 ${isFiltered ? 'text-primary' : 'text-muted-foreground'}`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-0">
+            <div className="p-2 border-b">
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="p-2 border-b flex justify-between">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => setInventoryFilters(prev => ({ ...prev, [filterKey]: filteredOptions }))}
+              >
+                Select All
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => clearColumnFilter(filterKey)}
+              >
+                Clear
+              </Button>
+            </div>
+            <ScrollArea className="h-48">
+              <div className="p-2 space-y-1">
+                {filteredOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No options</p>
+                ) : (
+                  filteredOptions.map(option => (
+                    <label 
+                      key={option} 
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                    >
+                      <Checkbox 
+                        checked={activeFilters.includes(option)}
+                        onCheckedChange={() => toggleInventoryFilter(filterKey, option)}
+                      />
+                      <span className="truncate">{option}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
+      </TableHead>
+    );
+  };
+
+  // Date Column Header with Sort and Filter
+  const DateColumnHeader = () => {
+    const activeFilters = inventoryFilters.fecha;
+    const isFiltered = activeFilters.length > 0;
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredOptions = uniqueDates.filter(opt => 
+      opt.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const toggleSort = () => {
+      setDateSortOrder(prev => {
+        if (prev === "desc") return "asc";
+        if (prev === "asc") return null;
+        return "desc";
+      });
+    };
+
+    const SortIcon = dateSortOrder === "desc" ? ArrowDown : dateSortOrder === "asc" ? ArrowUp : ArrowUpDown;
+
+    return (
+      <TableHead>
+        <div className="flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isFiltered ? 'text-primary font-bold' : ''}`}>
+                Production Date
+                {isFiltered && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilters.length}</Badge>}
+                <ChevronDown className={`h-3 w-3 ${isFiltered ? 'text-primary' : 'text-muted-foreground'}`} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-0">
+              <div className="p-2 border-b">
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8"
+                />
+              </div>
+              <div className="p-2 border-b flex justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  onClick={() => setInventoryFilters(prev => ({ ...prev, fecha: filteredOptions }))}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  onClick={() => clearColumnFilter("fecha")}
+                >
+                  Clear
+                </Button>
+              </div>
+              <ScrollArea className="h-48">
+                <div className="p-2 space-y-1">
+                  {filteredOptions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-2">No options</p>
+                  ) : (
+                    filteredOptions.map(option => (
+                      <label 
+                        key={option} 
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox 
+                          checked={activeFilters.includes(option)}
+                          onCheckedChange={() => toggleInventoryFilter("fecha", option)}
+                        />
+                        <span className="truncate">{option}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+          <button 
+            onClick={toggleSort}
+            className={`p-1 rounded hover:bg-muted transition-colors ${dateSortOrder ? 'text-primary' : 'text-muted-foreground'}`}
+            title={dateSortOrder === "desc" ? "Sorted: Newest first" : dateSortOrder === "asc" ? "Sorted: Oldest first" : "Click to sort"}
+          >
+            <SortIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </TableHead>
+    );
+  };
+
+  // Filter and sort available pallets
+  const filteredAvailablePallets = useMemo(() => {
+    let result = availablePallets;
+
+    // Apply text search
+    if (inventorySearch.trim()) {
+      const search = inventorySearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.pt_code.toLowerCase().includes(search) ||
+          p.description.toLowerCase().includes(search) ||
+          p.traceability.toLowerCase().includes(search) ||
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+      );
+    }
+
+    // Apply column filters
+    const dateStr = (p: AvailablePallet) => format(new Date(p.fecha), "MM/dd/yyyy");
+    if (inventoryFilters.fecha.length > 0) {
+      result = result.filter(p => inventoryFilters.fecha.includes(dateStr(p)));
+    }
+    if (inventoryFilters.pt_code.length > 0) {
+      result = result.filter(p => inventoryFilters.pt_code.includes(p.pt_code));
+    }
+    if (inventoryFilters.description.length > 0) {
+      result = result.filter(p => inventoryFilters.description.includes(p.description));
+    }
+    if (inventoryFilters.traceability.length > 0) {
+      result = result.filter(p => inventoryFilters.traceability.includes(p.traceability));
+    }
+    if (inventoryFilters.bfx_order.length > 0) {
+      result = result.filter(p => inventoryFilters.bfx_order.includes(p.bfx_order || "-"));
+    }
+    if (inventoryFilters.unit.length > 0) {
+      result = result.filter(p => inventoryFilters.unit.includes(p.unit));
+    }
+
+    // Apply date sorting
+    if (dateSortOrder) {
+      result = [...result].sort((a, b) => {
+        const dateA = new Date(a.fecha).getTime();
+        const dateB = new Date(b.fecha).getTime();
+        return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+
+    return result;
+  }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder]);
 
   const handleTogglePallet = (palletId: string) => {
     setSelectedPalletIds((prev) => {
@@ -685,16 +961,22 @@ export default function LoadDetail() {
                     Select pallets to add to this load ({availablePallets.length} available, {selectedPalletIds.size} selected)
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search inventory..."
                       value={inventorySearch}
                       onChange={(e) => setInventorySearch(e.target.value)}
-                      className="pl-8 w-[250px]"
+                      className="pl-8 w-[200px]"
                     />
                   </div>
+                  {hasActiveFilters && (
+                    <Button variant="outline" size="sm" onClick={clearAllInventoryFilters}>
+                      <X className="mr-1 h-3 w-3" />
+                      Clear Filters
+                    </Button>
+                  )}
                   <Button
                     onClick={handleAddSelectedPallets}
                     disabled={selectedPalletIds.size === 0 || addingPallets}
@@ -714,7 +996,7 @@ export default function LoadDetail() {
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    {inventorySearch ? "No pallets match your search" : "No available pallets"}
+                    {inventorySearch || hasActiveFilters ? "No pallets match your filters" : "No available pallets"}
                   </p>
                 </div>
               ) : (
@@ -732,13 +1014,13 @@ export default function LoadDetail() {
                               onCheckedChange={handleSelectAll}
                             />
                           </TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>PT Code</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Traceability</TableHead>
-                          <TableHead>BFX Order</TableHead>
+                          <DateColumnHeader />
+                          <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
+                          <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
+                          <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
+                          <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <TableHead className="text-right">Stock</TableHead>
-                          <TableHead>Unit</TableHead>
+                          <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
