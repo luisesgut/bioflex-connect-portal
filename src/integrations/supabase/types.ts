@@ -63,6 +63,7 @@ export type Database = {
           pallet_type: string | null
           pieces: number | null
           pt_code: string
+          release_date: string | null
           status: Database["public"]["Enums"]["inventory_status"]
           stock: number
           traceability: string
@@ -81,6 +82,7 @@ export type Database = {
           pallet_type?: string | null
           pieces?: number | null
           pt_code: string
+          release_date?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
           stock: number
           traceability: string
@@ -99,6 +101,7 @@ export type Database = {
           pallet_type?: string | null
           pieces?: number | null
           pt_code?: string
+          release_date?: string | null
           status?: Database["public"]["Enums"]["inventory_status"]
           stock?: number
           traceability?: string
