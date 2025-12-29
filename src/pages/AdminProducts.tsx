@@ -9,15 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText, Filter, X } from "lucide-react";
+import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText, ChevronDown, X } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AdminFilters {
   customer: string;
@@ -592,87 +591,24 @@ export default function AdminProducts() {
           </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-base">Filters</CardTitle>
-              </div>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
-                  <X className="h-3 w-3" />
-                  Clear all
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Search */}
-              <div className="relative lg:col-span-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Customer Filter */}
-              <Select value={filters.customer} onValueChange={(v) => setFilters(f => ({ ...f, customer: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Customer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Customers</SelectItem>
-                  {customers.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Item Type Filter */}
-              <Select value={filters.item_type} onValueChange={(v) => setFilters(f => ({ ...f, item_type: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Item Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {itemTypes.map(t => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Active Filter */}
-              <Select value={filters.activa} onValueChange={(v) => setFilters(f => ({ ...f, activa: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Active" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="yes">Active</SelectItem>
-                  <SelectItem value="no">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* PC File Filter */}
-              <Select value={filters.has_pc_file} onValueChange={(v) => setFilters(f => ({ ...f, has_pc_file: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="PC File" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="yes">Has PC File</SelectItem>
-                  <SelectItem value="no">No PC File</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Search and Instructions */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by código, nombre, customer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="gap-1">
+              <X className="h-3 w-3" />
+              Clear filters
+            </Button>
+          )}
+        </div>
 
         {/* Instructions */}
         <Card>
@@ -713,12 +649,74 @@ export default function AdminProducts() {
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre Producto</TableHead>
                       <TableHead>Print Card</TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">PC File</TableHead>
-                      <TableHead>Activa</TableHead>
+                      <TableHead className="bg-green-500/10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.has_pc_file !== 'all' ? 'font-bold' : ''}`}>
+                              PC File
+                              <ChevronDown className="h-3 w-3" />
+                              {filters.has_pc_file !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50">
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "all" }))} className={filters.has_pc_file === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "yes" }))} className={filters.has_pc_file === "yes" ? "bg-muted" : ""}>Has File</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, has_pc_file: "no" }))} className={filters.has_pc_file === "no" ? "bg-muted" : ""}>No File</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableHead>
+                      <TableHead>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center gap-1 hover:text-primary ${filters.activa !== 'all' ? 'text-primary font-bold' : ''}`}>
+                              Activa
+                              <ChevronDown className="h-3 w-3" />
+                              {filters.activa !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50">
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "all" }))} className={filters.activa === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "yes" }))} className={filters.activa === "yes" ? "bg-muted" : ""}>Active</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, activa: "no" }))} className={filters.activa === "no" ? "bg-muted" : ""}>Inactive</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableHead>
                       <TableHead className="bg-green-500/10 text-green-700">Customer Item</TableHead>
                       <TableHead className="bg-green-500/10 text-green-700">Item Description</TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">Customer</TableHead>
-                      <TableHead className="bg-green-500/10 text-green-700">Item Type</TableHead>
+                      <TableHead className="bg-green-500/10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.customer !== 'all' ? 'font-bold' : ''}`}>
+                              Customer
+                              <ChevronDown className="h-3 w-3" />
+                              {filters.customer !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50 max-h-64 overflow-y-auto">
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, customer: "all" }))} className={filters.customer === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
+                            {customers.map(c => (
+                              <DropdownMenuItem key={c} onClick={() => setFilters(f => ({ ...f, customer: c }))} className={filters.customer === c ? "bg-muted" : ""}>{c}</DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableHead>
+                      <TableHead className="bg-green-500/10">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center gap-1 text-green-700 hover:text-green-900 ${filters.item_type !== 'all' ? 'font-bold' : ''}`}>
+                              Item Type
+                              <ChevronDown className="h-3 w-3" />
+                              {filters.item_type !== 'all' && <span className="w-1.5 h-1.5 rounded-full bg-green-600" />}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50 max-h-64 overflow-y-auto">
+                            <DropdownMenuItem onClick={() => setFilters(f => ({ ...f, item_type: "all" }))} className={filters.item_type === "all" ? "bg-muted" : ""}>All</DropdownMenuItem>
+                            {itemTypes.map(t => (
+                              <DropdownMenuItem key={t} onClick={() => setFilters(f => ({ ...f, item_type: t }))} className={filters.item_type === t ? "bg-muted" : ""}>{t}</DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableHead>
                       <TableHead className="bg-green-500/10 text-green-700">Pcs/Pallet</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
