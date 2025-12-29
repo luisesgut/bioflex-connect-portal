@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck } from "lucide-react";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,12 +35,22 @@ interface LoadDetail {
   quantity: number;
 }
 
+interface ShippedLoadDetail {
+  load_number: string;
+  load_id: string;
+  pallet_count: number;
+  quantity: number;
+  delivery_date: string | null;
+  shipped_at: string;
+}
+
 interface InventoryStats {
   inFloor: number;
   shipped: number;
   pending: number;
   percentProduced: number;
   loadDetails: LoadDetail[];
+  shippedLoadDetails: ShippedLoadDetail[];
 }
 
 interface Order {
@@ -288,7 +298,49 @@ export function EditableOrderRow({
           )}
         </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
-          {order.inventoryStats.shipped.toLocaleString()}
+          {order.inventoryStats.shipped > 0 && order.inventoryStats.shippedLoadDetails.length > 0 ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2">
+                  {order.inventoryStats.shipped.toLocaleString()}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-72" align="end">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Shipped loads</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {order.inventoryStats.shippedLoadDetails.map((load) => (
+                      <Link
+                        key={load.load_id}
+                        to={`/shipping-loads/${load.load_id}`}
+                        className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted transition-colors"
+                      >
+                        <div>
+                          <span className="font-medium text-primary hover:underline">
+                            {load.load_number}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                            <Calendar className="h-3 w-3" />
+                            {load.delivery_date
+                              ? new Date(load.delivery_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              : new Date(load.shipped_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " (shipped)"}
+                          </div>
+                        </div>
+                        <span className="text-muted-foreground text-xs">
+                          {load.pallet_count} pallet{load.pallet_count !== 1 ? "s" : ""} · {load.quantity.toLocaleString()}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            order.inventoryStats.shipped.toLocaleString()
+          )}
         </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
           {order.inventoryStats.pending.toLocaleString()}
@@ -438,7 +490,49 @@ export function EditableOrderRow({
         )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
-        {order.inventoryStats.shipped.toLocaleString()}
+        {order.inventoryStats.shipped > 0 && order.inventoryStats.shippedLoadDetails.length > 0 ? (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <span className="cursor-help underline decoration-dotted underline-offset-2">
+                {order.inventoryStats.shipped.toLocaleString()}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-72" align="end">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Shipped loads</span>
+                </div>
+                <div className="space-y-1.5">
+                  {order.inventoryStats.shippedLoadDetails.map((load) => (
+                    <Link
+                      key={load.load_id}
+                      to={`/shipping-loads/${load.load_id}`}
+                      className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted transition-colors"
+                    >
+                      <div>
+                        <span className="font-medium text-primary hover:underline">
+                          {load.load_number}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Calendar className="h-3 w-3" />
+                          {load.delivery_date
+                            ? new Date(load.delivery_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                            : new Date(load.shipped_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " (shipped)"}
+                        </div>
+                      </div>
+                      <span className="text-muted-foreground text-xs">
+                        {load.pallet_count} pallet{load.pallet_count !== 1 ? "s" : ""} · {load.quantity.toLocaleString()}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        ) : (
+          order.inventoryStats.shipped.toLocaleString()
+        )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
         {order.inventoryStats.pending.toLocaleString()}
