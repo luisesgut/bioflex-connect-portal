@@ -22,6 +22,7 @@ interface Product {
   item_type: string | null;
   pieces_per_pallet: number | null;
   print_card_url: string | null;
+  dp_sales_csr_names: string | null;
 }
 
 interface Filters {
@@ -31,6 +32,7 @@ interface Filters {
   item_type: string[];
   pieces_per_pallet: string[];
   has_pc_file: string[];
+  dp_sales_csr_names: string[];
 }
 
 export default function Products() {
@@ -45,6 +47,7 @@ export default function Products() {
     item_type: [],
     pieces_per_pallet: [],
     has_pc_file: [],
+    dp_sales_csr_names: [],
   });
 
   useEffect(() => {
@@ -55,7 +58,7 @@ export default function Products() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, customer_item, item_description, customer, item_type, pieces_per_pallet, print_card_url')
+      .select('id, customer_item, item_description, customer, item_type, pieces_per_pallet, print_card_url, dp_sales_csr_names')
       .eq('activa', true)
       .order('customer_item');
 
@@ -85,6 +88,7 @@ export default function Products() {
   const uniqueCustomers = getUniqueValues('customer');
   const uniqueItemTypes = getUniqueValues('item_type');
   const uniquePieces = getUniqueValues('pieces_per_pallet');
+  const uniqueDpSalesCsr = getUniqueValues('dp_sales_csr_names');
   const pcFileOptions = ["Has File", "No File"];
 
   const filteredProducts = products.filter((product) => {
@@ -105,8 +109,10 @@ export default function Products() {
     const matchesPcFile = filters.has_pc_file.length === 0 || 
       (filters.has_pc_file.includes("Has File") && product.print_card_url) ||
       (filters.has_pc_file.includes("No File") && !product.print_card_url);
+    const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
+      (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
-    return matchesSearch && matchesCustomerItem && matchesDescription && matchesCustomer && matchesItemType && matchesPieces && matchesPcFile;
+    return matchesSearch && matchesCustomerItem && matchesDescription && matchesCustomer && matchesItemType && matchesPieces && matchesPcFile && matchesDpSalesCsr;
   });
 
   const hasActiveFilters = Object.values(filters).some(f => f.length > 0);
@@ -119,6 +125,7 @@ export default function Products() {
       item_type: [],
       pieces_per_pallet: [],
       has_pc_file: [],
+      dp_sales_csr_names: [],
     });
   };
 
@@ -281,6 +288,7 @@ export default function Products() {
                     <ColumnFilterHeader label="Item Type" filterKey="item_type" options={uniqueItemTypes} />
                     <ColumnFilterHeader label="Pieces/Pallet" filterKey="pieces_per_pallet" options={uniquePieces} className="text-right" />
                     <ColumnFilterHeader label="PC File" filterKey="has_pc_file" options={pcFileOptions} className="text-center" />
+                    <ColumnFilterHeader label="DP Sales/CSR" filterKey="dp_sales_csr_names" options={uniqueDpSalesCsr} />
                     <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Actions</th>
                   </tr>
                 </thead>
@@ -320,6 +328,9 @@ export default function Products() {
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {product.dp_sales_csr_names || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Button variant="accent" size="sm" className="gap-1">
