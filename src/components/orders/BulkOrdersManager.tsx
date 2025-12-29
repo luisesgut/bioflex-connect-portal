@@ -30,6 +30,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
           id,
           po_number,
           quantity,
+          price_per_thousand,
           total_price,
           status,
           is_hot_order,
@@ -51,6 +52,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
         "Product SKU",
         "Product Name",
         "Quantity",
+        "Price Per Thousand",
         "Total Price",
         "Status",
         "Is Hot Order",
@@ -67,6 +69,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
         order.products?.sku || "",
         order.products?.name || "",
         order.quantity,
+        order.price_per_thousand || "",
         order.total_price || "",
         order.status,
         order.is_hot_order ? "Yes" : "No",
@@ -119,6 +122,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
       const idIndex = headers.findIndex((h) => h.toLowerCase() === "id");
       const statusIndex = headers.findIndex((h) => h.toLowerCase() === "status");
       const hotOrderIndex = headers.findIndex((h) => h.toLowerCase() === "is hot order");
+      const pricePerThousandIndex = headers.findIndex((h) => h.toLowerCase() === "price per thousand");
       const estDeliveryIndex = headers.findIndex((h) => h.toLowerCase() === "estimated delivery date");
       const salesOrderIndex = headers.findIndex((h) => h.toLowerCase() === "sales order number");
       const notesIndex = headers.findIndex((h) => h.toLowerCase() === "notes");
@@ -144,6 +148,12 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
         }
         if (hotOrderIndex !== -1 && values[hotOrderIndex]?.trim()) {
           updateData.is_hot_order = values[hotOrderIndex].trim().toLowerCase() === "yes";
+        }
+        if (pricePerThousandIndex !== -1 && values[pricePerThousandIndex]?.trim()) {
+          const priceValue = parseFloat(values[pricePerThousandIndex].trim());
+          if (!isNaN(priceValue)) {
+            updateData.price_per_thousand = priceValue;
+          }
         }
         if (estDeliveryIndex !== -1 && values[estDeliveryIndex]?.trim()) {
           updateData.estimated_delivery_date = values[estDeliveryIndex].trim();
@@ -243,7 +253,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
             <DialogTitle>Bulk Update Orders</DialogTitle>
             <DialogDescription>
               Upload a CSV file to update multiple orders at once. The file must include an "ID" column.
-              Editable columns: Status, Is Hot Order, Estimated Delivery Date, Sales Order Number, Notes.
+              Editable columns: Status, Is Hot Order, Price Per Thousand, Estimated Delivery Date, Sales Order Number, Notes.
             </DialogDescription>
           </DialogHeader>
 
