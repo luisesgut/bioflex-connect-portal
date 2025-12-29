@@ -112,6 +112,7 @@ export type Database = {
           created_at: string
           destination: Database["public"]["Enums"]["customer_location"] | null
           id: string
+          is_on_hold: boolean
           load_id: string
           pallet_id: string
           quantity: number
@@ -122,6 +123,7 @@ export type Database = {
           created_at?: string
           destination?: Database["public"]["Enums"]["customer_location"] | null
           id?: string
+          is_on_hold?: boolean
           load_id: string
           pallet_id: string
           quantity: number
@@ -132,6 +134,7 @@ export type Database = {
           created_at?: string
           destination?: Database["public"]["Enums"]["customer_location"] | null
           id?: string
+          is_on_hold?: boolean
           load_id?: string
           pallet_id?: string
           quantity?: number
