@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -656,7 +657,12 @@ export default function LoadDetail() {
     }
   };
 
-  const handleTogglePalletHold = async (palletId: string, palletInventoryId: string, isOnHold: boolean, releaseDate?: Date | null) => {
+  const handleTogglePalletHold = async (
+    palletId: string,
+    palletInventoryId: string,
+    isOnHold: boolean,
+    releaseDate?: Date | null
+  ) => {
     try {
       const { error } = await supabase
         .from("load_pallets")
@@ -666,30 +672,34 @@ export default function LoadDetail() {
       if (error) throw error;
 
       // If putting on hold and a release date is provided, update inventory pallet
-      if (isOnHold && releaseDate) {
-        const { error: invError } = await supabase
-          .from("inventory_pallets")
-          .update({ release_date: releaseDate.toISOString().split("T")[0] })
-          .eq("id", palletInventoryId);
-        
-        if (invError) {
-          console.error("Error updating inventory release date:", invError);
-          throw invError;
+      if (isOnHold) {
+        if (releaseDate) {
+          const { error: invError } = await supabase
+            .from("inventory_pallets")
+            .update({ release_date: releaseDate.toISOString().split("T")[0] })
+            .eq("id", palletInventoryId);
+
+          if (invError) {
+            console.error("Error updating inventory release date:", invError);
+            throw invError;
+          }
         }
+
         toast.success("Pallet placed on hold");
-      } else if (!isOnHold) {
+      } else {
         // If shipping, set release date to load's shipping date
         if (load?.shipping_date) {
           const { error: invError } = await supabase
             .from("inventory_pallets")
             .update({ release_date: load.shipping_date })
             .eq("id", palletInventoryId);
-          
+
           if (invError) {
             console.error("Error updating inventory release date for shipping:", invError);
             throw invError;
           }
         }
+
         toast.success("Pallet marked for shipping");
       }
 
@@ -1338,118 +1348,108 @@ export default function LoadDetail() {
                         <TableCell>
                           {/* Only customers can change status when release is pending */}
                           {releaseRequest?.status === "pending" && !isAdmin ? (
-                            palletStatus === "hold" ? (
-                              <div className="flex items-center gap-2">
-                                <Select
-                                  value="hold"
-                                  onValueChange={(val) => {
-                                    if (val === "ship") {
-                                      handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[120px] border-red-500 text-red-600">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="ship">
-                                      <span className="flex items-center gap-1">
-                                        <Check className="h-3 w-3 text-green-600" />
-                                        Ship
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="hold">
-                                      <span className="flex items-center gap-1">
-                                        <X className="h-3 w-3 text-red-600" />
-                                        Hold
-                                      </span>
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                {pallet.release_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Until {format(new Date(pallet.release_date), "MMM d")}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <Popover>
-                                <Select
-                                  value={palletStatus}
-                                  onValueChange={(val) => {
-                                    if (val === "ship") {
-                                      handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className={`w-[120px] ${
-                                    palletStatus === "pending" 
-                                      ? "border-yellow-500 text-yellow-600" 
+                            <Select
+                              value={palletStatus}
+                              onValueChange={(val) => {
+                                if (val === "ship") {
+                                  handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
+                                }
+                                if (val === "hold") {
+                                  handleTogglePalletHold(pallet.id, pallet.pallet_id, true);
+                                }
+                              }}
+                            >
+                              <SelectTrigger
+                                className={`w-[120px] ${
+                                  palletStatus === "hold"
+                                    ? "border-destructive text-destructive"
+                                    : palletStatus === "pending"
+                                      ? "border-yellow-500 text-yellow-600"
                                       : "border-green-500 text-green-600"
-                                  }`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pending" disabled>
-                                      <span className="flex items-center gap-1 text-yellow-600">
-                                        Pending
-                                      </span>
-                                    </SelectItem>
-                                    <SelectItem value="ship">
-                                      <span className="flex items-center gap-1">
-                                        <Check className="h-3 w-3 text-green-600" />
-                                        Ship
-                                      </span>
-                                    </SelectItem>
-                                    <PopoverTrigger asChild>
-                                      <div 
-                                        className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <span className="flex items-center gap-1">
-                                          <X className="h-3 w-3 text-red-600" />
-                                          Hold
-                                        </span>
-                                      </div>
-                                    </PopoverTrigger>
-                                  </SelectContent>
-                                </Select>
-                                <PopoverContent className="w-auto p-4 pointer-events-auto" align="start">
-                                  <div className="space-y-3">
-                                    <p className="text-sm font-medium">When will this pallet be released?</p>
-                                    <Calendar
-                                      mode="single"
-                                      selected={pallet.release_date ? new Date(pallet.release_date) : undefined}
-                                      onSelect={(date) => {
-                                        if (date) {
-                                          handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
-                                        }
-                                      }}
-                                      disabled={(date) => date < new Date()}
-                                      initialFocus
-                                      className="pointer-events-auto"
-                                    />
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            )
+                                }`}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending" disabled>
+                                  <span className="flex items-center gap-1 text-yellow-600">Pending</span>
+                                </SelectItem>
+                                <SelectItem value="ship">
+                                  <span className="flex items-center gap-1">
+                                    <Check className="h-3 w-3 text-green-600" />
+                                    Ship
+                                  </span>
+                                </SelectItem>
+                                <SelectItem value="hold">
+                                  <span className="flex items-center gap-1">
+                                    <X className="h-3 w-3 text-destructive" />
+                                    Hold
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           ) : (
                             /* Admin sees read-only status */
-                            <Badge 
-                              variant={palletStatus === "hold" ? "destructive" : palletStatus === "pending" ? "outline" : "default"}
-                              className={palletStatus === "pending" ? "border-yellow-500 text-yellow-600" : palletStatus === "ship" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" : ""}
+                            <Badge
+                              variant={
+                                palletStatus === "hold"
+                                  ? "destructive"
+                                  : palletStatus === "pending"
+                                    ? "outline"
+                                    : "default"
+                              }
+                              className={
+                                palletStatus === "pending"
+                                  ? "border-yellow-500 text-yellow-600"
+                                  : palletStatus === "ship"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                    : ""
+                              }
                             >
                               {palletStatus === "hold" ? "On Hold" : palletStatus === "pending" ? "Pending" : "Ship"}
-                              {palletStatus === "hold" && pallet.release_date && (
-                                <span className="ml-1 text-xs">({format(new Date(pallet.release_date), "MMM d")})</span>
+                              {palletStatus === "hold" && pallet.pallet.release_date && (
+                                <span className="ml-1 text-xs">({format(new Date(pallet.pallet.release_date), "MMM d")})</span>
                               )}
                             </Badge>
                           )}
                         </TableCell>
                         {!isAdmin && (
                           <TableCell>
-                            {pallet.is_on_hold && pallet.release_date ? (
-                              <span className="text-sm">{format(new Date(pallet.release_date), "MMM d, yyyy")}</span>
+                            {pallet.is_on_hold && releaseRequest?.status === "pending" ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={cn(
+                                      "w-[160px] justify-start text-left font-normal",
+                                      !pallet.pallet.release_date && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {pallet.pallet.release_date
+                                      ? format(new Date(pallet.pallet.release_date), "MMM d, yyyy")
+                                      : "Select release date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={
+                                      pallet.pallet.release_date
+                                        ? new Date(pallet.pallet.release_date)
+                                        : undefined
+                                    }
+                                    onSelect={(date) => {
+                                      if (date) handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
+                                    }}
+                                    disabled={(date) => date < new Date()}
+                                    initialFocus
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            ) : pallet.is_on_hold && pallet.pallet.release_date ? (
+                              <span className="text-sm">{format(new Date(pallet.pallet.release_date), "MMM d, yyyy")}</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
