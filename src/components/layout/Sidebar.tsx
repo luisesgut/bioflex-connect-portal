@@ -13,7 +13,8 @@ import {
   EyeOff,
   Warehouse,
   Truck,
-  ClipboardCheck
+  ClipboardCheck,
+  PackageCheck
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const adminNavigation = [
   { name: "Product Codes", href: "/admin/products", icon: ShieldAlert },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
+  { name: "Shipped Pallets", href: "/shipped-pallets", icon: PackageCheck },
 ];
 
 const bottomNavigation = [
