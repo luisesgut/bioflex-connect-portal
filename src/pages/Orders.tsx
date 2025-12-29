@@ -55,6 +55,8 @@ interface Order {
   product_customer: string | null;
   product_item_type: string | null;
   product_dp_sales_csr: string | null;
+  product_customer_item: string | null;
+  product_item_description: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -132,7 +134,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku, customer, item_type, dp_sales_csr_names)
+        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description)
       `)
       .order("created_at", { ascending: false });
 
@@ -367,6 +369,8 @@ export default function Orders() {
         product_customer: order.products?.customer || null,
         product_item_type: order.products?.item_type || null,
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
+        product_customer_item: order.products?.customer_item || null,
+        product_item_description: order.products?.item_description || null,
         quantity: order.quantity,
         total_price: order.total_price,
         status: order.status,

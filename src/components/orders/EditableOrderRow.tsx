@@ -67,6 +67,8 @@ interface Order {
   product_customer: string | null;
   product_item_type: string | null;
   product_dp_sales_csr: string | null;
+  product_customer_item: string | null;
+  product_item_description: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -189,7 +191,7 @@ export function EditableOrderRow({
         </td>
         <td className="px-6 py-4">
           <span className="text-sm font-medium text-card-foreground">
-            {order.product_name || "—"}
+            {[order.product_customer_item, order.product_item_description].filter(Boolean).join(' - ') || order.product_name || "—"}
           </span>
         </td>
         <td className="px-6 py-4">
@@ -464,7 +466,7 @@ export function EditableOrderRow({
       </td>
       <td className="px-6 py-4">
         <span className="text-sm font-medium text-card-foreground">
-          {order.product_name || "—"}
+          {[order.product_customer_item, order.product_item_description].filter(Boolean).join(' - ') || order.product_name || "—"}
         </span>
       </td>
       <td className="px-6 py-4">
