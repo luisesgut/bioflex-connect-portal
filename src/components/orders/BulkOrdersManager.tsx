@@ -119,7 +119,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
 
       // Parse header
       const headers = parseCSVLine(lines[0]);
-      const idIndex = headers.findIndex((h) => h.toLowerCase() === "id");
+      const poNumberIndex = headers.findIndex((h) => h.toLowerCase() === "po number");
       const statusIndex = headers.findIndex((h) => h.toLowerCase() === "status");
       const hotOrderIndex = headers.findIndex((h) => h.toLowerCase() === "is hot order");
       const pricePerThousandIndex = headers.findIndex((h) => h.toLowerCase() === "price per thousand");
@@ -127,8 +127,8 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
       const salesOrderIndex = headers.findIndex((h) => h.toLowerCase() === "sales order number");
       const notesIndex = headers.findIndex((h) => h.toLowerCase() === "notes");
 
-      if (idIndex === -1) {
-        throw new Error("CSV must contain an 'ID' column");
+      if (poNumberIndex === -1) {
+        throw new Error("CSV must contain a 'PO Number' column");
       }
 
       // Parse data rows and update
@@ -137,9 +137,9 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
 
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i]);
-        const id = values[idIndex]?.trim();
+        const poNumber = values[poNumberIndex]?.trim();
         
-        if (!id) continue;
+        if (!poNumber) continue;
 
         const updateData: Record<string, any> = {};
         
@@ -169,10 +169,10 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
           const { error } = await supabase
             .from("purchase_orders")
             .update(updateData)
-            .eq("id", id);
+            .eq("po_number", poNumber);
 
           if (error) {
-            console.error(`Error updating order ${id}:`, error);
+            console.error(`Error updating order ${poNumber}:`, error);
             errorCount++;
           } else {
             successCount++;
@@ -252,7 +252,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
           <DialogHeader>
             <DialogTitle>Bulk Update Orders</DialogTitle>
             <DialogDescription>
-              Upload a CSV file to update multiple orders at once. The file must include an "ID" column.
+              Upload a CSV file to update multiple orders at once. The file must include a "PO Number" column.
               Editable columns: Status, Is Hot Order, Price Per Thousand, Estimated Delivery Date, Sales Order Number, Notes.
             </DialogDescription>
           </DialogHeader>
