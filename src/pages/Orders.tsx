@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Loader2 } from "lucide-react";
+import { Search, Plus, FileText, Loader2, Package, PackageCheck } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -493,6 +493,17 @@ export default function Orders() {
   }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
       dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
 
+  // Split orders into active and closed (delivered)
+  const activeOrders = useMemo(() => 
+    filteredAndSortedOrders.filter(order => order.status !== "delivered"), 
+    [filteredAndSortedOrders]
+  );
+  
+  const closedOrders = useMemo(() => 
+    filteredAndSortedOrders.filter(order => order.status === "delivered"), 
+    [filteredAndSortedOrders]
+  );
+
   const formatCurrency = (value: number | null) => {
     if (value === null) return "—";
     return new Intl.NumberFormat("en-US", {
@@ -558,147 +569,251 @@ export default function Orders() {
           </div>
         )}
 
-        {/* Orders Table */}
-        {!loading && filteredAndSortedOrders.length > 0 && (
-          <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/30">
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      PO Number
-                    </th>
-                    <FilterableColumnHeader
-                      title="Product"
-                      options={filterOptions.products}
-                      selectedValues={productFilter}
-                      onFilterChange={setProductFilter}
-                    />
-                    <FilterableColumnHeader
-                      title="Customer"
-                      options={filterOptions.customers}
-                      selectedValues={customerFilter}
-                      onFilterChange={setCustomerFilter}
-                    />
-                    <FilterableColumnHeader
-                      title="Item Type"
-                      options={filterOptions.itemTypes}
-                      selectedValues={itemTypeFilter}
-                      onFilterChange={setItemTypeFilter}
-                    />
-                    <FilterableColumnHeader
-                      title="DP Sales/CSR"
-                      options={filterOptions.dpSales}
-                      selectedValues={dpSalesFilter}
-                      onFilterChange={setDpSalesFilter}
-                    />
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Quantity
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Value
-                    </th>
-                    <FilterableColumnHeader
-                      title="Status"
-                      options={filterOptions.statuses}
-                      selectedValues={statusFilter}
-                      onFilterChange={setStatusFilter}
-                    />
-                    {isAdmin && (
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Sales Order
-                      </th>
-                    )}
-                    <FilterableColumnHeader
-                      title="Priority"
-                      options={filterOptions.priorities}
-                      selectedValues={priorityFilter}
-                      onFilterChange={setPriorityFilter}
-                    />
-                    <FilterableColumnHeader
-                      title="Customer Delivery"
-                      options={filterOptions.customerDeliveryDates}
-                      selectedValues={[]}
-                      onFilterChange={() => {}}
-                      showSort
-                      sortDirection={customerDeliverySort}
-                      onSortChange={(dir) => {
-                        setCustomerDeliverySort(dir);
-                        setBioflexDeliverySort(null);
-                      }}
-                    />
-                    <FilterableColumnHeader
-                      title="Bioflex Delivery"
-                      options={filterOptions.bioflexDeliveryDates}
-                      selectedValues={[]}
-                      onFilterChange={() => {}}
-                      showSort
-                      sortDirection={bioflexDeliverySort}
-                      onSortChange={(dir) => {
-                        setBioflexDeliverySort(dir);
-                        setCustomerDeliverySort(null);
-                      }}
-                    />
-                    {isAdmin && (
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Excess Stock
-                      </th>
-                    )}
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      In Floor
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Shipped
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Pending
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      % Produced
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredAndSortedOrders.map((order) => (
-                    <EditableOrderRow
-                      key={order.id}
-                      order={order}
-                      isAdmin={isAdmin}
-                      statusStyles={statusStyles}
-                      statusLabels={statusLabels}
-                      formatDate={formatDate}
-                      formatCurrency={formatCurrency}
-                      onAcceptOrder={handleAcceptOrder}
-                      onRequestChange={handleRequestChange}
-                      onUpdated={fetchOrders}
-                    />
-                  ))}
-                </tbody>
-              </table>
+        {/* Active Orders Table */}
+        {!loading && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Active POs</h2>
+              <span className="text-sm text-muted-foreground">({activeOrders.length})</span>
             </div>
+            
+            {activeOrders.length > 0 ? (
+              <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          PO Number
+                        </th>
+                        <FilterableColumnHeader
+                          title="Product"
+                          options={filterOptions.products}
+                          selectedValues={productFilter}
+                          onFilterChange={setProductFilter}
+                        />
+                        <FilterableColumnHeader
+                          title="Customer"
+                          options={filterOptions.customers}
+                          selectedValues={customerFilter}
+                          onFilterChange={setCustomerFilter}
+                        />
+                        <FilterableColumnHeader
+                          title="Item Type"
+                          options={filterOptions.itemTypes}
+                          selectedValues={itemTypeFilter}
+                          onFilterChange={setItemTypeFilter}
+                        />
+                        <FilterableColumnHeader
+                          title="DP Sales/CSR"
+                          options={filterOptions.dpSales}
+                          selectedValues={dpSalesFilter}
+                          onFilterChange={setDpSalesFilter}
+                        />
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Quantity
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Value
+                        </th>
+                        <FilterableColumnHeader
+                          title="Status"
+                          options={filterOptions.statuses}
+                          selectedValues={statusFilter}
+                          onFilterChange={setStatusFilter}
+                        />
+                        {isAdmin && (
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Sales Order
+                          </th>
+                        )}
+                        <FilterableColumnHeader
+                          title="Priority"
+                          options={filterOptions.priorities}
+                          selectedValues={priorityFilter}
+                          onFilterChange={setPriorityFilter}
+                        />
+                        <FilterableColumnHeader
+                          title="Customer Delivery"
+                          options={filterOptions.customerDeliveryDates}
+                          selectedValues={[]}
+                          onFilterChange={() => {}}
+                          showSort
+                          sortDirection={customerDeliverySort}
+                          onSortChange={(dir) => {
+                            setCustomerDeliverySort(dir);
+                            setBioflexDeliverySort(null);
+                          }}
+                        />
+                        <FilterableColumnHeader
+                          title="Bioflex Delivery"
+                          options={filterOptions.bioflexDeliveryDates}
+                          selectedValues={[]}
+                          onFilterChange={() => {}}
+                          showSort
+                          sortDirection={bioflexDeliverySort}
+                          onSortChange={(dir) => {
+                            setBioflexDeliverySort(dir);
+                            setCustomerDeliverySort(null);
+                          }}
+                        />
+                        {isAdmin && (
+                          <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Excess Stock
+                          </th>
+                        )}
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          In Floor
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Shipped
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Pending
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          % Produced
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {activeOrders.map((order) => (
+                        <EditableOrderRow
+                          key={order.id}
+                          order={order}
+                          isAdmin={isAdmin}
+                          statusStyles={statusStyles}
+                          statusLabels={statusLabels}
+                          formatDate={formatDate}
+                          formatCurrency={formatCurrency}
+                          onAcceptOrder={handleAcceptOrder}
+                          onRequestChange={handleRequestChange}
+                          onUpdated={fetchOrders}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 py-12">
+                <FileText className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-semibold text-foreground">No active orders</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {orders.length === 0 
+                    ? "Create your first purchase order to get started"
+                    : "Try adjusting your search or filter criteria"}
+                </p>
+                {orders.length === 0 && (
+                  <Link to="/orders/new" className="mt-4">
+                    <Button variant="accent" className="gap-2">
+                      <Plus className="h-5 w-5" />
+                      Create New PO
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {!loading && filteredAndSortedOrders.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 py-16">
-            <FileText className="h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-semibold text-foreground">No orders found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {orders.length === 0 
-                ? "Create your first purchase order to get started"
-                : "Try adjusting your search or filter criteria"}
-            </p>
-            {orders.length === 0 && (
-              <Link to="/orders/new" className="mt-4">
-                <Button variant="accent" className="gap-2">
-                  <Plus className="h-5 w-5" />
-                  Create New PO
-                </Button>
-              </Link>
-            )}
+        {/* Closed Orders Table */}
+        {!loading && closedOrders.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <PackageCheck className="h-5 w-5 text-success" />
+              <h2 className="text-lg font-semibold">Closed POs</h2>
+              <span className="text-sm text-muted-foreground">({closedOrders.length})</span>
+            </div>
+            
+            <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.3s" }}>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        PO Number
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Product
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Customer
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Item Type
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        DP Sales/CSR
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Quantity
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Value
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Status
+                      </th>
+                      {isAdmin && (
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Sales Order
+                        </th>
+                      )}
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Priority
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Customer Delivery
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Bioflex Delivery
+                      </th>
+                      {isAdmin && (
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Excess Stock
+                        </th>
+                      )}
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        In Floor
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Shipped
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Pending
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        % Produced
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {closedOrders.map((order) => (
+                      <EditableOrderRow
+                        key={order.id}
+                        order={order}
+                        isAdmin={isAdmin}
+                        statusStyles={statusStyles}
+                        statusLabels={statusLabels}
+                        formatDate={formatDate}
+                        formatCurrency={formatCurrency}
+                        onAcceptOrder={handleAcceptOrder}
+                        onRequestChange={handleRequestChange}
+                        onUpdated={fetchOrders}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
