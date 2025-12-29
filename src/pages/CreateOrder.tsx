@@ -170,7 +170,7 @@ export default function CreateOrder() {
                         <div className="flex flex-col items-start">
                           <span>{selectedProduct.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {selectedProduct.sku}
+                            Unit: {selectedProduct.units || '-'} • {selectedProduct.pieces_per_pallet?.toLocaleString() || '-'} per pallet
                           </span>
                         </div>
                       ) : (
@@ -199,7 +199,7 @@ export default function CreateOrder() {
                               <div className="flex flex-col">
                                 <span>{product.name}</span>
                                 <span className="text-xs text-muted-foreground">
-                                  {product.sku} • Units: {product.units || '-'}
+                                  Unit: {product.units || '-'} • {product.pieces_per_pallet?.toLocaleString() || '-'} per pallet
                                 </span>
                               </div>
                             </CommandItem>
@@ -372,14 +372,12 @@ export default function CreateOrder() {
                   ${pricePerThousand.toFixed(2)}
                 </span>
               </div>
-              {palletsNeeded !== null && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pallets Needed</span>
-                  <span className="font-medium text-card-foreground">
-                    {palletsNeeded.toLocaleString()}
-                  </span>
-                </div>
-              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Pallets</span>
+                <span className="font-medium text-card-foreground">
+                  {palletsNeeded !== null ? palletsNeeded.toLocaleString() : "—"}
+                </span>
+              </div>
               {isHotOrder && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Priority</span>
