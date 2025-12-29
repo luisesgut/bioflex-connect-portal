@@ -22,6 +22,13 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface InventoryStats {
+  inFloor: number;
+  shipped: number;
+  pending: number;
+  percentProduced: number;
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -36,6 +43,7 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
+  inventoryStats: InventoryStats;
 }
 
 interface EditableOrderRowProps {
@@ -228,6 +236,32 @@ export function EditableOrderRow({
             className="h-8 w-36"
           />
         </td>
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+          {order.inventoryStats.inFloor.toLocaleString()}
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+          {order.inventoryStats.shipped.toLocaleString()}
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+          {order.inventoryStats.pending.toLocaleString()}
+        </td>
+        <td className="whitespace-nowrap px-6 py-4 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full transition-all",
+                  order.inventoryStats.percentProduced >= 100 ? "bg-success" :
+                  order.inventoryStats.percentProduced >= 50 ? "bg-warning" : "bg-info"
+                )}
+                style={{ width: `${Math.min(100, order.inventoryStats.percentProduced)}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium text-card-foreground min-w-[3rem] text-right">
+              {order.inventoryStats.percentProduced}%
+            </span>
+          </div>
+        </td>
         <td className="whitespace-nowrap px-6 py-4 text-right">
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -317,6 +351,32 @@ export function EditableOrderRow({
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
         {formatDate(order.estimated_delivery_date)}
+      </td>
+      <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+        {order.inventoryStats.inFloor.toLocaleString()}
+      </td>
+      <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+        {order.inventoryStats.shipped.toLocaleString()}
+      </td>
+      <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+        {order.inventoryStats.pending.toLocaleString()}
+      </td>
+      <td className="whitespace-nowrap px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className={cn(
+                "h-full transition-all",
+                order.inventoryStats.percentProduced >= 100 ? "bg-success" :
+                order.inventoryStats.percentProduced >= 50 ? "bg-warning" : "bg-info"
+              )}
+              style={{ width: `${Math.min(100, order.inventoryStats.percentProduced)}%` }}
+            />
+          </div>
+          <span className="text-sm font-medium text-card-foreground min-w-[3rem] text-right">
+            {order.inventoryStats.percentProduced}%
+          </span>
+        </div>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2">

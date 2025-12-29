@@ -15,6 +15,13 @@ import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { differenceInHours } from "date-fns";
 
+interface InventoryStats {
+  inFloor: number;
+  shipped: number;
+  pending: number;
+  percentProduced: number;
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -29,6 +36,7 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
+  inventoryStats: InventoryStats;
 }
 
 const statusStyles: Record<string, string> = {
@@ -66,7 +74,9 @@ export default function Orders() {
     if (!user) return;
 
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Fetch orders
+    const { data: ordersData, error: ordersError } = await supabase
       .from("purchase_orders")
       .select(`
         id,
@@ -85,11 +95,71 @@ export default function Orders() {
       `)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching orders:", error);
+    if (ordersError) {
+      console.error("Error fetching orders:", ordersError);
       toast.error("Failed to load orders");
-    } else {
-      const formattedOrders = (data || []).map((order: any) => ({
+      setLoading(false);
+      return;
+    }
+
+    // Get all sales order numbers for inventory lookup
+    const salesOrderNumbers = (ordersData || [])
+      .map((o: any) => o.sales_order_number)
+      .filter((son: string | null): son is string => son !== null && son !== "");
+
+    // Fetch inventory with load statuses for all relevant sales orders
+    let inventoryMap: Record<string, { inFloor: number; shipped: number }> = {};
+    
+    if (salesOrderNumbers.length > 0) {
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from("inventory_pallets")
+        .select(`
+          id,
+          bfx_order,
+          stock,
+          load_pallets (
+            load_id,
+            shipping_loads (
+              status
+            )
+          )
+        `)
+        .in("bfx_order", salesOrderNumbers);
+
+      if (!inventoryError && inventoryData) {
+        // Process inventory data to calculate in_floor and shipped per sales_order
+        inventoryData.forEach((pallet: any) => {
+          const salesOrder = pallet.bfx_order;
+          if (!salesOrder) return;
+
+          if (!inventoryMap[salesOrder]) {
+            inventoryMap[salesOrder] = { inFloor: 0, shipped: 0 };
+          }
+
+          const stock = pallet.stock || 0;
+          
+          // Check if pallet is in a load with in_transit or delivered status
+          const loadPallet = pallet.load_pallets?.[0];
+          const loadStatus = loadPallet?.shipping_loads?.status;
+          
+          if (loadStatus === "in_transit" || loadStatus === "delivered") {
+            inventoryMap[salesOrder].shipped += stock;
+          } else {
+            // All other statuses (available, assigned, or loads with other statuses) = in floor
+            inventoryMap[salesOrder].inFloor += stock;
+          }
+        });
+      }
+    }
+
+    const formattedOrders = (ordersData || []).map((order: any) => {
+      const salesOrder = order.sales_order_number;
+      const stats = inventoryMap[salesOrder] || { inFloor: 0, shipped: 0 };
+      const produced = stats.inFloor + stats.shipped;
+      const pending = Math.max(0, order.quantity - produced);
+      const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
+
+      return {
         id: order.id,
         po_number: order.po_number,
         product_name: order.products?.name || null,
@@ -103,9 +173,15 @@ export default function Orders() {
         created_at: order.created_at,
         pdf_url: order.pdf_url,
         sales_order_number: order.sales_order_number,
-      }));
-      setOrders(formattedOrders);
-    }
+        inventoryStats: {
+          inFloor: stats.inFloor,
+          shipped: stats.shipped,
+          pending,
+          percentProduced,
+        },
+      };
+    });
+    setOrders(formattedOrders);
     setLoading(false);
   };
 
@@ -256,6 +332,18 @@ export default function Orders() {
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Bioflex Delivery
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      In Floor
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Shipped
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Pending
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      % Produced
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Actions
