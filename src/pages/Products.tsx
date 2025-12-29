@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Package, ArrowUpRight, Loader2, FileText, Filter, X } from "lucide-react";
+import { Search, Plus, Package, ArrowUpRight, Loader2, FileText, ChevronDown, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Product {
   id: string;
@@ -81,12 +80,55 @@ export default function Products() {
     return matchesSearch && matchesCustomer && matchesItemType && matchesPcFile;
   });
 
-  const clearFilters = () => {
+  const hasActiveFilters = filters.customer !== "all" || filters.item_type !== "all" || filters.has_pc_file !== "all";
+
+  const clearAllFilters = () => {
     setFilters({ customer: "all", item_type: "all", has_pc_file: "all" });
-    setSearchQuery("");
   };
 
-  const hasActiveFilters = filters.customer !== "all" || filters.item_type !== "all" || filters.has_pc_file !== "all" || searchQuery;
+  const ColumnHeader = ({ 
+    label, 
+    filterKey, 
+    options, 
+    className = "" 
+  }: { 
+    label: string; 
+    filterKey: keyof Filters; 
+    options: string[]; 
+    className?: string;
+  }) => {
+    const isFiltered = filters[filterKey] !== "all";
+    return (
+      <th className={`px-4 py-3 text-left text-sm font-semibold text-foreground ${className}`}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isFiltered ? 'text-primary' : ''}`}>
+              {label}
+              <ChevronDown className={`h-3 w-3 ${isFiltered ? 'text-primary' : 'text-muted-foreground'}`} />
+              {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="bg-popover border shadow-md z-50">
+            <DropdownMenuItem 
+              onClick={() => setFilters(f => ({ ...f, [filterKey]: "all" }))}
+              className={filters[filterKey] === "all" ? "bg-muted" : ""}
+            >
+              All
+            </DropdownMenuItem>
+            {options.map(option => (
+              <DropdownMenuItem 
+                key={option} 
+                onClick={() => setFilters(f => ({ ...f, [filterKey]: option }))}
+                className={filters[filterKey] === option ? "bg-muted" : ""}
+              >
+                {option}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </th>
+    );
+  };
 
   return (
     <MainLayout>
@@ -107,71 +149,23 @@ export default function Products() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="rounded-xl border bg-card p-4 space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">Filters</span>
-            </div>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
-                <X className="h-3 w-3" />
-                Clear all
-              </Button>
-            )}
+        {/* Search and Filter Status */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by item or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search item or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Customer Filter */}
-            <Select value={filters.customer} onValueChange={(v) => setFilters(f => ({ ...f, customer: v }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Customer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Customers</SelectItem>
-                {customers.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Item Type Filter */}
-            <Select value={filters.item_type} onValueChange={(v) => setFilters(f => ({ ...f, item_type: v }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Item Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {itemTypes.map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* PC File Filter */}
-            <Select value={filters.has_pc_file} onValueChange={(v) => setFilters(f => ({ ...f, has_pc_file: v }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="PC File" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="yes">Has PC File</SelectItem>
-                <SelectItem value="no">No PC File</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearAllFilters} className="gap-1">
+              <X className="h-3 w-3" />
+              Clear filters
+            </Button>
+          )}
         </div>
 
         {/* Products Table */}
@@ -192,13 +186,18 @@ export default function Products() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Customer Item</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Item Description</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Customer</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Item Type</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Pieces/Pallet</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">PC File</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Customer Item</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Item Description</th>
+                  <ColumnHeader label="Customer" filterKey="customer" options={customers} />
+                  <ColumnHeader label="Item Type" filterKey="item_type" options={itemTypes} />
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Pieces/Pallet</th>
+                  <ColumnHeader 
+                    label="PC File" 
+                    filterKey="has_pc_file" 
+                    options={["yes", "no"]} 
+                    className="text-center"
+                  />
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -208,22 +207,22 @@ export default function Products() {
                     className="transition-colors hover:bg-muted/30 animate-slide-up"
                     style={{ animationDelay: `${0.02 * Math.min(index, 10)}s` }}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <span className="font-medium text-foreground">{product.customer_item || '-'}</span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">
+                    <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
                       {product.item_description || '-'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <Badge variant="secondary">{product.customer || '-'}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {product.item_type || '-'}
                     </td>
-                    <td className="px-6 py-4 text-right font-mono text-muted-foreground">
+                    <td className="px-4 py-3 text-right font-mono text-muted-foreground">
                       {product.pieces_per_pallet?.toLocaleString() || '-'}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-3 text-center">
                       {product.print_card_url ? (
                         <a 
                           href={product.print_card_url} 
@@ -238,7 +237,7 @@ export default function Products() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <Button variant="accent" size="sm" className="gap-1">
                         Order
                         <ArrowUpRight className="h-3 w-3" />
