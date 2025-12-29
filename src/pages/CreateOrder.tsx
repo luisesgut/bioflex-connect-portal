@@ -423,11 +423,14 @@ export default function CreateOrder() {
                   </Button>
                   <Input
                     id="quantity"
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1000, parseInt(e.target.value) || 0))}
-                    min={1000}
-                    step={1000}
+                    type="text"
+                    inputMode="numeric"
+                    value={quantity.toLocaleString()}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/,/g, '');
+                      const numValue = parseInt(rawValue) || 0;
+                      setQuantity(Math.max(1000, numValue));
+                    }}
                     className="text-center text-lg font-semibold h-12"
                   />
                   <Button
