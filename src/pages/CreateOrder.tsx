@@ -451,9 +451,6 @@ export default function CreateOrder() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Minimum order: 1,000 {selectedProduct?.units || 'units'}
-                </p>
               </div>
             </div>
           </div>
