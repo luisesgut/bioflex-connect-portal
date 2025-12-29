@@ -422,6 +422,15 @@ export default function Orders() {
     setChangeRequestDialogOpen(true);
   };
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "TBD";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   // Get unique values for filter options
   const filterOptions = useMemo(() => ({
     products: orders.map((o) => o.product_name).filter(Boolean) as string[],
@@ -483,15 +492,6 @@ export default function Orders() {
     return result;
   }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
       dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "TBD";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return "—";
