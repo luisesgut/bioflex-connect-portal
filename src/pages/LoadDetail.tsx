@@ -53,6 +53,7 @@ import {
   ArrowUpDown,
   ArrowDown,
   ArrowUp,
+  Send,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -160,7 +161,7 @@ export default function LoadDetail() {
     unit: [],
   });
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>("desc");
-
+  const [sendingRelease, setSendingRelease] = useState(false);
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -698,6 +699,41 @@ export default function LoadDetail() {
     }
   };
 
+  const handleSendReleaseRequest = async () => {
+    if (!id || !user || pallets.length === 0) {
+      toast.error("Please add pallets to the load before sending a release request");
+      return;
+    }
+
+    setSendingRelease(true);
+    try {
+      // Create release request
+      const { error: requestError } = await supabase.from("release_requests").insert({
+        load_id: id,
+        requested_by: user.id,
+        status: "pending",
+      });
+
+      if (requestError) throw requestError;
+
+      // Update load status to pending_release
+      const { error: loadError } = await supabase
+        .from("shipping_loads")
+        .update({ status: "pending_release" })
+        .eq("id", id);
+
+      if (loadError) throw loadError;
+
+      toast.success("Release request sent to customer");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error sending release request:", error);
+      toast.error("Failed to send release request");
+    } finally {
+      setSendingRelease(false);
+    }
+  };
+
   const handleMarkAsShipped = async () => {
     if (!id) return;
 
@@ -773,12 +809,24 @@ export default function LoadDetail() {
               Shipping: {format(new Date(load.shipping_date), "MMMM d, yyyy")}
             </p>
           </div>
-          {isAdmin && load.status === "approved" && (
-            <Button onClick={handleMarkAsShipped}>
-              <Truck className="mr-2 h-4 w-4" />
-              Mark as Shipped
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAdmin && load.status === "assembling" && pallets.length > 0 && (
+              <Button onClick={handleSendReleaseRequest} disabled={sendingRelease}>
+                {sendingRelease ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Send Release Request
+              </Button>
+            )}
+            {isAdmin && load.status === "approved" && (
+              <Button onClick={handleMarkAsShipped}>
+                <Truck className="mr-2 h-4 w-4" />
+                Mark as Shipped
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Release Request Card */}
