@@ -154,48 +154,79 @@ export default function Orders() {
       .map((o: any) => o.po_number)
       .filter((po: string | null): po is string => po !== null && po !== "");
 
-    // Create maps for inventory stats - keyed by both sales_order and po_number
-    let inventoryBySalesOrder: Record<string, { inFloor: number; shipped: number }> = {};
-    let inventoryByPO: Record<string, { inFloor: number; shipped: number }> = {};
+    // Create maps for inventory stats - keyed by PO number
+    // Track pallet IDs to avoid double-counting when bfx_order and customer_lot both match
+    let inventoryByPO: Record<string, { inFloor: number; shipped: number; palletIds: Set<string> }> = {};
     // Load details map - keyed by po_number
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
     // Shipped load details map - keyed by po_number
     let shippedLoadDetailsByPO: Record<string, ShippedLoadDetail[]> = {};
+    // Track shipped pallet IDs to avoid double-counting
+    let shippedPalletIds: Record<string, Set<string>> = {};
+
+    // Build a map from sales_order_number to po_number for each order
+    const salesOrderToPO: Record<string, string> = {};
+    (ordersData || []).forEach((order: any) => {
+      if (order.sales_order_number && order.po_number) {
+        salesOrderToPO[order.sales_order_number] = order.po_number;
+      }
+    });
     
     // Fetch current inventory by bfx_order (matches sales_order_number)
     if (salesOrderNumbers.length > 0) {
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventory_pallets")
-        .select("bfx_order, stock")
+        .select("id, bfx_order, stock")
         .in("bfx_order", salesOrderNumbers);
 
       if (!inventoryError && inventoryData) {
         inventoryData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
+          
+          // Map to PO number
+          const poNum = salesOrderToPO[salesOrder];
+          if (!poNum) return;
 
-          if (!inventoryBySalesOrder[salesOrder]) {
-            inventoryBySalesOrder[salesOrder] = { inFloor: 0, shipped: 0 };
+          if (!inventoryByPO[poNum]) {
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          inventoryBySalesOrder[salesOrder].inFloor += pallet.stock || 0;
+          
+          // Only count if not already counted
+          if (!inventoryByPO[poNum].palletIds.has(pallet.id)) {
+            inventoryByPO[poNum].palletIds.add(pallet.id);
+            inventoryByPO[poNum].inFloor += pallet.stock || 0;
+          }
         });
       }
 
       // Fetch shipped pallets by bfx_order
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
-        .select("bfx_order, quantity")
+        .select("id, bfx_order, quantity")
         .in("bfx_order", salesOrderNumbers);
 
       if (!shippedError && shippedData) {
         shippedData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
+          
+          // Map to PO number
+          const poNum = salesOrderToPO[salesOrder];
+          if (!poNum) return;
 
-          if (!inventoryBySalesOrder[salesOrder]) {
-            inventoryBySalesOrder[salesOrder] = { inFloor: 0, shipped: 0 };
+          if (!inventoryByPO[poNum]) {
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          inventoryBySalesOrder[salesOrder].shipped += pallet.quantity || 0;
+          if (!shippedPalletIds[poNum]) {
+            shippedPalletIds[poNum] = new Set();
+          }
+          
+          // Only count if not already counted
+          if (!shippedPalletIds[poNum].has(pallet.id)) {
+            shippedPalletIds[poNum].add(pallet.id);
+            inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          }
         });
       }
     }
@@ -227,9 +258,14 @@ export default function Orders() {
           if (!poNum) return;
 
           if (!inventoryByPO[poNum]) {
-            inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          inventoryByPO[poNum].inFloor += pallet.stock || 0;
+          
+          // Only count if not already counted (avoids double-counting when bfx_order and customer_lot both match)
+          if (!inventoryByPO[poNum].palletIds.has(pallet.id)) {
+            inventoryByPO[poNum].palletIds.add(pallet.id);
+            inventoryByPO[poNum].inFloor += pallet.stock || 0;
+          }
 
           // Track load details for this PO
           if (pallet.load_pallets && pallet.load_pallets.length > 0) {
@@ -264,6 +300,7 @@ export default function Orders() {
       const { data: shippedByLotData, error: shippedByLotError } = await supabase
         .from("shipped_pallets")
         .select(`
+          id,
           customer_lot,
           quantity,
           load_id,
@@ -282,9 +319,17 @@ export default function Orders() {
           if (!poNum) return;
 
           if (!inventoryByPO[poNum]) {
-            inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          if (!shippedPalletIds[poNum]) {
+            shippedPalletIds[poNum] = new Set();
+          }
+          
+          // Only count if not already counted
+          if (!shippedPalletIds[poNum].has(pallet.id)) {
+            shippedPalletIds[poNum].add(pallet.id);
+            inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          }
 
           // Track shipped load details
           const loadInfo = pallet.shipping_loads;
@@ -340,14 +385,8 @@ export default function Orders() {
     }
 
     const formattedOrders = (ordersData || []).map((order: any) => {
-      // Combine stats from both matching methods (bfx_order → sales_order AND customer_lot → po_number)
-      const statsBySalesOrder = inventoryBySalesOrder[order.sales_order_number] || { inFloor: 0, shipped: 0 };
-      const statsByPO = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
-      
-      const stats = {
-        inFloor: statsBySalesOrder.inFloor + statsByPO.inFloor,
-        shipped: statsBySalesOrder.shipped + statsByPO.shipped,
-      };
+      // Get stats from combined inventory map (already de-duplicated by pallet ID)
+      const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
       
       const produced = stats.inFloor + stats.shipped;
       const pending = Math.max(0, order.quantity - produced);
