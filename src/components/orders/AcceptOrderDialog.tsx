@@ -66,6 +66,10 @@ export function AcceptOrderDialog({
 
     setIsSubmitting(true);
 
+    const deliveryDateFormatted = estimatedDeliveryDate
+      ? format(estimatedDeliveryDate, "yyyy-MM-dd")
+      : null;
+
     const { error } = await supabase
       .from("purchase_orders")
       .update({
@@ -73,9 +77,8 @@ export function AcceptOrderDialog({
         sales_order_number: salesOrderNumber.trim(),
         accepted_at: new Date().toISOString(),
         accepted_by: user.id,
-        estimated_delivery_date: estimatedDeliveryDate
-          ? format(estimatedDeliveryDate, "yyyy-MM-dd")
-          : null,
+        estimated_delivery_date: deliveryDateFormatted,
+        requested_delivery_date: deliveryDateFormatted,
       })
       .eq("id", order.id);
 
