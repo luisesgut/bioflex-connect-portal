@@ -857,7 +857,7 @@ export default function AdminProducts() {
                           <Badge variant="outline">{product.codigo_producto || '-'}</Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm font-mono">
-                          {product.pt_code || '-'}
+                          {product.codigo_producto || '-'}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {product.nombre_producto_2 || product.name}
