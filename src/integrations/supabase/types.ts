@@ -258,6 +258,7 @@ export type Database = {
           accepted_at: string | null
           accepted_by: string | null
           created_at: string
+          do_not_delay: boolean
           estimated_delivery_date: string | null
           id: string
           is_hot_order: boolean
@@ -280,6 +281,7 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           created_at?: string
+          do_not_delay?: boolean
           estimated_delivery_date?: string | null
           id?: string
           is_hot_order?: boolean
@@ -302,6 +304,7 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           created_at?: string
+          do_not_delay?: boolean
           estimated_delivery_date?: string | null
           id?: string
           is_hot_order?: boolean
