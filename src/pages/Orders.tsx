@@ -102,16 +102,21 @@ export default function Orders() {
       return;
     }
 
-    // Get all sales order numbers for inventory lookup
+    // Get all sales order numbers and PO numbers for inventory lookup
     const salesOrderNumbers = (ordersData || [])
       .map((o: any) => o.sales_order_number)
       .filter((son: string | null): son is string => son !== null && son !== "");
 
-    // Fetch inventory (in floor) and shipped pallets separately
-    let inventoryMap: Record<string, { inFloor: number; shipped: number }> = {};
+    const poNumbers = (ordersData || [])
+      .map((o: any) => o.po_number)
+      .filter((po: string | null): po is string => po !== null && po !== "");
+
+    // Create maps for inventory stats - keyed by both sales_order and po_number
+    let inventoryBySalesOrder: Record<string, { inFloor: number; shipped: number }> = {};
+    let inventoryByPO: Record<string, { inFloor: number; shipped: number }> = {};
     
+    // Fetch current inventory by bfx_order (matches sales_order_number)
     if (salesOrderNumbers.length > 0) {
-      // Fetch current inventory (this is what's "in floor")
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventory_pallets")
         .select("bfx_order, stock")
@@ -122,14 +127,14 @@ export default function Orders() {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
 
-          if (!inventoryMap[salesOrder]) {
-            inventoryMap[salesOrder] = { inFloor: 0, shipped: 0 };
+          if (!inventoryBySalesOrder[salesOrder]) {
+            inventoryBySalesOrder[salesOrder] = { inFloor: 0, shipped: 0 };
           }
-          inventoryMap[salesOrder].inFloor += pallet.stock || 0;
+          inventoryBySalesOrder[salesOrder].inFloor += pallet.stock || 0;
         });
       }
 
-      // Fetch shipped pallets (permanent record of shipped product)
+      // Fetch shipped pallets by bfx_order
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
         .select("bfx_order, quantity")
@@ -140,17 +145,62 @@ export default function Orders() {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
 
-          if (!inventoryMap[salesOrder]) {
-            inventoryMap[salesOrder] = { inFloor: 0, shipped: 0 };
+          if (!inventoryBySalesOrder[salesOrder]) {
+            inventoryBySalesOrder[salesOrder] = { inFloor: 0, shipped: 0 };
           }
-          inventoryMap[salesOrder].shipped += pallet.quantity || 0;
+          inventoryBySalesOrder[salesOrder].shipped += pallet.quantity || 0;
+        });
+      }
+    }
+
+    // Also fetch inventory by customer_lot (matches po_number)
+    if (poNumbers.length > 0) {
+      const { data: inventoryByLotData, error: inventoryByLotError } = await supabase
+        .from("inventory_pallets")
+        .select("customer_lot, stock")
+        .in("customer_lot", poNumbers);
+
+      if (!inventoryByLotError && inventoryByLotData) {
+        inventoryByLotData.forEach((pallet: any) => {
+          const poNum = pallet.customer_lot;
+          if (!poNum) return;
+
+          if (!inventoryByPO[poNum]) {
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
+          }
+          inventoryByPO[poNum].inFloor += pallet.stock || 0;
+        });
+      }
+
+      // Fetch shipped pallets by customer_lot
+      const { data: shippedByLotData, error: shippedByLotError } = await supabase
+        .from("shipped_pallets")
+        .select("customer_lot, quantity")
+        .in("customer_lot", poNumbers);
+
+      if (!shippedByLotError && shippedByLotData) {
+        shippedByLotData.forEach((pallet: any) => {
+          const poNum = pallet.customer_lot;
+          if (!poNum) return;
+
+          if (!inventoryByPO[poNum]) {
+            inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
+          }
+          inventoryByPO[poNum].shipped += pallet.quantity || 0;
         });
       }
     }
 
     const formattedOrders = (ordersData || []).map((order: any) => {
-      const salesOrder = order.sales_order_number;
-      const stats = inventoryMap[salesOrder] || { inFloor: 0, shipped: 0 };
+      // Combine stats from both matching methods (bfx_order → sales_order AND customer_lot → po_number)
+      const statsBySalesOrder = inventoryBySalesOrder[order.sales_order_number] || { inFloor: 0, shipped: 0 };
+      const statsByPO = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
+      
+      const stats = {
+        inFloor: statsBySalesOrder.inFloor + statsByPO.inFloor,
+        shipped: statsBySalesOrder.shipped + statsByPO.shipped,
+      };
+      
       const produced = stats.inFloor + stats.shipped;
       const pending = Math.max(0, order.quantity - produced);
       const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
