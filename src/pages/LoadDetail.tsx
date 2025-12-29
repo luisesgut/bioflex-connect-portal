@@ -673,15 +673,18 @@ export default function LoadDetail() {
           .eq("id", palletInventoryId);
         
         if (invError) throw invError;
+        toast.success("Pallet placed on hold");
       } else if (!isOnHold) {
-        // If releasing from hold, clear the release date
-        await supabase
-          .from("inventory_pallets")
-          .update({ release_date: null })
-          .eq("id", palletInventoryId);
+        // If shipping, set release date to load's shipping date
+        if (load?.shipping_date) {
+          await supabase
+            .from("inventory_pallets")
+            .update({ release_date: load.shipping_date })
+            .eq("id", palletInventoryId);
+        }
+        toast.success("Pallet marked for shipping");
       }
 
-      toast.success(isOnHold ? "Pallet placed on hold" : "Pallet released from hold");
       fetchLoadData();
     } catch (error) {
       console.error("Error toggling pallet hold:", error);
