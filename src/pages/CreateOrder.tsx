@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ export default function CreateOrder() {
   const [quantityInput, setQuantityInput] = useState<string>("10,000");
   const [pricePerThousand, setPricePerThousand] = useState<number>(0);
   const [isHotOrder, setIsHotOrder] = useState(false);
+  const [doNotDelay, setDoNotDelay] = useState(false);
   const [notes, setNotes] = useState("");
   const [requestedDate, setRequestedDate] = useState("");
   const [poDate, setPoDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -204,6 +205,7 @@ export default function CreateOrder() {
         pallets_needed: palletsNeeded || null,
         requested_delivery_date: requestedDate === "ASAP" ? null : (requestedDate || null),
         is_hot_order: isHotOrder,
+        do_not_delay: doNotDelay,
         notes: notes || null,
         pdf_url: pdfUrl,
       });
@@ -521,6 +523,38 @@ export default function CreateOrder() {
                       setRequestedDate("");
                     }
                   }}
+                />
+              </div>
+
+              <div className={cn(
+                "flex items-center justify-between rounded-lg border p-4 transition-all duration-300",
+                doNotDelay 
+                  ? "border-yellow-500 bg-yellow-500/5 shadow-sm" 
+                  : "border-border bg-muted/20"
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+                    doNotDelay ? "bg-yellow-500/20" : "bg-muted"
+                  )}>
+                    <Clock className={cn(
+                      "h-5 w-5 transition-colors",
+                      doNotDelay ? "text-yellow-600" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div>
+                    <Label htmlFor="do-not-delay" className="text-base cursor-pointer">
+                      Do Not Delay
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Mark this order as time-sensitive
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="do-not-delay"
+                  checked={doNotDelay}
+                  onCheckedChange={setDoNotDelay}
                 />
               </div>
 
