@@ -165,13 +165,25 @@ export default function LoadDetail() {
 
       setReleaseRequest(requestData);
 
-      // Fetch available pallets for adding
+      // Fetch pallets already in loads
+      const { data: assignedPallets } = await supabase
+        .from("load_pallets")
+        .select("pallet_id");
+
+      const assignedPalletIds = (assignedPallets || []).map((p) => p.pallet_id);
+
+      // Fetch available pallets excluding those already in any load
       const { data: availableData } = await supabase
         .from("inventory_pallets")
         .select("id, pt_code, description, stock, traceability")
         .eq("status", "available");
 
-      setAvailablePallets(availableData || []);
+      // Filter out pallets already assigned to any load
+      const filteredPallets = (availableData || []).filter(
+        (p) => !assignedPalletIds.includes(p.id)
+      );
+
+      setAvailablePallets(filteredPallets);
     } catch (error) {
       console.error("Error fetching load data:", error);
       toast.error("Failed to load data");
