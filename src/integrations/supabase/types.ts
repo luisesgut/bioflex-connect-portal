@@ -607,7 +607,12 @@ export type Database = {
       app_role: "admin" | "user"
       change_request_status: "pending" | "approved" | "rejected"
       change_request_type: "volume_change" | "cancellation" | "do_not_delay"
-      customer_location: "salinas" | "bakersfield" | "coachella" | "yuma"
+      customer_location:
+        | "salinas"
+        | "bakersfield"
+        | "coachella"
+        | "yuma"
+        | "tbd"
       inventory_status: "available" | "assigned" | "shipped"
       load_status:
         | "assembling"
@@ -748,7 +753,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       change_request_status: ["pending", "approved", "rejected"],
       change_request_type: ["volume_change", "cancellation", "do_not_delay"],
-      customer_location: ["salinas", "bakersfield", "coachella", "yuma"],
+      customer_location: ["salinas", "bakersfield", "coachella", "yuma", "tbd"],
       inventory_status: ["available", "assigned", "shipped"],
       load_status: [
         "assembling",
