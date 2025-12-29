@@ -542,6 +542,63 @@ export type Database = {
           },
         ]
       }
+      shipped_pallets: {
+        Row: {
+          bfx_order: string | null
+          created_at: string
+          customer_lot: string | null
+          delivery_date: string | null
+          description: string
+          destination: string | null
+          fecha: string | null
+          id: string
+          load_id: string
+          load_pallet_id: string | null
+          original_pallet_id: string | null
+          pt_code: string
+          quantity: number
+          shipped_at: string
+          traceability: string | null
+          unit: string
+        }
+        Insert: {
+          bfx_order?: string | null
+          created_at?: string
+          customer_lot?: string | null
+          delivery_date?: string | null
+          description: string
+          destination?: string | null
+          fecha?: string | null
+          id?: string
+          load_id: string
+          load_pallet_id?: string | null
+          original_pallet_id?: string | null
+          pt_code: string
+          quantity: number
+          shipped_at?: string
+          traceability?: string | null
+          unit?: string
+        }
+        Update: {
+          bfx_order?: string | null
+          created_at?: string
+          customer_lot?: string | null
+          delivery_date?: string | null
+          description?: string
+          destination?: string | null
+          fecha?: string | null
+          id?: string
+          load_id?: string
+          load_pallet_id?: string | null
+          original_pallet_id?: string | null
+          pt_code?: string
+          quantity?: number
+          shipped_at?: string
+          traceability?: string | null
+          unit?: string
+        }
+        Relationships: []
+      }
       shipping_loads: {
         Row: {
           created_at: string
