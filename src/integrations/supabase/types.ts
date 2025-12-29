@@ -87,6 +87,7 @@ export type Database = {
           piezas_totales_por_caja: number | null
           pisos: number | null
           print_card: string | null
+          print_card_url: string | null
           pt_code: string | null
           refilado: string | null
           size: string | null
@@ -131,6 +132,7 @@ export type Database = {
           piezas_totales_por_caja?: number | null
           pisos?: number | null
           print_card?: string | null
+          print_card_url?: string | null
           pt_code?: string | null
           refilado?: string | null
           size?: string | null
@@ -175,6 +177,7 @@ export type Database = {
           piezas_totales_por_caja?: number | null
           pisos?: number | null
           print_card?: string | null
+          print_card_url?: string | null
           pt_code?: string | null
           refilado?: string | null
           size?: string | null
