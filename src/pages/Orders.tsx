@@ -256,7 +256,10 @@ export default function Orders() {
                       Priority
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Est. Delivery
+                      Customer Delivery
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Bioflex Delivery
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Actions
@@ -316,7 +319,10 @@ export default function Orders() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                        {formatDate(order.estimated_delivery_date || order.requested_delivery_date)}
+                        {formatDate(order.requested_delivery_date)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                        {formatDate(order.estimated_delivery_date)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
