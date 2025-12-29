@@ -15,11 +15,19 @@ import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { differenceInHours } from "date-fns";
 
+interface LoadDetail {
+  load_number: string;
+  load_id: string;
+  pallet_count: number;
+  quantity: number;
+}
+
 interface InventoryStats {
   inFloor: number;
   shipped: number;
   pending: number;
   percentProduced: number;
+  loadDetails: LoadDetail[];
 }
 
 interface Order {
@@ -114,6 +122,8 @@ export default function Orders() {
     // Create maps for inventory stats - keyed by both sales_order and po_number
     let inventoryBySalesOrder: Record<string, { inFloor: number; shipped: number }> = {};
     let inventoryByPO: Record<string, { inFloor: number; shipped: number }> = {};
+    // Load details map - keyed by po_number
+    let loadDetailsByPO: Record<string, LoadDetail[]> = {};
     
     // Fetch current inventory by bfx_order (matches sales_order_number)
     if (salesOrderNumbers.length > 0) {
@@ -153,11 +163,25 @@ export default function Orders() {
       }
     }
 
-    // Also fetch inventory by customer_lot (matches po_number)
+    // Also fetch inventory by customer_lot (matches po_number) with load details
     if (poNumbers.length > 0) {
       const { data: inventoryByLotData, error: inventoryByLotError } = await supabase
         .from("inventory_pallets")
-        .select("customer_lot, stock")
+        .select(`
+          id,
+          customer_lot,
+          stock,
+          load_pallets (
+            id,
+            quantity,
+            load_id,
+            shipping_loads (
+              id,
+              load_number,
+              status
+            )
+          )
+        `)
         .in("customer_lot", poNumbers);
 
       if (!inventoryByLotError && inventoryByLotData) {
@@ -169,6 +193,33 @@ export default function Orders() {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0 };
           }
           inventoryByPO[poNum].inFloor += pallet.stock || 0;
+
+          // Track load details for this PO
+          if (pallet.load_pallets && pallet.load_pallets.length > 0) {
+            const loadPallet = pallet.load_pallets[0];
+            const loadInfo = loadPallet?.shipping_loads;
+            
+            // Only include loads that are not in_transit or delivered (those are "in floor")
+            if (loadInfo && loadInfo.status !== "in_transit" && loadInfo.status !== "delivered") {
+              if (!loadDetailsByPO[poNum]) {
+                loadDetailsByPO[poNum] = [];
+              }
+              
+              // Check if this load is already tracked
+              const existingLoad = loadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
+              if (existingLoad) {
+                existingLoad.pallet_count += 1;
+                existingLoad.quantity += pallet.stock || 0;
+              } else {
+                loadDetailsByPO[poNum].push({
+                  load_id: loadInfo.id,
+                  load_number: loadInfo.load_number,
+                  pallet_count: 1,
+                  quantity: pallet.stock || 0,
+                });
+              }
+            }
+          }
         });
       }
 
@@ -204,6 +255,9 @@ export default function Orders() {
       const produced = stats.inFloor + stats.shipped;
       const pending = Math.max(0, order.quantity - produced);
       const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
+      
+      // Get load details for this PO
+      const loadDetails = loadDetailsByPO[order.po_number] || [];
 
       return {
         id: order.id,
@@ -224,6 +278,7 @@ export default function Orders() {
           shipped: stats.shipped,
           pending,
           percentProduced,
+          loadDetails,
         },
       };
     });
