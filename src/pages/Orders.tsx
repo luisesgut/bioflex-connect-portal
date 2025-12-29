@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search, Plus, FileText, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -13,6 +13,7 @@ import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { BulkOrdersManager } from "@/components/orders/BulkOrdersManager";
 import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
+import { FilterableColumnHeader } from "@/components/orders/FilterableColumnHeader";
 import { differenceInHours } from "date-fns";
 
 interface LoadDetail {
@@ -97,6 +98,18 @@ export default function Orders() {
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Column filters
+  const [productFilter, setProductFilter] = useState<string[]>([]);
+  const [customerFilter, setCustomerFilter] = useState<string[]>([]);
+  const [itemTypeFilter, setItemTypeFilter] = useState<string[]>([]);
+  const [dpSalesFilter, setDpSalesFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+
+  // Date sorting
+  const [customerDeliverySort, setCustomerDeliverySort] = useState<"asc" | "desc" | null>(null);
+  const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -409,13 +422,67 @@ export default function Orders() {
     setChangeRequestDialogOpen(true);
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-    const matchesStatus = selectedStatus === "All" || 
-                         getStatusFilter(order.status) === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Get unique values for filter options
+  const filterOptions = useMemo(() => ({
+    products: orders.map((o) => o.product_name).filter(Boolean) as string[],
+    customers: orders.map((o) => o.product_customer).filter(Boolean) as string[],
+    itemTypes: orders.map((o) => o.product_item_type).filter(Boolean) as string[],
+    dpSales: orders.map((o) => o.product_dp_sales_csr).filter(Boolean) as string[],
+    statuses: orders.map((o) => statusLabels[o.status] || "Submitted"),
+    priorities: ["Hot", "DND", "Normal"],
+    customerDeliveryDates: orders.map((o) => formatDate(o.requested_delivery_date)),
+    bioflexDeliveryDates: orders.map((o) => formatDate(o.estimated_delivery_date)),
+  }), [orders]);
+
+  const getPriorityLabel = (order: Order) => {
+    if (order.is_hot_order) return "Hot";
+    if (order.do_not_delay) return "DND";
+    return "Normal";
+  };
+
+  const filteredAndSortedOrders = useMemo(() => {
+    let result = orders.filter((order) => {
+      const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const matchesStatus = selectedStatus === "All" || 
+                           getStatusFilter(order.status) === selectedStatus;
+      
+      // Column filters
+      const matchesProduct = productFilter.length === 0 || 
+                            (order.product_name && productFilter.includes(order.product_name));
+      const matchesCustomer = customerFilter.length === 0 || 
+                             (order.product_customer && customerFilter.includes(order.product_customer));
+      const matchesItemType = itemTypeFilter.length === 0 || 
+                             (order.product_item_type && itemTypeFilter.includes(order.product_item_type));
+      const matchesDpSales = dpSalesFilter.length === 0 || 
+                            (order.product_dp_sales_csr && dpSalesFilter.includes(order.product_dp_sales_csr));
+      const matchesStatusFilter = statusFilter.length === 0 || 
+                                 statusFilter.includes(statusLabels[order.status] || "Submitted");
+      const matchesPriority = priorityFilter.length === 0 || 
+                             priorityFilter.includes(getPriorityLabel(order));
+      
+      return matchesSearch && matchesStatus && matchesProduct && matchesCustomer && 
+             matchesItemType && matchesDpSales && matchesStatusFilter && matchesPriority;
+    });
+
+    // Apply date sorting
+    if (customerDeliverySort) {
+      result = [...result].sort((a, b) => {
+        const dateA = a.requested_delivery_date ? new Date(a.requested_delivery_date).getTime() : 0;
+        const dateB = b.requested_delivery_date ? new Date(b.requested_delivery_date).getTime() : 0;
+        return customerDeliverySort === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    } else if (bioflexDeliverySort) {
+      result = [...result].sort((a, b) => {
+        const dateA = a.estimated_delivery_date ? new Date(a.estimated_delivery_date).getTime() : 0;
+        const dateB = b.estimated_delivery_date ? new Date(b.estimated_delivery_date).getTime() : 0;
+        return bioflexDeliverySort === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    }
+
+    return result;
+  }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
+      dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
@@ -492,7 +559,7 @@ export default function Orders() {
         )}
 
         {/* Orders Table */}
-        {!loading && filteredOrders.length > 0 && (
+        {!loading && filteredAndSortedOrders.length > 0 && (
           <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -501,41 +568,77 @@ export default function Orders() {
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       PO Number
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Product
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Customer
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Item Type
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      DP Sales/CSR
-                    </th>
+                    <FilterableColumnHeader
+                      title="Product"
+                      options={filterOptions.products}
+                      selectedValues={productFilter}
+                      onFilterChange={setProductFilter}
+                    />
+                    <FilterableColumnHeader
+                      title="Customer"
+                      options={filterOptions.customers}
+                      selectedValues={customerFilter}
+                      onFilterChange={setCustomerFilter}
+                    />
+                    <FilterableColumnHeader
+                      title="Item Type"
+                      options={filterOptions.itemTypes}
+                      selectedValues={itemTypeFilter}
+                      onFilterChange={setItemTypeFilter}
+                    />
+                    <FilterableColumnHeader
+                      title="DP Sales/CSR"
+                      options={filterOptions.dpSales}
+                      selectedValues={dpSalesFilter}
+                      onFilterChange={setDpSalesFilter}
+                    />
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Quantity
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Value
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Status
-                    </th>
+                    <FilterableColumnHeader
+                      title="Status"
+                      options={filterOptions.statuses}
+                      selectedValues={statusFilter}
+                      onFilterChange={setStatusFilter}
+                    />
                     {isAdmin && (
                       <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Sales Order
                       </th>
                     )}
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Priority
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Customer Delivery
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Bioflex Delivery
-                    </th>
+                    <FilterableColumnHeader
+                      title="Priority"
+                      options={filterOptions.priorities}
+                      selectedValues={priorityFilter}
+                      onFilterChange={setPriorityFilter}
+                    />
+                    <FilterableColumnHeader
+                      title="Customer Delivery"
+                      options={filterOptions.customerDeliveryDates}
+                      selectedValues={[]}
+                      onFilterChange={() => {}}
+                      showSort
+                      sortDirection={customerDeliverySort}
+                      onSortChange={(dir) => {
+                        setCustomerDeliverySort(dir);
+                        setBioflexDeliverySort(null);
+                      }}
+                    />
+                    <FilterableColumnHeader
+                      title="Bioflex Delivery"
+                      options={filterOptions.bioflexDeliveryDates}
+                      selectedValues={[]}
+                      onFilterChange={() => {}}
+                      showSort
+                      sortDirection={bioflexDeliverySort}
+                      onSortChange={(dir) => {
+                        setBioflexDeliverySort(dir);
+                        setCustomerDeliverySort(null);
+                      }}
+                    />
                     {isAdmin && (
                       <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Excess Stock
@@ -559,7 +662,7 @@ export default function Orders() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredOrders.map((order) => (
+                  {filteredAndSortedOrders.map((order) => (
                     <EditableOrderRow
                       key={order.id}
                       order={order}
@@ -579,7 +682,7 @@ export default function Orders() {
           </div>
         )}
 
-        {!loading && filteredOrders.length === 0 && (
+        {!loading && filteredAndSortedOrders.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 py-16">
             <FileText className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold text-foreground">No orders found</h3>
