@@ -32,6 +32,7 @@ interface Order {
   estimated_delivery_date: string | null;
   created_at: string;
   pdf_url: string | null;
+  sales_order_number: string | null;
 }
 
 const statusStyles: Record<string, string> = {
@@ -81,6 +82,7 @@ export default function Orders() {
         estimated_delivery_date,
         created_at,
         pdf_url,
+        sales_order_number,
         products (name)
       `)
       .order("created_at", { ascending: false });
@@ -101,6 +103,7 @@ export default function Orders() {
         estimated_delivery_date: order.estimated_delivery_date,
         created_at: order.created_at,
         pdf_url: order.pdf_url,
+        sales_order_number: order.sales_order_number,
       }));
       setOrders(formattedOrders);
     }
@@ -233,6 +236,11 @@ export default function Orders() {
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Status
                     </th>
+                    {isAdmin && (
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Sales Order
+                      </th>
+                    )}
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Priority
                     </th>
@@ -279,6 +287,13 @@ export default function Orders() {
                           {statusLabels[order.status] || "Submitted"}
                         </Badge>
                       </td>
+                      {isAdmin && (
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <span className="font-mono text-sm text-muted-foreground">
+                            {order.sales_order_number || "—"}
+                          </span>
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-6 py-4">
                         {order.is_hot_order ? (
                           <div className="flex items-center gap-1.5">
