@@ -116,7 +116,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, pt_code)
+        products (name, sku)
       `)
       .order("created_at", { ascending: false });
 
@@ -294,9 +294,9 @@ export default function Orders() {
       }
     }
 
-    // Fetch excess stock by PT code (for admin view)
+    // Fetch excess stock by PT code (sku field contains PT code)
     const ptCodes = (ordersData || [])
-      .map((o: any) => o.products?.pt_code)
+      .map((o: any) => o.products?.sku)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
     
     let excessStockByPT: Record<string, ExcessStockDetail> = {};
@@ -339,8 +339,8 @@ export default function Orders() {
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       
-      // Get excess stock by PT code
-      const productPtCode = order.products?.pt_code || null;
+      // Get excess stock by PT code (sku field contains PT code)
+      const productPtCode = order.products?.sku || null;
       const excessStock = productPtCode ? excessStockByPT[productPtCode] || null : null;
 
       return {
