@@ -36,7 +36,7 @@ interface ShippingLoad {
   id: string;
   load_number: string;
   shipping_date: string;
-  status: "assembling" | "pending_release" | "approved" | "on_hold" | "shipped";
+  status: "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
   total_pallets: number;
   release_number: string | null;
   notes: string | null;
@@ -49,14 +49,18 @@ const statusStyles: Record<string, string> = {
   approved: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   on_hold: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
   shipped: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+  in_transit: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+  delivered: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300",
 };
 
 const statusLabels: Record<string, string> = {
   assembling: "Assembling",
   pending_release: "Pending Release",
-  approved: "Approved",
+  approved: "Released",
   on_hold: "On Hold",
   shipped: "Shipped",
+  in_transit: "In Transit",
+  delivered: "Delivered",
 };
 
 export default function ShippingLoads() {
