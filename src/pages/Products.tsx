@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Package, ArrowUpRight, Loader2, FileText } from "lucide-react";
+import { Search, Plus, Package, ArrowUpRight, Loader2, FileText, Filter, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Product {
   id: string;
@@ -17,12 +24,22 @@ interface Product {
   print_card_url: string | null;
 }
 
+interface Filters {
+  customer: string;
+  item_type: string;
+  has_pc_file: string;
+}
+
 export default function Products() {
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState("All");
+  const [filters, setFilters] = useState<Filters>({
+    customer: "all",
+    item_type: "all",
+    has_pc_file: "all",
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -48,20 +65,32 @@ export default function Products() {
     setLoading(false);
   };
 
-  // Get unique customers for filter
-  const customers = ["All", ...new Set(products.map(p => p.customer).filter(Boolean) as string[])];
+  // Get unique values for filters
+  const customers = [...new Set(products.map(p => p.customer).filter(Boolean) as string[])].sort();
+  const itemTypes = [...new Set(products.map(p => p.item_type).filter(Boolean) as string[])].sort();
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = 
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.item_description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCustomer = selectedCustomer === "All" || product.customer === selectedCustomer;
-    return matchesSearch && matchesCustomer;
+    const matchesCustomer = filters.customer === "all" || product.customer === filters.customer;
+    const matchesItemType = filters.item_type === "all" || product.item_type === filters.item_type;
+    const matchesPcFile = filters.has_pc_file === "all" || 
+      (filters.has_pc_file === "yes" && product.print_card_url) ||
+      (filters.has_pc_file === "no" && !product.print_card_url);
+    return matchesSearch && matchesCustomer && matchesItemType && matchesPcFile;
   });
+
+  const clearFilters = () => {
+    setFilters({ customer: "all", item_type: "all", has_pc_file: "all" });
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = filters.customer !== "all" || filters.item_type !== "all" || filters.has_pc_file !== "all" || searchQuery;
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
@@ -79,28 +108,69 @@ export default function Products() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by item or description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {customers.slice(0, 6).map((customer) => (
-              <Button
-                key={customer}
-                variant={selectedCustomer === customer ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCustomer(customer)}
-                className="transition-all duration-200"
-              >
-                {customer}
+        <div className="rounded-xl border bg-card p-4 space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Filters</span>
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
+                <X className="h-3 w-3" />
+                Clear all
               </Button>
-            ))}
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search item or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Customer Filter */}
+            <Select value={filters.customer} onValueChange={(v) => setFilters(f => ({ ...f, customer: v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Customer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Customers</SelectItem>
+                {customers.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Item Type Filter */}
+            <Select value={filters.item_type} onValueChange={(v) => setFilters(f => ({ ...f, item_type: v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Item Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {itemTypes.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* PC File Filter */}
+            <Select value={filters.has_pc_file} onValueChange={(v) => setFilters(f => ({ ...f, has_pc_file: v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="PC File" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="yes">Has PC File</SelectItem>
+                <SelectItem value="no">No PC File</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -136,7 +206,7 @@ export default function Products() {
                   <tr 
                     key={product.id} 
                     className="transition-colors hover:bg-muted/30 animate-slide-up"
-                    style={{ animationDelay: `${0.05 * index}s` }}
+                    style={{ animationDelay: `${0.02 * Math.min(index, 10)}s` }}
                   >
                     <td className="px-6 py-4">
                       <span className="font-medium text-foreground">{product.customer_item || '-'}</span>

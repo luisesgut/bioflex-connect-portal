@@ -9,8 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText } from "lucide-react";
+import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText, Filter, X } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface AdminFilters {
+  customer: string;
+  item_type: string;
+  activa: string;
+  has_pc_file: string;
+}
 
 interface Product {
   id: string;
@@ -108,6 +122,12 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState<AdminFilters>({
+    customer: "all",
+    item_type: "all",
+    activa: "all",
+    has_pc_file: "all",
+  });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
@@ -468,12 +488,34 @@ export default function AdminProducts() {
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get unique values for filters
+  const customers = [...new Set(products.map(p => p.customer).filter(Boolean) as string[])].sort();
+  const itemTypes = [...new Set(products.map(p => p.item_type).filter(Boolean) as string[])].sort();
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = 
+      product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCustomer = filters.customer === "all" || product.customer === filters.customer;
+    const matchesItemType = filters.item_type === "all" || product.item_type === filters.item_type;
+    const matchesActiva = filters.activa === "all" || 
+      (filters.activa === "yes" && product.activa) ||
+      (filters.activa === "no" && !product.activa);
+    const matchesPcFile = filters.has_pc_file === "all" || 
+      (filters.has_pc_file === "yes" && product.print_card_url) ||
+      (filters.has_pc_file === "no" && !product.print_card_url);
+    return matchesSearch && matchesCustomer && matchesItemType && matchesActiva && matchesPcFile;
+  });
+
+  const clearFilters = () => {
+    setFilters({ customer: "all", item_type: "all", activa: "all", has_pc_file: "all" });
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = filters.customer !== "all" || filters.item_type !== "all" || 
+    filters.activa !== "all" || filters.has_pc_file !== "all" || searchQuery;
 
   if (adminLoading) {
     return (
@@ -550,6 +592,88 @@ export default function AdminProducts() {
           </div>
         </div>
 
+        {/* Filters */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-base">Filters</CardTitle>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
+                  <X className="h-3 w-3" />
+                  Clear all
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Search */}
+              <div className="relative lg:col-span-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Customer Filter */}
+              <Select value={filters.customer} onValueChange={(v) => setFilters(f => ({ ...f, customer: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {customers.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Item Type Filter */}
+              <Select value={filters.item_type} onValueChange={(v) => setFilters(f => ({ ...f, item_type: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Item Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {itemTypes.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Active Filter */}
+              <Select value={filters.activa} onValueChange={(v) => setFilters(f => ({ ...f, activa: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Active" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">Active</SelectItem>
+                  <SelectItem value="no">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* PC File Filter */}
+              <Select value={filters.has_pc_file} onValueChange={(v) => setFilters(f => ({ ...f, has_pc_file: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="PC File" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">Has PC File</SelectItem>
+                  <SelectItem value="no">No PC File</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Instructions */}
         <Card>
           <CardHeader className="pb-3">
@@ -568,17 +692,6 @@ export default function AdminProducts() {
             </CardDescription>
           </CardHeader>
         </Card>
-
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by código, nombre, customer..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
 
         {/* Products Table */}
         <Card>
