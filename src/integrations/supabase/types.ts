@@ -53,6 +53,62 @@ export type Database = {
         }
         Relationships: []
       }
+      order_change_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          current_quantity: number
+          id: string
+          purchase_order_id: string
+          reason: string
+          request_type: Database["public"]["Enums"]["change_request_type"]
+          requested_by: string
+          requested_quantity: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["change_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          current_quantity: number
+          id?: string
+          purchase_order_id: string
+          reason: string
+          request_type: Database["public"]["Enums"]["change_request_type"]
+          requested_by: string
+          requested_quantity?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["change_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          current_quantity?: number
+          id?: string
+          purchase_order_id?: string
+          reason?: string
+          request_type?: Database["public"]["Enums"]["change_request_type"]
+          requested_by?: string
+          requested_quantity?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["change_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_change_requests_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           activa: boolean | null
@@ -310,6 +366,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      change_request_status: "pending" | "approved" | "rejected"
+      change_request_type: "volume_change" | "cancellation"
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
     }
@@ -440,6 +498,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      change_request_status: ["pending", "approved", "rejected"],
+      change_request_type: ["volume_change", "cancellation"],
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],
     },

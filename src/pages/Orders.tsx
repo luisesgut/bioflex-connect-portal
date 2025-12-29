@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Flame, MoreVertical, Download, Eye, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Search, Plus, FileText, Flame, MoreVertical, Download, Eye, Loader2, CheckCircle2, Clock, FileEdit } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { BulkOrdersManager } from "@/components/orders/BulkOrdersManager";
+import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { differenceInHours } from "date-fns";
 
 interface Order {
@@ -64,6 +65,7 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
+  const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const fetchOrders = async () => {
@@ -134,6 +136,11 @@ export default function Orders() {
   const handleAcceptOrder = (order: Order) => {
     setSelectedOrder(order);
     setAcceptDialogOpen(true);
+  };
+
+  const handleRequestChange = (order: Order) => {
+    setSelectedOrder(order);
+    setChangeRequestDialogOpen(true);
   };
 
   const filteredOrders = orders.filter((order) => {
@@ -356,6 +363,19 @@ export default function Orders() {
                                   </DropdownMenuItem>
                                 </>
                               )}
+                              {/* Show Request Change for accepted/in-production orders (non-admin users) */}
+                              {!isAdmin && (order.status === "accepted" || order.status === "in-production") && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="gap-2"
+                                    onClick={() => handleRequestChange(order)}
+                                  >
+                                    <FileEdit className="h-4 w-4" />
+                                    Request Change
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                               {!order.is_hot_order && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -403,6 +423,14 @@ export default function Orders() {
           onOpenChange={setAcceptDialogOpen}
           order={selectedOrder}
           onAccepted={fetchOrders}
+        />
+
+        {/* Change Request Dialog */}
+        <ChangeRequestDialog
+          open={changeRequestDialogOpen}
+          onOpenChange={setChangeRequestDialogOpen}
+          order={selectedOrder}
+          onSubmitted={fetchOrders}
         />
       </div>
     </MainLayout>

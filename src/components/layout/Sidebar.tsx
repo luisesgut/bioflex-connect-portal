@@ -7,7 +7,8 @@ import {
   FileWarning,
   Settings,
   LogOut,
-  ShieldAlert
+  ShieldAlert,
+  FileEdit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Hot Orders", href: "/hot-orders", icon: Flame },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
+  { name: "Change Requests", href: "/change-requests", icon: FileEdit },
 ];
 
 const adminNavigation = [
