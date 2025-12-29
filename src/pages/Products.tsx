@@ -339,7 +339,7 @@ export default function Products() {
                           variant="accent" 
                           size="sm" 
                           className="gap-1"
-                          onClick={() => navigate(`/create-order?productId=${product.id}`)}
+                          onClick={() => navigate(`/orders/new?productId=${product.id}`)}
                         >
                           Order
                           <ArrowUpRight className="h-3 w-3" />
