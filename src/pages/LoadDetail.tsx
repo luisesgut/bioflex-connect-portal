@@ -1017,9 +1017,8 @@ export default function LoadDetail() {
                           <DateColumnHeader />
                           <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                           <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
-                          <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
-                          <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <TableHead className="text-right">Stock</TableHead>
+                          <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
                         </TableRow>
                       </TableHeader>
@@ -1042,13 +1041,10 @@ export default function LoadDetail() {
                             <TableCell className="max-w-[200px] truncate">
                               {pallet.description}
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {pallet.traceability}
-                            </TableCell>
-                            <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-right font-medium">
                               {pallet.stock.toLocaleString()}
                             </TableCell>
+                            <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-sm">{pallet.unit}</TableCell>
                           </TableRow>
                         ))}
