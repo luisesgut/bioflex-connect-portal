@@ -672,15 +672,23 @@ export default function LoadDetail() {
           .update({ release_date: releaseDate.toISOString().split("T")[0] })
           .eq("id", palletInventoryId);
         
-        if (invError) throw invError;
+        if (invError) {
+          console.error("Error updating inventory release date:", invError);
+          throw invError;
+        }
         toast.success("Pallet placed on hold");
       } else if (!isOnHold) {
         // If shipping, set release date to load's shipping date
         if (load?.shipping_date) {
-          await supabase
+          const { error: invError } = await supabase
             .from("inventory_pallets")
             .update({ release_date: load.shipping_date })
             .eq("id", palletInventoryId);
+          
+          if (invError) {
+            console.error("Error updating inventory release date for shipping:", invError);
+            throw invError;
+          }
         }
         toast.success("Pallet marked for shipping");
       }
@@ -1303,8 +1311,12 @@ export default function LoadDetail() {
                   </TableHeader>
                   <TableBody>
                     {pallets.map((pallet) => {
-                      // Status is "pending" when load is assembling or release request is pending, unless customer chose hold/ship
-                      const palletStatus = pallet.is_on_hold ? "hold" : (load?.status === "assembling" || releaseRequest?.status === "pending" ? "pending" : "ship");
+                      // Determine pallet status based on is_on_hold and release_date
+                      // - "hold" if is_on_hold is true
+                      // - "ship" if release_date matches load's shipping_date (customer chose to ship)
+                      // - "pending" otherwise (awaiting customer decision)
+                      const hasChosenToShip = !pallet.is_on_hold && pallet.pallet.release_date === load?.shipping_date;
+                      const palletStatus = pallet.is_on_hold ? "hold" : (hasChosenToShip ? "ship" : "pending");
                       return (
                       <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
                         {isAdmin && (
