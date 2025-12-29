@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar, ChevronDown, X } from "lucide-react";
+import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -84,6 +84,7 @@ export default function Inventory() {
     bfx_order: [],
     status: [],
   });
+  const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>("desc");
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -335,31 +336,130 @@ export default function Inventory() {
     );
   };
 
+  // Date Column Header with Sort and Filter
+  const DateColumnHeader = () => {
+    const activeFilters = filters.fecha;
+    const isFiltered = activeFilters.length > 0;
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredOptions = uniqueDates.filter(opt => 
+      opt.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const toggleSort = () => {
+      setDateSortOrder(prev => {
+        if (prev === "desc") return "asc";
+        if (prev === "asc") return null;
+        return "desc";
+      });
+    };
+
+    const SortIcon = dateSortOrder === "desc" ? ArrowDown : dateSortOrder === "asc" ? ArrowUp : ArrowUpDown;
+
+    return (
+      <TableHead>
+        <div className="flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isFiltered ? 'text-primary font-bold' : ''}`}>
+                Date
+                {isFiltered && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilters.length}</Badge>}
+                <ChevronDown className={`h-3 w-3 ${isFiltered ? 'text-primary' : 'text-muted-foreground'}`} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-0">
+              <div className="p-2 border-b">
+                <Input
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8"
+                />
+              </div>
+              <div className="p-2 border-b flex justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  onClick={() => setFilters(prev => ({ ...prev, fecha: filteredOptions }))}
+                >
+                  Select All
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs"
+                  onClick={() => clearColumnFilter("fecha")}
+                >
+                  Clear
+                </Button>
+              </div>
+              <ScrollArea className="h-48">
+                <div className="p-2 space-y-1">
+                  {filteredOptions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-2">No options</p>
+                  ) : (
+                    filteredOptions.map(option => (
+                      <label 
+                        key={option} 
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox 
+                          checked={activeFilters.includes(option)}
+                          onCheckedChange={() => toggleFilter("fecha", option)}
+                        />
+                        <span className="truncate">{option}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+          <button 
+            onClick={toggleSort}
+            className={`p-1 rounded hover:bg-muted transition-colors ${dateSortOrder ? 'text-primary' : 'text-muted-foreground'}`}
+            title={dateSortOrder === "desc" ? "Sorted: Newest first" : dateSortOrder === "asc" ? "Sorted: Oldest first" : "Click to sort"}
+          >
+            <SortIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </TableHead>
+    );
+  };
+
   // Apply filters to inventory
-  const filteredInventory = inventory.filter((item) => {
-    // Text search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = 
-        item.pt_code.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.traceability.toLowerCase().includes(query) ||
-        item.bfx_order?.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
+  const filteredInventory = inventory
+    .filter((item) => {
+      // Text search
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          item.pt_code.toLowerCase().includes(query) ||
+          item.description.toLowerCase().includes(query) ||
+          item.traceability.toLowerCase().includes(query) ||
+          item.bfx_order?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
 
-    // Column filters
-    const dateStr = new Date(item.fecha).toLocaleDateString();
-    if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
-    if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
-    if (filters.description.length > 0 && !filters.description.includes(item.description)) return false;
-    if (filters.unit.length > 0 && !filters.unit.includes(item.unit)) return false;
-    if (filters.traceability.length > 0 && !filters.traceability.includes(item.traceability)) return false;
-    if (filters.bfx_order.length > 0 && !filters.bfx_order.includes(item.bfx_order || "-")) return false;
-    if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
+      // Column filters
+      const dateStr = new Date(item.fecha).toLocaleDateString();
+      if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
+      if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
+      if (filters.description.length > 0 && !filters.description.includes(item.description)) return false;
+      if (filters.unit.length > 0 && !filters.unit.includes(item.unit)) return false;
+      if (filters.traceability.length > 0 && !filters.traceability.includes(item.traceability)) return false;
+      if (filters.bfx_order.length > 0 && !filters.bfx_order.includes(item.bfx_order || "-")) return false;
+      if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      if (!dateSortOrder) return 0;
+      const dateA = new Date(a.fecha).getTime();
+      const dateB = new Date(b.fecha).getTime();
+      return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
 
   const availableCount = filteredInventory.filter((i) => i.status === "available").length;
   const assignedCount = filteredInventory.filter((i) => i.status === "assigned").length;
@@ -498,7 +598,7 @@ export default function Inventory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <ColumnFilterHeader label="Date" filterKey="fecha" options={uniqueDates} />
+                  <DateColumnHeader />
                   <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                   <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                   <TableHead className="text-right">Stock</TableHead>
