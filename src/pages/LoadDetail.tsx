@@ -54,7 +54,19 @@ import {
   ArrowDown,
   ArrowUp,
   Send,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
@@ -167,6 +179,8 @@ export default function LoadDetail() {
   });
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>("desc");
   const [sendingRelease, setSendingRelease] = useState(false);
+  const [deletingLoad, setDeletingLoad] = useState(false);
+  const [deletingHoldPallets, setDeletingHoldPallets] = useState(false);
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -838,6 +852,97 @@ export default function LoadDetail() {
     }
   };
 
+  const handleDeleteLoad = async () => {
+    if (!id) return;
+
+    setDeletingLoad(true);
+    try {
+      // Get all pallet IDs from this load
+      const palletIds = pallets.map((p) => p.pallet_id);
+
+      // Delete load pallets first (foreign key constraint)
+      const { error: palletsError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .eq("load_id", id);
+
+      if (palletsError) throw palletsError;
+
+      // Delete any release requests for this load
+      await supabase
+        .from("release_requests")
+        .delete()
+        .eq("load_id", id);
+
+      // Delete the load
+      const { error: loadError } = await supabase
+        .from("shipping_loads")
+        .delete()
+        .eq("id", id);
+
+      if (loadError) throw loadError;
+
+      // Reset inventory pallet statuses back to available
+      if (palletIds.length > 0) {
+        await supabase
+          .from("inventory_pallets")
+          .update({ status: "available" })
+          .in("id", palletIds);
+      }
+
+      toast.success("Load deleted successfully");
+      navigate("/shipping-loads");
+    } catch (error) {
+      console.error("Error deleting load:", error);
+      toast.error("Failed to delete load");
+    } finally {
+      setDeletingLoad(false);
+    }
+  };
+
+  const handleDeleteHoldPallets = async () => {
+    const holdPallets = pallets.filter((p) => p.is_on_hold);
+    if (holdPallets.length === 0) {
+      toast.error("No pallets on hold to delete");
+      return;
+    }
+
+    setDeletingHoldPallets(true);
+    try {
+      const holdPalletIds = holdPallets.map((p) => p.id);
+      const inventoryPalletIds = holdPallets.map((p) => p.pallet_id);
+
+      // Delete load pallets that are on hold
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", holdPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      // Reset inventory pallet statuses back to available
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available" })
+        .in("id", inventoryPalletIds);
+
+      // Update load total
+      const newTotal = Math.max(0, (load?.total_pallets || 0) - holdPallets.length);
+      await supabase
+        .from("shipping_loads")
+        .update({ total_pallets: newTotal })
+        .eq("id", id);
+
+      toast.success(`${holdPallets.length} on-hold pallet(s) removed from load`);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting hold pallets:", error);
+      toast.error("Failed to remove on-hold pallets");
+    } finally {
+      setDeletingHoldPallets(false);
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -896,6 +1001,35 @@ export default function LoadDetail() {
                 <Truck className="mr-2 h-4 w-4" />
                 Mark as Shipped
               </Button>
+            )}
+            {isAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={deletingLoad}>
+                    {deletingLoad ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    Delete Load
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Load?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the load "{load.load_number}" and remove all {pallets.length} pallet(s) from it. 
+                      The pallets will be returned to available inventory. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteLoad} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Delete Load
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
@@ -998,13 +1132,44 @@ export default function LoadDetail() {
 
         {/* Pallets Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Pallets in Load</CardTitle>
-            <CardDescription>
-              {load.status === "assembling" 
-                ? "Select pallets from the inventory below to add to this load"
-                : "Assign destinations to each pallet for delivery"}
-            </CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>Pallets in Load</CardTitle>
+              <CardDescription>
+                {load.status === "assembling" 
+                  ? "Select pallets from the inventory below to add to this load"
+                  : "Assign destinations to each pallet for delivery"}
+              </CardDescription>
+            </div>
+            {isAdmin && pallets.some((p) => p.is_on_hold) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
+                    {deletingHoldPallets ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    Delete On-Hold Pallets ({pallets.filter((p) => p.is_on_hold).length})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete On-Hold Pallets?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will remove {pallets.filter((p) => p.is_on_hold).length} on-hold pallet(s) from this load. 
+                      They will be returned to available inventory. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteHoldPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Delete On-Hold Pallets
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </CardHeader>
           <CardContent>
             {pallets.length === 0 ? (
