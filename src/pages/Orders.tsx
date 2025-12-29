@@ -51,6 +51,9 @@ interface Order {
   po_number: string;
   product_name: string | null;
   product_pt_code: string | null;
+  product_customer: string | null;
+  product_item_type: string | null;
+  product_dp_sales_csr: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -116,7 +119,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku)
+        products (name, sku, customer, item_type, dp_sales_csr_names)
       `)
       .order("created_at", { ascending: false });
 
@@ -348,6 +351,9 @@ export default function Orders() {
         po_number: order.po_number,
         product_name: order.products?.name || null,
         product_pt_code: productPtCode,
+        product_customer: order.products?.customer || null,
+        product_item_type: order.products?.item_type || null,
+        product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         quantity: order.quantity,
         total_price: order.total_price,
         status: order.status,
@@ -497,6 +503,15 @@ export default function Orders() {
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Product
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Customer
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Item Type
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      DP Sales/CSR
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Quantity
