@@ -64,24 +64,9 @@ interface Order {
   po_number: string;
   product_name: string | null;
   product_pt_code: string | null;
-  quantity: number;
-  total_price: number | null;
-  status: string;
-  is_hot_order: boolean;
-  do_not_delay: boolean;
-  requested_delivery_date: string | null;
-  estimated_delivery_date: string | null;
-  created_at: string;
-  pdf_url: string | null;
-  sales_order_number: string | null;
-  inventoryStats: InventoryStats;
-}
-
-interface Order {
-  id: string;
-  po_number: string;
-  product_name: string | null;
-  product_pt_code: string | null;
+  product_customer: string | null;
+  product_item_type: string | null;
+  product_dp_sales_csr: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -205,6 +190,21 @@ export function EditableOrderRow({
         <td className="px-6 py-4">
           <span className="text-sm font-medium text-card-foreground">
             {order.product_name || "—"}
+          </span>
+        </td>
+        <td className="px-6 py-4">
+          <span className="text-sm text-muted-foreground">
+            {order.product_customer || "—"}
+          </span>
+        </td>
+        <td className="px-6 py-4">
+          <span className="text-sm text-muted-foreground">
+            {order.product_item_type || "—"}
+          </span>
+        </td>
+        <td className="px-6 py-4">
+          <span className="text-sm text-muted-foreground">
+            {order.product_dp_sales_csr || "—"}
           </span>
         </td>
         <td className="whitespace-nowrap px-6 py-2">
@@ -465,6 +465,21 @@ export function EditableOrderRow({
       <td className="px-6 py-4">
         <span className="text-sm font-medium text-card-foreground">
           {order.product_name || "—"}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className="text-sm text-muted-foreground">
+          {order.product_customer || "—"}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className="text-sm text-muted-foreground">
+          {order.product_item_type || "—"}
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <span className="text-sm text-muted-foreground">
+          {order.product_dp_sales_csr || "—"}
         </span>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
