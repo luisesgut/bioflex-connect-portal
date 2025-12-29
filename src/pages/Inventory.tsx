@@ -20,7 +20,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar, ChevronDown, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -44,6 +51,16 @@ interface InventoryPallet {
   created_at: string;
 }
 
+interface InventoryFilters {
+  fecha: string[];
+  pt_code: string[];
+  description: string[];
+  unit: string[];
+  traceability: string[];
+  bfx_order: string[];
+  status: string[];
+}
+
 const statusStyles: Record<string, string> = {
   available: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   assigned: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
@@ -58,6 +75,15 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [latestUploadDate, setLatestUploadDate] = useState<string | null>(null);
+  const [filters, setFilters] = useState<InventoryFilters>({
+    fecha: [],
+    pt_code: [],
+    description: [],
+    unit: [],
+    traceability: [],
+    bfx_order: [],
+    status: [],
+  });
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -186,17 +212,158 @@ export default function Inventory() {
     }
   };
 
-  const filteredInventory = inventory.filter(
-    (item) =>
-      item.pt_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.traceability.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.bfx_order?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter toggle function
+  const toggleFilter = (filterKey: keyof InventoryFilters, value: string) => {
+    setFilters(prev => {
+      const current = prev[filterKey];
+      if (current.includes(value)) {
+        return { ...prev, [filterKey]: current.filter(v => v !== value) };
+      } else {
+        return { ...prev, [filterKey]: [...current, value] };
+      }
+    });
+  };
 
-  const availableCount = inventory.filter((i) => i.status === "available").length;
-  const assignedCount = inventory.filter((i) => i.status === "assigned").length;
-  const shippedCount = inventory.filter((i) => i.status === "shipped").length;
+  const clearColumnFilter = (filterKey: keyof InventoryFilters) => {
+    setFilters(prev => ({ ...prev, [filterKey]: [] }));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      fecha: [],
+      pt_code: [],
+      description: [],
+      unit: [],
+      traceability: [],
+      bfx_order: [],
+      status: [],
+    });
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = Object.values(filters).some(arr => arr.length > 0) || searchQuery.length > 0;
+
+  // Get unique values for filter options
+  const uniqueDates = [...new Set(inventory.map(i => new Date(i.fecha).toLocaleDateString()))].sort();
+  const uniquePtCodes = [...new Set(inventory.map(i => i.pt_code))].filter(Boolean).sort();
+  const uniqueDescriptions = [...new Set(inventory.map(i => i.description))].filter(Boolean).sort();
+  const uniqueUnits = [...new Set(inventory.map(i => i.unit))].filter(Boolean).sort();
+  const uniqueTraceability = [...new Set(inventory.map(i => i.traceability))].filter(Boolean).sort();
+  const uniqueBfxOrders = [...new Set(inventory.map(i => i.bfx_order || "-"))].sort();
+  const uniqueStatuses = [...new Set(inventory.map(i => i.status))].sort();
+
+  // Column Filter Header Component
+  const ColumnFilterHeader = ({ 
+    label, 
+    filterKey, 
+    options,
+    className = ""
+  }: { 
+    label: string; 
+    filterKey: keyof InventoryFilters; 
+    options: string[];
+    className?: string;
+  }) => {
+    const activeFilters = filters[filterKey];
+    const isFiltered = activeFilters.length > 0;
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const filteredOptions = options.filter(opt => 
+      opt.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <TableHead className={className}>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={`inline-flex items-center gap-1 hover:text-primary transition-colors ${isFiltered ? 'text-primary font-bold' : ''}`}>
+              {label}
+              {isFiltered && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilters.length}</Badge>}
+              <ChevronDown className={`h-3 w-3 ${isFiltered ? 'text-primary' : 'text-muted-foreground'}`} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-0">
+            <div className="p-2 border-b">
+              <Input
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="p-2 border-b flex justify-between">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => setFilters(prev => ({ ...prev, [filterKey]: filteredOptions }))}
+              >
+                Select All
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => clearColumnFilter(filterKey)}
+              >
+                Clear
+              </Button>
+            </div>
+            <ScrollArea className="h-48">
+              <div className="p-2 space-y-1">
+                {filteredOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No options</p>
+                ) : (
+                  filteredOptions.map(option => (
+                    <label 
+                      key={option} 
+                      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                    >
+                      <Checkbox 
+                        checked={activeFilters.includes(option)}
+                        onCheckedChange={() => toggleFilter(filterKey, option)}
+                      />
+                      <span className="truncate">{option}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
+      </TableHead>
+    );
+  };
+
+  // Apply filters to inventory
+  const filteredInventory = inventory.filter((item) => {
+    // Text search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        item.pt_code.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        item.traceability.toLowerCase().includes(query) ||
+        item.bfx_order?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+
+    // Column filters
+    const dateStr = new Date(item.fecha).toLocaleDateString();
+    if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
+    if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
+    if (filters.description.length > 0 && !filters.description.includes(item.description)) return false;
+    if (filters.unit.length > 0 && !filters.unit.includes(item.unit)) return false;
+    if (filters.traceability.length > 0 && !filters.traceability.includes(item.traceability)) return false;
+    if (filters.bfx_order.length > 0 && !filters.bfx_order.includes(item.bfx_order || "-")) return false;
+    if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
+
+    return true;
+  });
+
+  const availableCount = filteredInventory.filter((i) => i.status === "available").length;
+  const assignedCount = filteredInventory.filter((i) => i.status === "assigned").length;
+  const shippedCount = filteredInventory.filter((i) => i.status === "shipped").length;
 
   return (
     <MainLayout>
@@ -290,15 +457,23 @@ export default function Inventory() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by PT code, description, traceability..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Clear Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by PT code, description, traceability..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={clearAllFilters}>
+              <X className="mr-2 h-4 w-4" />
+              Clear Filters
+            </Button>
+          )}
         </div>
 
         {/* Table */}
@@ -323,14 +498,14 @@ export default function Inventory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>PT Code</TableHead>
-                  <TableHead>Description</TableHead>
+                  <ColumnFilterHeader label="Date" filterKey="fecha" options={uniqueDates} />
+                  <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
+                  <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                   <TableHead className="text-right">Stock</TableHead>
-                  <TableHead>Traceability</TableHead>
-                  <TableHead>BFX Order</TableHead>
+                  <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
+                  <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                   <TableHead className="text-right">Pieces</TableHead>
-                  <TableHead>Status</TableHead>
+                  <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-[50px]"></TableHead>}
                 </TableRow>
               </TableHeader>
