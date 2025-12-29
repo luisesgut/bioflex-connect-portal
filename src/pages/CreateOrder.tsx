@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ interface Product {
 
 export default function CreateOrder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -70,12 +71,18 @@ export default function CreateOrder() {
         toast.error("Failed to load products");
       } else {
         setProducts(data || []);
+        
+        // Pre-select product from URL param
+        const productIdFromUrl = searchParams.get("productId");
+        if (productIdFromUrl && data?.some(p => p.id === productIdFromUrl)) {
+          setSelectedProductId(productIdFromUrl);
+        }
       }
       setLoading(false);
     };
 
     fetchProducts();
-  }, []);
+  }, [searchParams]);
 
   // Check for duplicate PO number with debounce
   useEffect(() => {

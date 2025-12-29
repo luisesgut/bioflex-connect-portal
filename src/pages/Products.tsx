@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, Plus, Package, ArrowUpRight, Loader2, FileText, ChevronDown, X, Check } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ interface Filters {
 }
 
 export default function Products() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -333,7 +335,12 @@ export default function Products() {
                         {product.dp_sales_csr_names || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button variant="accent" size="sm" className="gap-1">
+                        <Button 
+                          variant="accent" 
+                          size="sm" 
+                          className="gap-1"
+                          onClick={() => navigate(`/create-order?productId=${product.id}`)}
+                        >
                           Order
                           <ArrowUpRight className="h-3 w-3" />
                         </Button>
