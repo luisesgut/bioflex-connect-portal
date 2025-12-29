@@ -115,6 +115,8 @@ export type Database = {
           load_id: string
           pallet_id: string
           quantity: number
+          release_number: string | null
+          release_pdf_url: string | null
         }
         Insert: {
           created_at?: string
@@ -123,6 +125,8 @@ export type Database = {
           load_id: string
           pallet_id: string
           quantity: number
+          release_number?: string | null
+          release_pdf_url?: string | null
         }
         Update: {
           created_at?: string
@@ -131,6 +135,8 @@ export type Database = {
           load_id?: string
           pallet_id?: string
           quantity?: number
+          release_number?: string | null
+          release_pdf_url?: string | null
         }
         Relationships: [
           {
