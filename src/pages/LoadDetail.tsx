@@ -203,6 +203,7 @@ export default function LoadDetail() {
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -979,10 +980,18 @@ export default function LoadDetail() {
       setDeliveryDates(initialDates);
       setPendingStatus(newStatus);
       setStatusDialogOpen(true);
+    } else if (newStatus === "in_transit") {
+      // Show confirmation dialog for in_transit status
+      setInTransitConfirmOpen(true);
     } else {
       // For other statuses, update directly
       handleUpdateLoadStatus(newStatus);
     }
+  };
+
+  const handleConfirmInTransit = () => {
+    setInTransitConfirmOpen(false);
+    handleUpdateLoadStatus("in_transit");
   };
 
   const handleUpdateLoadStatus = async (newStatus: string, deliveryDatesData?: DeliveryDateEntry[]) => {
@@ -1518,8 +1527,8 @@ export default function LoadDetail() {
           </CardContent>
         </Card>
 
-        {/* Available Inventory Table - Shown for admins at any non-delivered status */}
-        {isAdmin && load.status !== "delivered" && (
+        {/* Available Inventory Table - Shown for admins when not in_transit or delivered */}
+        {isAdmin && load.status !== "delivered" && load.status !== "in_transit" && (
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1735,6 +1744,29 @@ export default function LoadDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* In Transit Confirmation Dialog */}
+        <AlertDialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change Status to In Transit?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <span className="block text-destructive font-medium">
+                  ⚠️ Warning: Once the load is marked as "In Transit", you will no longer be able to add pallets to this load.
+                </span>
+                <span className="block">
+                  Are you sure you want to proceed?
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmInTransit}>
+                Confirm In Transit
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
