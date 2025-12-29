@@ -75,6 +75,8 @@ interface LoadPallet {
   pallet_id: string;
   destination: string | null;
   quantity: number;
+  release_number: string | null;
+  release_pdf_url: string | null;
   pallet: {
     pt_code: string;
     description: string;
@@ -185,6 +187,8 @@ export default function LoadDetail() {
           pallet_id,
           destination,
           quantity,
+          release_number,
+          release_pdf_url,
           pallet:inventory_pallets(pt_code, description, traceability, bfx_order)
         `)
         .eq("load_id", id);
@@ -624,6 +628,50 @@ export default function LoadDetail() {
     }
   };
 
+  const handleUpdatePalletReleaseNumber = async (palletId: string, releaseNum: string) => {
+    try {
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ release_number: releaseNum || null })
+        .eq("id", palletId);
+
+      if (error) throw error;
+      toast.success("Release number updated");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error updating release number:", error);
+      toast.error("Failed to update release number");
+    }
+  };
+
+  const handlePalletReleasePdfUpload = async (palletId: string, file: File) => {
+    try {
+      const fileName = `pallets/${palletId}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("release-documents")
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from("load_pallets")
+        .update({ release_pdf_url: urlData.publicUrl })
+        .eq("id", palletId);
+
+      if (updateError) throw updateError;
+
+      toast.success("Release PDF uploaded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading pallet PDF:", error);
+      toast.error("Failed to upload PDF");
+    }
+  };
+
   const handleRespondToRelease = async () => {
     if (!releaseRequest || !user) return;
 
@@ -954,6 +1002,8 @@ export default function LoadDetail() {
                       <TableHead>Traceability</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead>Destination</TableHead>
+                      <TableHead>Release #</TableHead>
+                      <TableHead>Release PDF</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -990,6 +1040,72 @@ export default function LoadDetail() {
                                 ? destinations.find((d) => d.value === pallet.destination)?.label
                                 : "Pending approval"}
                             </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                            <Input
+                              placeholder="Release #"
+                              defaultValue={pallet.release_number || ""}
+                              className="w-[120px]"
+                              onBlur={(e) => {
+                                if (e.target.value !== (pallet.release_number || "")) {
+                                  handleUpdatePalletReleaseNumber(pallet.id, e.target.value);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {pallet.release_number || "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                            <div className="flex items-center gap-2">
+                              {pallet.release_pdf_url ? (
+                                <a
+                                  href={pallet.release_pdf_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline flex items-center gap-1"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                  View
+                                </a>
+                              ) : null}
+                              <label className="cursor-pointer">
+                                <Input
+                                  type="file"
+                                  accept=".pdf"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handlePalletReleasePdfUpload(pallet.id, file);
+                                    }
+                                  }}
+                                />
+                                <span className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                                  <Upload className="h-3 w-3" />
+                                  {pallet.release_pdf_url ? "Replace" : "Upload"}
+                                </span>
+                              </label>
+                            </div>
+                          ) : (
+                            pallet.release_pdf_url ? (
+                              <a
+                                href={pallet.release_pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                <FileText className="h-4 w-4" />
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )
                           )}
                         </TableCell>
                       </TableRow>
