@@ -134,7 +134,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description)
+        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, pt_code)
       `)
       .order("created_at", { ascending: false });
 
@@ -615,6 +615,11 @@ export default function Orders() {
                           selectedValues={dpSalesFilter}
                           onFilterChange={setDpSalesFilter}
                         />
+                        {isAdmin && (
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            PT Code
+                          </th>
+                        )}
                         <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                           Quantity
                         </th>
@@ -756,6 +761,11 @@ export default function Orders() {
                       <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         DP Sales/CSR
                       </th>
+                      {isAdmin && (
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          PT Code
+                        </th>
+                      )}
                       <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Quantity
                       </th>

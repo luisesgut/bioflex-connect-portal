@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminFilters {
   codigo_producto: string[];
+  pt_code: string[];
   nombre_producto_2: string[];
   print_card: string[];
   has_pc_file: string[];
@@ -137,6 +138,7 @@ export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<AdminFilters>({
     codigo_producto: [],
+    pt_code: [],
     nombre_producto_2: [],
     print_card: [],
     has_pc_file: [],
@@ -524,6 +526,7 @@ export default function AdminProducts() {
   };
 
   const uniqueCodigos = getUniqueValues('codigo_producto');
+  const uniquePtCodes = getUniqueValues('pt_code');
   const uniqueNombres = getUniqueValues('nombre_producto_2');
   const uniquePrintCards = getUniqueValues('print_card');
   const uniqueCustomerItems = getUniqueValues('customer_item');
@@ -545,6 +548,8 @@ export default function AdminProducts() {
     
     const matchesCodigo = filters.codigo_producto.length === 0 || 
       (product.codigo_producto && filters.codigo_producto.includes(product.codigo_producto));
+    const matchesPtCode = filters.pt_code.length === 0 || 
+      (product.pt_code && filters.pt_code.includes(product.pt_code));
     const matchesNombre = filters.nombre_producto_2.length === 0 || 
       (product.nombre_producto_2 && filters.nombre_producto_2.includes(product.nombre_producto_2));
     const matchesPrintCard = filters.print_card.length === 0 || 
@@ -570,7 +575,7 @@ export default function AdminProducts() {
     const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
       (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
-    return matchesSearch && matchesCodigo && matchesNombre && matchesPrintCard && matchesPcFile && 
+    return matchesSearch && matchesCodigo && matchesPtCode && matchesNombre && matchesPrintCard && matchesPcFile && 
            matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
            matchesItemType && matchesPieces && matchesUnits && matchesDpSalesCsr;
   });
@@ -578,6 +583,7 @@ export default function AdminProducts() {
   const clearFilters = () => {
     setFilters({
       codigo_producto: [],
+      pt_code: [],
       nombre_producto_2: [],
       print_card: [],
       has_pc_file: [],
@@ -829,6 +835,7 @@ export default function AdminProducts() {
                   <TableHeader>
                     <TableRow>
                       <ColumnFilterHeader label="Código" filterKey="codigo_producto" options={uniqueCodigos} />
+                      <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                       <ColumnFilterHeader label="Nombre Producto" filterKey="nombre_producto_2" options={uniqueNombres} />
                       <ColumnFilterHeader label="Print Card" filterKey="print_card" options={uniquePrintCards} />
                       <ColumnFilterHeader label="PC File" filterKey="has_pc_file" options={pcFileOptions} isGreen />
@@ -848,6 +855,9 @@ export default function AdminProducts() {
                       <TableRow key={product.id}>
                         <TableCell>
                           <Badge variant="outline">{product.codigo_producto || '-'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm font-mono">
+                          {product.pt_code || '-'}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {product.nombre_producto_2 || product.name}
