@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
+import { BulkOrdersManager } from "@/components/orders/BulkOrdersManager";
 import { differenceInHours } from "date-fns";
 
 interface Order {
@@ -173,12 +174,15 @@ export default function Orders() {
               Create and manage your purchase orders
             </p>
           </div>
-          <Link to="/orders/new">
-            <Button variant="accent" className="gap-2">
-              <Plus className="h-5 w-5" />
-              Create New PO
-            </Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            {isAdmin && <BulkOrdersManager onUpdated={fetchOrders} />}
+            <Link to="/orders/new">
+              <Button variant="accent" className="gap-2">
+                <Plus className="h-5 w-5" />
+                Create New PO
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
