@@ -46,7 +46,7 @@ export function ChangeRequestDialog({
   const handleSubmit = async () => {
     if (!order || !user) return;
 
-    if (!reason.trim()) {
+    if (requestType !== "do_not_delay" && !reason.trim()) {
       toast.error("Please provide a reason for your request");
       return;
     }
@@ -77,7 +77,7 @@ export function ChangeRequestDialog({
         requested_quantity: requestType === "volume_change" 
           ? parseInt(newQuantity.replace(/,/g, ""), 10) 
           : null,
-        reason: reason.trim(),
+        reason: reason.trim() || "Requesting Do Not Delay status",
         requested_by: user.id,
       });
 
@@ -165,22 +165,22 @@ export function ChangeRequestDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="reason">Reason for Change</Label>
-            <Textarea
-              id="reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={
-                requestType === "cancellation"
-                  ? "Please explain why you need to cancel this order..."
-                  : requestType === "do_not_delay"
-                  ? "Please explain why this order should not be delayed..."
-                  : "Please explain why you need to change the quantity..."
-              }
-              rows={3}
-            />
-          </div>
+          {requestType !== "do_not_delay" && (
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason for Change</Label>
+              <Textarea
+                id="reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={
+                  requestType === "cancellation"
+                    ? "Please explain why you need to cancel this order..."
+                    : "Please explain why you need to change the quantity..."
+                }
+                rows={3}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
