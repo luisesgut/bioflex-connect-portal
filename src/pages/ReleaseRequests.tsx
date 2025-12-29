@@ -27,6 +27,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";
+import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ReleaseRequest {
   id: string;
@@ -43,6 +44,11 @@ interface ReleaseRequest {
     estimated_delivery_date: string | null;
     total_pallets: number;
     status: string;
+    eta_cross_border: string | null;
+    documents_sent: boolean;
+    border_crossed: boolean;
+    last_reported_city: string | null;
+    transit_notes: string | null;
   };
 }
 
@@ -100,7 +106,7 @@ export default function ReleaseRequests() {
           response_at,
           release_number,
           is_hot_order,
-          load:shipping_loads(id, load_number, shipping_date, estimated_delivery_date, total_pallets, status)
+          load:shipping_loads(id, load_number, shipping_date, estimated_delivery_date, total_pallets, status, eta_cross_border, documents_sent, border_crossed, last_reported_city, transit_notes)
         `)
         .order("requested_at", { ascending: false });
 
@@ -416,14 +422,18 @@ export default function ReleaseRequests() {
               {renderTable(pendingLoads, "No pending loads")}
             </div>
 
-            {/* In Transit Section */}
+            {/* In Transit Section - Enhanced with Transit Tracking */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-purple-600" />
                 <h2 className="text-lg font-semibold">In Transit</h2>
                 <span className="text-sm text-muted-foreground">({inTransitLoads.length})</span>
               </div>
-              {renderTable(inTransitLoads, "No loads in transit")}
+              <TransitTrackingTable
+                loads={inTransitLoads}
+                isAdmin={isAdmin}
+                onRefresh={fetchRequests}
+              />
             </div>
 
             {/* Delivered Section */}

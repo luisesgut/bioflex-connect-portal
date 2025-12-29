@@ -601,10 +601,14 @@ export type Database = {
       }
       shipping_loads: {
         Row: {
+          border_crossed: boolean | null
           created_at: string
           created_by: string
+          documents_sent: boolean | null
           estimated_delivery_date: string | null
+          eta_cross_border: string | null
           id: string
+          last_reported_city: string | null
           load_number: string
           notes: string | null
           release_number: string | null
@@ -612,13 +616,18 @@ export type Database = {
           shipping_date: string
           status: Database["public"]["Enums"]["load_status"]
           total_pallets: number
+          transit_notes: string | null
           updated_at: string
         }
         Insert: {
+          border_crossed?: boolean | null
           created_at?: string
           created_by: string
+          documents_sent?: boolean | null
           estimated_delivery_date?: string | null
+          eta_cross_border?: string | null
           id?: string
+          last_reported_city?: string | null
           load_number: string
           notes?: string | null
           release_number?: string | null
@@ -626,13 +635,18 @@ export type Database = {
           shipping_date: string
           status?: Database["public"]["Enums"]["load_status"]
           total_pallets?: number
+          transit_notes?: string | null
           updated_at?: string
         }
         Update: {
+          border_crossed?: boolean | null
           created_at?: string
           created_by?: string
+          documents_sent?: boolean | null
           estimated_delivery_date?: string | null
+          eta_cross_border?: string | null
           id?: string
+          last_reported_city?: string | null
           load_number?: string
           notes?: string | null
           release_number?: string | null
@@ -640,9 +654,48 @@ export type Database = {
           shipping_date?: string
           status?: Database["public"]["Enums"]["load_status"]
           total_pallets?: number
+          transit_notes?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      transit_updates: {
+        Row: {
+          created_at: string
+          eta_cross_border: string | null
+          id: string
+          last_reported_city: string | null
+          load_id: string
+          notes: string | null
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          eta_cross_border?: string | null
+          id?: string
+          last_reported_city?: string | null
+          load_id: string
+          notes?: string | null
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          eta_cross_border?: string | null
+          id?: string
+          last_reported_city?: string | null
+          load_id?: string
+          notes?: string | null
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transit_updates_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
