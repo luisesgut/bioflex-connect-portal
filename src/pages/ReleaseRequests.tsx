@@ -19,11 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Loader2, Eye, Clock, CheckCircle, XCircle, Truck, Package, MapPin } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FileText, Loader2, Eye, Clock, CheckCircle, XCircle, Truck, Package, MapPin, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface ReleaseRequest {
   id: string;
@@ -34,8 +37,10 @@ interface ReleaseRequest {
   release_number: string | null;
   is_hot_order: boolean;
   load: {
+    id: string;
     load_number: string;
     shipping_date: string;
+    estimated_delivery_date: string | null;
     total_pallets: number;
     status: string;
   };
@@ -83,7 +88,7 @@ export default function ReleaseRequests() {
           response_at,
           release_number,
           is_hot_order,
-          load:shipping_loads(load_number, shipping_date, total_pallets, status)
+          load:shipping_loads(id, load_number, shipping_date, estimated_delivery_date, total_pallets, status)
         `)
         .order("requested_at", { ascending: false });
 
@@ -169,6 +174,23 @@ export default function ReleaseRequests() {
     }
   };
 
+  const handleDateChange = async (loadId: string, field: 'shipping_date' | 'estimated_delivery_date', date: Date) => {
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({ [field]: format(date, "yyyy-MM-dd") })
+        .eq("id", loadId);
+
+      if (error) throw error;
+
+      toast.success("Date updated successfully");
+      fetchRequests();
+    } catch (error) {
+      console.error("Error updating date:", error);
+      toast.error("Failed to update date");
+    }
+  };
+
   const pendingCount = requests.filter((r) => r.status === "pending").length;
   const approvedCount = requests.filter((r) => r.status === "approved").length;
   const onHoldCount = requests.filter((r) => r.status === "on_hold").length;
@@ -239,8 +261,8 @@ export default function ReleaseRequests() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Load #</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead>Est. Delivery</TableHead>
+                  <TableHead>Ship Date</TableHead>
+                  <TableHead>Delivery Date</TableHead>
                   <TableHead className="text-center">Pallets</TableHead>
                   <TableHead>Load Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -259,11 +281,55 @@ export default function ReleaseRequests() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {format(new Date(request.requested_at), "MMM d, h:mm a")}
+                      <TableCell>
+                        {isAdmin ? (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                                <CalendarIcon className="mr-1 h-3 w-3" />
+                                {format(new Date(request.load.shipping_date), "MMM d, yyyy")}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={new Date(request.load.shipping_date)}
+                                onSelect={(date) => date && handleDateChange(request.load.id, 'shipping_date', date)}
+                                initialFocus
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          format(new Date(request.load.shipping_date), "MMM d, yyyy")
+                        )}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(request.load.shipping_date), "MMM d, yyyy")}
+                        {isAdmin ? (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                                <CalendarIcon className="mr-1 h-3 w-3" />
+                                {request.load.estimated_delivery_date 
+                                  ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
+                                  : "Set date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={request.load.estimated_delivery_date ? new Date(request.load.estimated_delivery_date) : undefined}
+                                onSelect={(date) => date && handleDateChange(request.load.id, 'estimated_delivery_date', date)}
+                                initialFocus
+                                className={cn("p-3 pointer-events-auto")}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          request.load.estimated_delivery_date 
+                            ? format(new Date(request.load.estimated_delivery_date), "MMM d, yyyy")
+                            : "-"
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {request.load.total_pallets}

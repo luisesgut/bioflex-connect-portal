@@ -43,6 +43,7 @@ interface ShippingLoad {
   id: string;
   load_number: string;
   shipping_date: string;
+  estimated_delivery_date: string | null;
   status: "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
   total_pallets: number;
   release_number: string | null;
@@ -219,6 +220,23 @@ export default function ShippingLoads() {
     }
   };
 
+  const handleDateChange = async (loadId: string, field: 'shipping_date' | 'estimated_delivery_date', date: Date) => {
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({ [field]: format(date, "yyyy-MM-dd") })
+        .eq("id", loadId);
+
+      if (error) throw error;
+
+      toast.success("Date updated successfully");
+      fetchLoads();
+    } catch (error) {
+      console.error("Error updating date:", error);
+      toast.error("Failed to update date");
+    }
+  };
+
   const filteredLoads = loads.filter(
     (load) =>
       load.load_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -316,10 +334,10 @@ export default function ShippingLoads() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Load #</TableHead>
-                  <TableHead>Est. Delivery</TableHead>
+                  <TableHead>Ship Date</TableHead>
+                  <TableHead>Delivery Date</TableHead>
                   <TableHead className="text-center">Pallets</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -328,7 +346,54 @@ export default function ShippingLoads() {
                   <TableRow key={load.id}>
                     <TableCell className="font-medium">{load.load_number}</TableCell>
                     <TableCell>
-                      {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                      {isAdmin ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={new Date(load.shipping_date)}
+                              onSelect={(date) => date && handleDateChange(load.id, 'shipping_date', date)}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        format(new Date(load.shipping_date), "MMM d, yyyy")
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isAdmin ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                              <CalendarIcon className="mr-1 h-3 w-3" />
+                              {load.estimated_delivery_date 
+                                ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                                : "Set date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                              onSelect={(date) => date && handleDateChange(load.id, 'estimated_delivery_date', date)}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        load.estimated_delivery_date 
+                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                          : "-"
+                      )}
                     </TableCell>
                     <TableCell className="text-center">{load.total_pallets}</TableCell>
                     <TableCell>
@@ -353,9 +418,6 @@ export default function ShippingLoads() {
                           {statusLabels[load.status]}
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {format(new Date(load.created_at), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
