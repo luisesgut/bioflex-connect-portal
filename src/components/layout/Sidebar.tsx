@@ -10,7 +10,10 @@ import {
   ShieldAlert,
   FileEdit,
   Eye,
-  EyeOff
+  EyeOff,
+  Warehouse,
+  Truck,
+  ClipboardCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,12 +26,15 @@ const navigation = [
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Hot Orders", href: "/hot-orders", icon: Flame },
+  { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
   { name: "Change Requests", href: "/change-requests", icon: FileEdit },
 ];
 
 const adminNavigation = [
   { name: "Product Codes", href: "/admin/products", icon: ShieldAlert },
+  { name: "Inventory", href: "/inventory", icon: Warehouse },
+  { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
 ];
 
 const bottomNavigation = [

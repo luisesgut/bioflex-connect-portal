@@ -14,6 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
+      customer_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          code: Database["public"]["Enums"]["customer_location"]
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          state: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          code: Database["public"]["Enums"]["customer_location"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          state?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          code?: Database["public"]["Enums"]["customer_location"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          state?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      inventory_pallets: {
+        Row: {
+          bfx_order: string | null
+          created_at: string
+          customer_lot: string | null
+          description: string
+          fecha: string
+          gross_weight: number | null
+          id: string
+          net_weight: number | null
+          pallet_type: string | null
+          pieces: number | null
+          pt_code: string
+          status: Database["public"]["Enums"]["inventory_status"]
+          stock: number
+          traceability: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          bfx_order?: string | null
+          created_at?: string
+          customer_lot?: string | null
+          description: string
+          fecha: string
+          gross_weight?: number | null
+          id?: string
+          net_weight?: number | null
+          pallet_type?: string | null
+          pieces?: number | null
+          pt_code: string
+          status?: Database["public"]["Enums"]["inventory_status"]
+          stock: number
+          traceability: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          bfx_order?: string | null
+          created_at?: string
+          customer_lot?: string | null
+          description?: string
+          fecha?: string
+          gross_weight?: number | null
+          id?: string
+          net_weight?: number | null
+          pallet_type?: string | null
+          pieces?: number | null
+          pt_code?: string
+          status?: Database["public"]["Enums"]["inventory_status"]
+          stock?: number
+          traceability?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      load_pallets: {
+        Row: {
+          created_at: string
+          destination: Database["public"]["Enums"]["customer_location"] | null
+          id: string
+          load_id: string
+          pallet_id: string
+          quantity: number
+        }
+        Insert: {
+          created_at?: string
+          destination?: Database["public"]["Enums"]["customer_location"] | null
+          id?: string
+          load_id: string
+          pallet_id: string
+          quantity: number
+        }
+        Update: {
+          created_at?: string
+          destination?: Database["public"]["Enums"]["customer_location"] | null
+          id?: string
+          load_id?: string
+          pallet_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_pallets_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_pallets_pallet_id_fkey"
+            columns: ["pallet_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_pallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ncr_submissions: {
         Row: {
           attachments: string[] | null
@@ -333,6 +468,107 @@ export type Database = {
           },
         ]
       }
+      release_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          customer_notes: string | null
+          id: string
+          is_hot_order: boolean
+          load_id: string
+          release_number: string | null
+          release_pdf_url: string | null
+          requested_at: string
+          requested_by: string
+          responded_by: string | null
+          response_at: string | null
+          status: Database["public"]["Enums"]["release_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_notes?: string | null
+          id?: string
+          is_hot_order?: boolean
+          load_id: string
+          release_number?: string | null
+          release_pdf_url?: string | null
+          requested_at?: string
+          requested_by: string
+          responded_by?: string | null
+          response_at?: string | null
+          status?: Database["public"]["Enums"]["release_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_notes?: string | null
+          id?: string
+          is_hot_order?: boolean
+          load_id?: string
+          release_number?: string | null
+          release_pdf_url?: string | null
+          requested_at?: string
+          requested_by?: string
+          responded_by?: string | null
+          response_at?: string | null
+          status?: Database["public"]["Enums"]["release_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "release_requests_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_loads: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          load_number: string
+          notes: string | null
+          release_number: string | null
+          release_pdf_url: string | null
+          shipping_date: string
+          status: Database["public"]["Enums"]["load_status"]
+          total_pallets: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          load_number: string
+          notes?: string | null
+          release_number?: string | null
+          release_pdf_url?: string | null
+          shipping_date: string
+          status?: Database["public"]["Enums"]["load_status"]
+          total_pallets?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          load_number?: string
+          notes?: string | null
+          release_number?: string | null
+          release_pdf_url?: string | null
+          shipping_date?: string
+          status?: Database["public"]["Enums"]["load_status"]
+          total_pallets?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -371,8 +607,17 @@ export type Database = {
       app_role: "admin" | "user"
       change_request_status: "pending" | "approved" | "rejected"
       change_request_type: "volume_change" | "cancellation" | "do_not_delay"
+      customer_location: "salinas" | "bakersfield" | "coachella" | "yuma"
+      inventory_status: "available" | "assigned" | "shipped"
+      load_status:
+        | "assembling"
+        | "pending_release"
+        | "approved"
+        | "on_hold"
+        | "shipped"
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
+      release_status: "pending" | "approved" | "on_hold" | "shipped"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -503,8 +748,18 @@ export const Constants = {
       app_role: ["admin", "user"],
       change_request_status: ["pending", "approved", "rejected"],
       change_request_type: ["volume_change", "cancellation", "do_not_delay"],
+      customer_location: ["salinas", "bakersfield", "coachella", "yuma"],
+      inventory_status: ["available", "assigned", "shipped"],
+      load_status: [
+        "assembling",
+        "pending_release",
+        "approved",
+        "on_hold",
+        "shipped",
+      ],
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],
+      release_status: ["pending", "approved", "on_hold", "shipped"],
     },
   },
 } as const

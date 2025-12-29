@@ -17,6 +17,10 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminProducts from "./pages/AdminProducts";
 import ChangeRequests from "./pages/ChangeRequests";
+import Inventory from "./pages/Inventory";
+import ShippingLoads from "./pages/ShippingLoads";
+import LoadDetail from "./pages/LoadDetail";
+import ReleaseRequests from "./pages/ReleaseRequests";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +43,10 @@ const App = () => (
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
               <Route path="/change-requests" element={<ProtectedRoute><ChangeRequests /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+              <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
+              <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
+              <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AdminProvider>
