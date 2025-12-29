@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
-import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2 } from "lucide-react";
+import { Upload, Download, Save, Search, ShieldAlert, Loader2, Trash2, FileUp, FileText } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 interface Product {
@@ -53,6 +53,7 @@ interface Product {
   customer: string | null;
   item_type: string | null;
   pieces_per_pallet: number | null;
+  print_card_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -109,7 +110,9 @@ export default function AdminProducts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pcFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -394,6 +397,77 @@ export default function AdminProducts() {
     }
   };
 
+  const handlePCFilesUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+    let matchedCount = 0;
+    let uploadedCount = 0;
+    let errorCount = 0;
+
+    for (const file of Array.from(files)) {
+      // Get filename without extension
+      const fileName = file.name;
+      const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+
+      // Find matching product by print_card
+      const matchingProduct = products.find(p => 
+        p.print_card && p.print_card.toLowerCase() === fileNameWithoutExt.toLowerCase()
+      );
+
+      if (!matchingProduct) {
+        console.log(`No match found for file: ${fileName}`);
+        continue;
+      }
+
+      // Upload file to storage
+      const filePath = `${matchingProduct.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('print-cards')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        errorCount++;
+        continue;
+      }
+
+      uploadedCount++;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('print-cards')
+        .getPublicUrl(filePath);
+
+      // Update product with file URL
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ print_card_url: urlData.publicUrl })
+        .eq('id', matchingProduct.id);
+
+      if (updateError) {
+        console.error('Update error:', updateError);
+        errorCount++;
+      } else {
+        matchedCount++;
+      }
+    }
+
+    toast({
+      title: "PC Files Upload Complete",
+      description: `${uploadedCount} files uploaded, ${matchedCount} products matched, ${errorCount} errors`,
+      variant: errorCount > 0 ? "destructive" : "default",
+    });
+
+    await fetchProducts();
+    setUploadingFiles(false);
+
+    if (pcFileInputRef.current) {
+      pcFileInputRef.current.value = '';
+    }
+  };
+
   const filteredProducts = products.filter(product =>
     product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -429,12 +503,20 @@ export default function AdminProducts() {
               Manage all product data. Green columns are visible to customers.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="file"
               accept=".csv"
               ref={fileInputRef}
               onChange={handleCSVUpload}
+              className="hidden"
+            />
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              ref={pcFileInputRef}
+              onChange={handlePCFilesUpload}
+              multiple
               className="hidden"
             />
             <Button variant="outline" onClick={downloadCSVTemplate}>
@@ -453,18 +535,36 @@ export default function AdminProducts() {
               )}
               Import CSV
             </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => pcFileInputRef.current?.click()}
+              disabled={uploadingFiles}
+            >
+              {uploadingFiles ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileUp className="mr-2 h-4 w-4" />
+              )}
+              Upload PC Files
+            </Button>
           </div>
         </div>
 
-        {/* CSV Instructions */}
+        {/* Instructions */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">CSV Import Format</CardTitle>
-            <CardDescription>
-              Upload your CSV file with headers matching the Excel template. Required column: 
-              <code className="rounded bg-muted px-1 ml-1">codigoProducto</code>. 
-              Products are matched by código de producto. Customer-visible columns (green): 
-              <span className="text-green-600 font-medium ml-1">CUSTOMER ITEM, ITEM DESCRIPTION, CUSTOMER, ITEM TYPE, PIECES PER PALLET</span>
+            <CardTitle className="text-base">Import Instructions</CardTitle>
+            <CardDescription className="space-y-2">
+              <p>
+                <strong>CSV Import:</strong> Upload CSV with headers matching the Excel template. Required: 
+                <code className="rounded bg-muted px-1 ml-1">codigoProducto</code>. 
+                Green columns are customer-visible.
+              </p>
+              <p>
+                <strong>PC Files Upload:</strong> Upload multiple PC files at once. Files are matched to products by 
+                <code className="rounded bg-muted px-1 ml-1">printCard</code> column name. 
+                Example: if a product has printCard = "ABC123", upload a file named "ABC123.pdf".
+              </p>
             </CardDescription>
           </CardHeader>
         </Card>
@@ -499,6 +599,8 @@ export default function AdminProducts() {
                     <TableRow>
                       <TableHead>Código</TableHead>
                       <TableHead>Nombre Producto</TableHead>
+                      <TableHead>Print Card</TableHead>
+                      <TableHead className="bg-green-500/10 text-green-700">PC File</TableHead>
                       <TableHead>Activa</TableHead>
                       <TableHead className="bg-green-500/10 text-green-700">Customer Item</TableHead>
                       <TableHead className="bg-green-500/10 text-green-700">Item Description</TableHead>
@@ -516,6 +618,24 @@ export default function AdminProducts() {
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {product.nombre_producto_2 || product.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {product.print_card || '-'}
+                        </TableCell>
+                        <TableCell className="bg-green-500/5">
+                          {product.print_card_url ? (
+                            <a 
+                              href={product.print_card_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            >
+                              <FileText className="h-4 w-4" />
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={product.activa ? "default" : "secondary"}>

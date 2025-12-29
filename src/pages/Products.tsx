@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Package, ArrowUpRight, Loader2 } from "lucide-react";
+import { Search, Plus, Package, ArrowUpRight, Loader2, FileText } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface Product {
   customer: string | null;
   item_type: string | null;
   pieces_per_pallet: number | null;
+  print_card_url: string | null;
 }
 
 export default function Products() {
@@ -31,7 +32,7 @@ export default function Products() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, customer_item, item_description, customer, item_type, pieces_per_pallet')
+      .select('id, customer_item, item_description, customer, item_type, pieces_per_pallet, print_card_url')
       .eq('activa', true)
       .order('customer_item');
 
@@ -126,6 +127,7 @@ export default function Products() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Customer</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Item Type</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Pieces/Pallet</th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">PC File</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Actions</th>
                 </tr>
               </thead>
@@ -150,6 +152,21 @@ export default function Products() {
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-muted-foreground">
                       {product.pieces_per_pallet?.toLocaleString() || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {product.print_card_url ? (
+                        <a 
+                          href={product.print_card_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Button variant="accent" size="sm" className="gap-1">
