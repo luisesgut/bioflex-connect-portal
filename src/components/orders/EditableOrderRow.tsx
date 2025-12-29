@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar } from "lucide-react";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,11 @@ interface ShippedLoadDetail {
   shipped_at: string;
 }
 
+interface ExcessStockDetail {
+  pallet_count: number;
+  total_quantity: number;
+}
+
 interface InventoryStats {
   inFloor: number;
   shipped: number;
@@ -51,12 +56,32 @@ interface InventoryStats {
   percentProduced: number;
   loadDetails: LoadDetail[];
   shippedLoadDetails: ShippedLoadDetail[];
+  excessStock: ExcessStockDetail | null;
 }
 
 interface Order {
   id: string;
   po_number: string;
   product_name: string | null;
+  product_pt_code: string | null;
+  quantity: number;
+  total_price: number | null;
+  status: string;
+  is_hot_order: boolean;
+  do_not_delay: boolean;
+  requested_delivery_date: string | null;
+  estimated_delivery_date: string | null;
+  created_at: string;
+  pdf_url: string | null;
+  sales_order_number: string | null;
+  inventoryStats: InventoryStats;
+}
+
+interface Order {
+  id: string;
+  po_number: string;
+  product_name: string | null;
+  product_pt_code: string | null;
   quantity: number;
   total_price: number | null;
   status: string;
@@ -260,6 +285,39 @@ export function EditableOrderRow({
             className="h-8 w-36"
           />
         </td>
+        {/* Excess Stock column - admin only in edit mode */}
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+          {order.inventoryStats.excessStock ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2 text-info">
+                  {order.inventoryStats.excessStock.total_quantity.toLocaleString()}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-56" align="end">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Boxes className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Inventory by PT Code</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-mono text-xs">{order.product_pt_code}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Pallets in inventory:</span>
+                    <span className="font-medium">{order.inventoryStats.excessStock.pallet_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Total quantity:</span>
+                    <span className="font-medium">{order.inventoryStats.excessStock.total_quantity.toLocaleString()}</span>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
         <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
           {order.inventoryStats.inFloor > 0 && order.inventoryStats.loadDetails.length > 0 ? (
             <HoverCard>
@@ -452,6 +510,41 @@ export function EditableOrderRow({
       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
         {formatDate(order.estimated_delivery_date)}
       </td>
+      {/* Excess Stock column - admin only */}
+      {isAdmin && (
+        <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
+          {order.inventoryStats.excessStock ? (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <span className="cursor-help underline decoration-dotted underline-offset-2 text-info">
+                  {order.inventoryStats.excessStock.total_quantity.toLocaleString()}
+                </span>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-56" align="end">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Boxes className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Inventory by PT Code</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-mono text-xs">{order.product_pt_code}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Pallets in inventory:</span>
+                    <span className="font-medium">{order.inventoryStats.excessStock.pallet_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Total quantity:</span>
+                    <span className="font-medium">{order.inventoryStats.excessStock.total_quantity.toLocaleString()}</span>
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </td>
+      )}
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-muted-foreground">
         {order.inventoryStats.inFloor > 0 && order.inventoryStats.loadDetails.length > 0 ? (
           <HoverCard>
