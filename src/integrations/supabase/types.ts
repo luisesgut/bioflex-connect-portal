@@ -65,6 +65,7 @@ export type Database = {
           customer_item: string | null
           descripcion_caja: string | null
           descripcion_cliente: string | null
+          dp_sales_csr_names: string | null
           empacado_de_producto_por: string | null
           estructura: string | null
           et: string | null
@@ -97,6 +98,7 @@ export type Database = {
           unidades_en_ancho: number | null
           unidades_en_largo: number | null
           unidades_por_tarima: number | null
+          units: string | null
           updated_at: string
         }
         Insert: {
@@ -110,6 +112,7 @@ export type Database = {
           customer_item?: string | null
           descripcion_caja?: string | null
           descripcion_cliente?: string | null
+          dp_sales_csr_names?: string | null
           empacado_de_producto_por?: string | null
           estructura?: string | null
           et?: string | null
@@ -142,6 +145,7 @@ export type Database = {
           unidades_en_ancho?: number | null
           unidades_en_largo?: number | null
           unidades_por_tarima?: number | null
+          units?: string | null
           updated_at?: string
         }
         Update: {
@@ -155,6 +159,7 @@ export type Database = {
           customer_item?: string | null
           descripcion_caja?: string | null
           descripcion_cliente?: string | null
+          dp_sales_csr_names?: string | null
           empacado_de_producto_por?: string | null
           estructura?: string | null
           et?: string | null
@@ -187,6 +192,7 @@ export type Database = {
           unidades_en_ancho?: number | null
           unidades_en_largo?: number | null
           unidades_por_tarima?: number | null
+          units?: string | null
           updated_at?: string
         }
         Relationships: []

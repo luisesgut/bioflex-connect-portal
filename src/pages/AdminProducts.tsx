@@ -30,6 +30,8 @@ interface AdminFilters {
   customer: string[];
   item_type: string[];
   pieces_per_pallet: string[];
+  units: string[];
+  dp_sales_csr_names: string[];
 }
 
 interface Product {
@@ -74,6 +76,8 @@ interface Product {
   item_type: string | null;
   pieces_per_pallet: number | null;
   print_card_url: string | null;
+  units: string | null;
+  dp_sales_csr_names: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,12 +110,15 @@ const CSV_COLUMN_MAP: Record<string, keyof Product> = {
   'piezasporpaquete': 'piezas_por_paquete',
   'paqueteporcaja': 'paquete_por_caja',
   'piezastotalesporcaja': 'piezas_totales_por_caja',
-  'customer item': 'customer_item',
-  'item description': 'item_description',
-  'customer': 'customer',
-  'item type': 'item_type',
-  'pieces per pallet': 'pieces_per_pallet',
-  // Old columns for backward compatibility
+      'customer item': 'customer_item',
+      'item description': 'item_description',
+      'customer': 'customer',
+      'item type': 'item_type',
+      'pieces per pallet': 'pieces_per_pallet',
+      'units': 'units',
+      'dp sales/csr names': 'dp_sales_csr_names',
+      'dpsales/csrnames': 'dp_sales_csr_names',
+      // Old columns for backward compatibility
   'sku': 'sku',
   'name': 'name',
   'category': 'category',
@@ -139,6 +146,8 @@ export default function AdminProducts() {
     customer: [],
     item_type: [],
     pieces_per_pallet: [],
+    units: [],
+    dp_sales_csr_names: [],
   });
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -359,7 +368,8 @@ export default function AdminProducts() {
       'PestanaAlAncho', 'PestanaAlAlto', 'Refilado', 'MetrosXBobina', 'UnidadesEnAncho',
       'UnidadesEnLargo', 'Pisos', 'UnidadesPorTarima', 'TipoEmbalaje', 'DescripcionCaja',
       'EmpacadoDeProductoPor', 'PiezasPorPaquete', 'PaquetePorCaja', 'PiezasTotalePorCaja',
-      'CUSTOMER ITEM', 'ITEM DESCRIPTION', 'CUSTOMER', 'ITEM TYPE', 'PIECES PER PALLET'
+      'CUSTOMER ITEM', 'ITEM DESCRIPTION', 'CUSTOMER', 'ITEM TYPE', 'PIECES PER PALLET',
+      'UNITS', 'DP SALES/CSR NAMES'
     ];
     
     const csvContent = [
@@ -395,7 +405,9 @@ export default function AdminProducts() {
         `"${(p.item_description || '').replace(/"/g, '""')}"`,
         `"${(p.customer || '').replace(/"/g, '""')}"`,
         p.item_type || '',
-        p.pieces_per_pallet || ''
+        p.pieces_per_pallet || '',
+        p.units || '',
+        `"${(p.dp_sales_csr_names || '').replace(/"/g, '""')}"`
       ].join(','))
     ].join('\n');
 
@@ -519,6 +531,8 @@ export default function AdminProducts() {
   const uniqueCustomers = getUniqueValues('customer');
   const uniqueItemTypes = getUniqueValues('item_type');
   const uniquePieces = getUniqueValues('pieces_per_pallet');
+  const uniqueUnits = getUniqueValues('units');
+  const uniqueDpSalesCsr = getUniqueValues('dp_sales_csr_names');
   const activaOptions = ["Active", "Inactive"];
   const pcFileOptions = ["Has File", "No File"];
 
@@ -551,10 +565,14 @@ export default function AdminProducts() {
       (product.item_type && filters.item_type.includes(product.item_type));
     const matchesPieces = filters.pieces_per_pallet.length === 0 || 
       (product.pieces_per_pallet !== null && filters.pieces_per_pallet.includes(String(product.pieces_per_pallet)));
+    const matchesUnits = filters.units.length === 0 || 
+      (product.units && filters.units.includes(product.units));
+    const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
+      (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
     return matchesSearch && matchesCodigo && matchesNombre && matchesPrintCard && matchesPcFile && 
            matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
-           matchesItemType && matchesPieces;
+           matchesItemType && matchesPieces && matchesUnits && matchesDpSalesCsr;
   });
 
   const clearFilters = () => {
@@ -569,6 +587,8 @@ export default function AdminProducts() {
       customer: [],
       item_type: [],
       pieces_per_pallet: [],
+      units: [],
+      dp_sales_csr_names: [],
     });
     setSearchQuery("");
   };
@@ -818,6 +838,8 @@ export default function AdminProducts() {
                       <ColumnFilterHeader label="Customer" filterKey="customer" options={uniqueCustomers} isGreen />
                       <ColumnFilterHeader label="Item Type" filterKey="item_type" options={uniqueItemTypes} isGreen />
                       <ColumnFilterHeader label="Pcs/Pallet" filterKey="pieces_per_pallet" options={uniquePieces} isGreen className="text-right" />
+                      <ColumnFilterHeader label="Units" filterKey="units" options={uniqueUnits} />
+                      <ColumnFilterHeader label="DP Sales/CSR Names" filterKey="dp_sales_csr_names" options={uniqueDpSalesCsr} isGreen />
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -862,6 +884,8 @@ export default function AdminProducts() {
                         <TableCell className="bg-green-500/5 text-right">
                           {product.pieces_per_pallet?.toLocaleString() || '-'}
                         </TableCell>
+                        <TableCell>{product.units || '-'}</TableCell>
+                        <TableCell className="bg-green-500/5">{product.dp_sales_csr_names || '-'}</TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"

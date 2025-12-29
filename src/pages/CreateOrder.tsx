@@ -22,15 +22,16 @@ interface Product {
   name: string;
   sku: string;
   unitPrice: number;
+  units: string | null;
 }
 
 const products: Product[] = [
-  { id: "1", name: "Custom Stand-Up Pouch - 12oz", sku: "SUP-12OZ-001", unitPrice: 0.25 },
-  { id: "2", name: "Resealable Flat Pouch - 8oz", sku: "RFP-8OZ-002", unitPrice: 0.18 },
-  { id: "3", name: "Gusseted Bag - 2lb", sku: "GB-2LB-003", unitPrice: 0.22 },
-  { id: "4", name: "Vacuum Seal Pouch - 16oz", sku: "VSP-16OZ-004", unitPrice: 0.30 },
-  { id: "5", name: "Spouted Pouch - 32oz", sku: "SP-32OZ-005", unitPrice: 0.50 },
-  { id: "6", name: "Retort Pouch - 10oz", sku: "RP-10OZ-006", unitPrice: 0.29 },
+  { id: "1", name: "Custom Stand-Up Pouch - 12oz", sku: "SUP-12OZ-001", unitPrice: 0.25, units: "PCS" },
+  { id: "2", name: "Resealable Flat Pouch - 8oz", sku: "RFP-8OZ-002", unitPrice: 0.18, units: "PCS" },
+  { id: "3", name: "Gusseted Bag - 2lb", sku: "GB-2LB-003", unitPrice: 0.22, units: "PCS" },
+  { id: "4", name: "Vacuum Seal Pouch - 16oz", sku: "VSP-16OZ-004", unitPrice: 0.30, units: "PCS" },
+  { id: "5", name: "Spouted Pouch - 32oz", sku: "SP-32OZ-005", unitPrice: 0.50, units: "PCS" },
+  { id: "6", name: "Retort Pouch - 10oz", sku: "RP-10OZ-006", unitPrice: 0.29, units: "PCS" },
 ];
 
 export default function CreateOrder() {
@@ -110,7 +111,7 @@ export default function CreateOrder() {
                         <div className="flex flex-col">
                           <span>{product.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {product.sku} • ${product.unitPrice}/unit
+                            {product.sku} • ${product.unitPrice}/unit • Units: {product.units || '-'}
                           </span>
                         </div>
                       </SelectItem>
@@ -241,7 +242,7 @@ export default function CreateOrder() {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Quantity</span>
                 <span className="font-medium text-card-foreground">
-                  {quantity.toLocaleString()} units
+                  {quantity.toLocaleString()} {product?.units || 'units'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
