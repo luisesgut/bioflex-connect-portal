@@ -185,6 +185,7 @@ export default function LoadDetail() {
   const [sendingRelease, setSendingRelease] = useState(false);
   const [deletingLoad, setDeletingLoad] = useState(false);
   const [deletingHoldPallets, setDeletingHoldPallets] = useState(false);
+  const [selectedPalletsToDelete, setSelectedPalletsToDelete] = useState<Set<string>>(new Set());
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -969,6 +970,70 @@ export default function LoadDetail() {
     }
   };
 
+  const handleDeleteSelectedPallets = async () => {
+    if (selectedPalletsToDelete.size === 0) {
+      toast.error("No pallets selected to delete");
+      return;
+    }
+
+    setDeletingHoldPallets(true);
+    try {
+      const palletsToDelete = pallets.filter((p) => selectedPalletsToDelete.has(p.id));
+      const loadPalletIds = palletsToDelete.map((p) => p.id);
+      const inventoryPalletIds = palletsToDelete.map((p) => p.pallet_id);
+
+      // Delete selected load pallets
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      // Reset inventory pallet statuses back to available
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      // Update load total
+      const newTotal = Math.max(0, (load?.total_pallets || 0) - palletsToDelete.length);
+      await supabase
+        .from("shipping_loads")
+        .update({ total_pallets: newTotal })
+        .eq("id", id);
+
+      toast.success(`${palletsToDelete.length} pallet(s) removed from load`);
+      setSelectedPalletsToDelete(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting pallets:", error);
+      toast.error("Failed to remove pallets");
+    } finally {
+      setDeletingHoldPallets(false);
+    }
+  };
+
+  const togglePalletToDelete = (palletId: string) => {
+    setSelectedPalletsToDelete((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(palletId)) {
+        newSet.delete(palletId);
+      } else {
+        newSet.add(palletId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllPalletsToDelete = () => {
+    if (selectedPalletsToDelete.size === pallets.length) {
+      setSelectedPalletsToDelete(new Set());
+    } else {
+      setSelectedPalletsToDelete(new Set(pallets.map((p) => p.id)));
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -1164,37 +1229,43 @@ export default function LoadDetail() {
               <CardDescription>
                 {load.status === "assembling" 
                   ? "Select pallets from the inventory below to add to this load"
-                  : "Assign destinations to each pallet for delivery"}
+                  : isAdmin 
+                    ? "Customer will assign status to each pallet"
+                    : "Select Ship or Hold for each pallet"}
               </CardDescription>
             </div>
-            {isAdmin && pallets.some((p) => p.is_on_hold) && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
-                    {deletingHoldPallets ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
-                    )}
-                    Delete On-Hold Pallets ({pallets.filter((p) => p.is_on_hold).length})
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete On-Hold Pallets?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will remove {pallets.filter((p) => p.is_on_hold).length} on-hold pallet(s) from this load. 
-                      They will be returned to available inventory. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteHoldPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Delete On-Hold Pallets
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            {isAdmin && pallets.length > 0 && (
+              <div className="flex items-center gap-2">
+                {selectedPalletsToDelete.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
+                        {deletingHoldPallets ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Delete Selected ({selectedPalletsToDelete.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Selected Pallets?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove {selectedPalletsToDelete.size} pallet(s) from this load. 
+                          They will be returned to available inventory. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete Pallets
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             )}
           </CardHeader>
           <CardContent>
@@ -1208,6 +1279,14 @@ export default function LoadDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {isAdmin && (
+                        <TableHead className="w-[40px]">
+                          <Checkbox
+                            checked={selectedPalletsToDelete.size === pallets.length && pallets.length > 0}
+                            onCheckedChange={toggleAllPalletsToDelete}
+                          />
+                        </TableHead>
+                      )}
                       {isAdmin && <TableHead>PT Code</TableHead>}
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
@@ -1221,9 +1300,17 @@ export default function LoadDetail() {
                   </TableHeader>
                   <TableBody>
                     {pallets.map((pallet) => {
-                      const palletStatus = pallet.is_on_hold ? "hold" : (releaseRequest?.status === "pending" && !pallet.destination ? "pending" : "ship");
+                      const palletStatus = pallet.is_on_hold ? "hold" : (releaseRequest?.status === "pending" ? "pending" : "ship");
                       return (
                       <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
+                        {isAdmin && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedPalletsToDelete.has(pallet.id)}
+                              onCheckedChange={() => togglePalletToDelete(pallet.id)}
+                            />
+                          </TableCell>
+                        )}
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">
                           {pallet.pallet.description}
@@ -1233,7 +1320,8 @@ export default function LoadDetail() {
                         </TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
-                          {releaseRequest?.status === "pending" || isAdmin ? (
+                          {/* Only customers can change status when release is pending */}
+                          {releaseRequest?.status === "pending" && !isAdmin ? (
                             palletStatus === "hold" ? (
                               <div className="flex items-center gap-2">
                                 <Select
@@ -1276,7 +1364,6 @@ export default function LoadDetail() {
                                     if (val === "ship") {
                                       handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
                                     }
-                                    // Hold selection is handled by popover trigger below
                                   }}
                                 >
                                   <SelectTrigger className={`w-[120px] ${
@@ -1331,8 +1418,15 @@ export default function LoadDetail() {
                               </Popover>
                             )
                           ) : (
-                            <Badge variant={pallet.is_on_hold ? "destructive" : "default"}>
-                              {pallet.is_on_hold ? "On Hold" : "Ship"}
+                            /* Admin sees read-only status */
+                            <Badge 
+                              variant={palletStatus === "hold" ? "destructive" : palletStatus === "pending" ? "outline" : "default"}
+                              className={palletStatus === "pending" ? "border-yellow-500 text-yellow-600" : palletStatus === "ship" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" : ""}
+                            >
+                              {palletStatus === "hold" ? "On Hold" : palletStatus === "pending" ? "Pending" : "Ship"}
+                              {palletStatus === "hold" && pallet.release_date && (
+                                <span className="ml-1 text-xs">({format(new Date(pallet.release_date), "MMM d")})</span>
+                              )}
                             </Badge>
                           )}
                         </TableCell>
