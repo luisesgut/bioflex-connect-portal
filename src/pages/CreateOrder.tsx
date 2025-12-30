@@ -204,14 +204,26 @@ export default function CreateOrder() {
           setNotes(extracted.notes);
         }
         
-        // Try to match product by code
+        // Try to match product by code - search customer_item, sku, and item_description
         if (extracted.product_code && products.length > 0) {
-          const matchedProduct = products.find(p => 
-            p.customer_item?.toLowerCase().includes(extracted.product_code!.toLowerCase()) ||
-            p.sku?.toLowerCase().includes(extracted.product_code!.toLowerCase()) ||
-            extracted.product_code!.toLowerCase().includes(p.customer_item?.toLowerCase() || '') ||
-            extracted.product_code!.toLowerCase().includes(p.sku?.toLowerCase() || '')
-          );
+          const productCode = extracted.product_code.toLowerCase();
+          const matchedProduct = products.find(p => {
+            const customerItem = p.customer_item?.toLowerCase() || '';
+            const sku = p.sku?.toLowerCase() || '';
+            const description = p.item_description?.toLowerCase() || '';
+            
+            return (
+              // Match against customer_item
+              customerItem.includes(productCode) ||
+              productCode.includes(customerItem) ||
+              // Match against SKU
+              sku.includes(productCode) ||
+              productCode.includes(sku) ||
+              // Match against item_description (customer item code often appears here)
+              description.includes(productCode) ||
+              productCode.includes(description)
+            );
+          });
           if (matchedProduct) {
             setSelectedProductId(matchedProduct.id);
           }
