@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock, Sparkles } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock, Sparkles, Check, AlertCircle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,8 @@ export default function CreateOrder() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [extractingData, setExtractingData] = useState(false);
+  const [extractedData, setExtractedData] = useState<ExtractedPOData | null>(null);
+  const [matchedProductName, setMatchedProductName] = useState<string | null>(null);
   const [poNumber, setPoNumber] = useState("");
   const [poNumberError, setPoNumberError] = useState<string | null>(null);
   const [checkingPoNumber, setCheckingPoNumber] = useState(false);
@@ -184,6 +186,9 @@ export default function CreateOrder() {
       if (data?.success && data?.data) {
         const extracted: ExtractedPOData = data.data;
         
+        // Store extracted data for preview
+        setExtractedData(extracted);
+        
         // Fill in the form fields
         if (extracted.po_number) {
           setPoNumber(extracted.po_number);
@@ -208,6 +213,7 @@ export default function CreateOrder() {
         // Try to match product by code - search customer_item, sku, and item_description
         // Prioritize item_id_code (e.g., "62036-11/61494-16NZ") over product_code
         const codesToMatch = [extracted.item_id_code, extracted.product_code].filter(Boolean);
+        let foundProductName: string | null = null;
         
         if (codesToMatch.length > 0 && products.length > 0) {
           let matchedProduct = null;
@@ -237,8 +243,11 @@ export default function CreateOrder() {
           
           if (matchedProduct) {
             setSelectedProductId(matchedProduct.id);
+            foundProductName = [matchedProduct.customer_item, matchedProduct.item_description].filter(Boolean).join(' - ') || matchedProduct.name;
           }
         }
+        
+        setMatchedProductName(foundProductName);
         
         toast.success('Form auto-filled from PDF!', {
           description: `PO #${extracted.po_number || 'extracted'} - ${extracted.quantity?.toLocaleString() || 'N/A'} units`
@@ -256,6 +265,8 @@ export default function CreateOrder() {
 
   const removeUploadedFile = () => {
     setUploadedFile(null);
+    setExtractedData(null);
+    setMatchedProductName(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -448,6 +459,68 @@ export default function CreateOrder() {
                 </Button>
               )}
             </div>
+            
+            {/* Extracted Data Preview */}
+            {extractedData && (
+              <div className="mt-4 rounded-lg border border-accent/30 bg-accent/5 p-4">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-card-foreground mb-3">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Extracted Data
+                </h3>
+                <div className="grid gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">PO Number:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.po_number || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">PO Date:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.po_date || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Quantity:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.quantity?.toLocaleString() || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivery Date:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.requested_delivery_date || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Unit Price:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.unit_price ? `$${extractedData.unit_price}` : '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total:</span>
+                      <span className="font-medium text-card-foreground">{extractedData.total_price ? `$${extractedData.total_price.toLocaleString()}` : '-'}</span>
+                    </div>
+                  </div>
+                  
+                  {(extractedData.item_id_code || extractedData.product_code) && (
+                    <div className="mt-2 pt-2 border-t border-accent/20">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Product Code:</span>
+                        <span className="font-medium text-card-foreground text-right truncate max-w-[200px]" title={extractedData.item_id_code || extractedData.product_code}>
+                          {extractedData.item_id_code || extractedData.product_code}
+                        </span>
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-muted-foreground">Matched Product:</span>
+                        {matchedProductName ? (
+                          <span className="font-medium text-green-600 text-right truncate max-w-[200px]" title={matchedProductName}>
+                            {matchedProductName}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-amber-600">
+                            <AlertCircle className="h-3 w-3" />
+                            No match found
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* PO Information */}
