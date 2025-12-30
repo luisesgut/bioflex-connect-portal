@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileText, Package, Truck, CheckCircle2, XCircle, Clock, AlertTriangle, Flame, Calendar, ArrowRightLeft, Ban, ShieldAlert } from "lucide-react";
+import { Loader2, FileText, Package, Truck, CheckCircle2, XCircle, Clock, AlertTriangle, Flame, Calendar, ArrowRightLeft, Ban, ShieldAlert, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ interface TimelineEvent {
   description: string;
   timestamp: string;
   status?: "pending" | "approved" | "rejected" | "info";
-  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield";
+  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield" | "status";
   metadata?: Record<string, string | number | null>;
 }
 
@@ -47,6 +47,7 @@ const iconMap = {
   change: ArrowRightLeft,
   cancel: Ban,
   shield: ShieldAlert,
+  status: RefreshCw,
 };
 
 const statusColors = {
@@ -99,6 +100,41 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
           status: "approved",
           icon: "check",
         });
+      }
+
+      // 2b. Fetch status change history
+      const { data: statusHistory } = await supabase
+        .from("po_status_history")
+        .select("*")
+        .eq("purchase_order_id", order.id)
+        .order("changed_at", { ascending: true });
+
+      if (statusHistory) {
+        const statusLabels: Record<string, string> = {
+          pending: "Pending",
+          submitted: "Submitted",
+          accepted: "Accepted",
+          in_production: "In Production",
+          shipped: "Shipped",
+          delivered: "Delivered",
+          cancelled: "Cancelled",
+        };
+
+        for (const change of statusHistory) {
+          const oldLabel = statusLabels[change.old_status || ""] || change.old_status || "Unknown";
+          const newLabel = statusLabels[change.new_status] || change.new_status;
+          
+          timelineEvents.push({
+            id: `status-change-${change.id}`,
+            type: "status_change",
+            title: "Status Changed",
+            description: `Status updated from "${oldLabel}" to "${newLabel}"`,
+            timestamp: change.changed_at,
+            status: "info",
+            icon: "status",
+            metadata: change.notes ? { reason: change.notes } : undefined,
+          });
+        }
       }
 
       // 3. Fetch change requests for this PO
