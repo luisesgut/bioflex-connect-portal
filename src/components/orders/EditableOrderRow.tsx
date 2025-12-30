@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2 } from "lucide-react";
+import { POActivityTimeline } from "./POActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,7 @@ export function EditableOrderRow({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedOrder, setEditedOrder] = useState({
     quantity: order.quantity,
@@ -855,7 +857,7 @@ export function EditableOrderRow({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem className="gap-2">
+              <DropdownMenuItem className="gap-2" onClick={() => setTimelineOpen(true)}>
                 <Eye className="h-4 w-4" />
                 View Details
               </DropdownMenuItem>
@@ -937,6 +939,20 @@ export function EditableOrderRow({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* PO Activity Timeline */}
+        <POActivityTimeline
+          open={timelineOpen}
+          onOpenChange={setTimelineOpen}
+          order={{
+            id: order.id,
+            po_number: order.po_number,
+            sales_order_number: order.sales_order_number,
+            created_at: order.created_at,
+            status: order.status,
+            is_hot_order: order.is_hot_order,
+          }}
+        />
       </td>
     </tr>
   );
