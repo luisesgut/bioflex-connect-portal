@@ -41,6 +41,7 @@ interface ExtractedPOData {
   po_date?: string;
   requested_delivery_date?: string;
   product_code?: string;
+  item_id_code?: string;
   quantity?: number;
   unit_price?: number;
   total_price?: number;
@@ -205,25 +206,35 @@ export default function CreateOrder() {
         }
         
         // Try to match product by code - search customer_item, sku, and item_description
-        if (extracted.product_code && products.length > 0) {
-          const productCode = extracted.product_code.toLowerCase();
-          const matchedProduct = products.find(p => {
-            const customerItem = p.customer_item?.toLowerCase() || '';
-            const sku = p.sku?.toLowerCase() || '';
-            const description = p.item_description?.toLowerCase() || '';
+        // Prioritize item_id_code (e.g., "62036-11/61494-16NZ") over product_code
+        const codesToMatch = [extracted.item_id_code, extracted.product_code].filter(Boolean);
+        
+        if (codesToMatch.length > 0 && products.length > 0) {
+          let matchedProduct = null;
+          
+          for (const code of codesToMatch) {
+            if (!code || matchedProduct) continue;
+            const searchCode = code.toLowerCase();
             
-            return (
-              // Match against customer_item
-              customerItem.includes(productCode) ||
-              productCode.includes(customerItem) ||
-              // Match against SKU
-              sku.includes(productCode) ||
-              productCode.includes(sku) ||
-              // Match against item_description (customer item code often appears here)
-              description.includes(productCode) ||
-              productCode.includes(description)
-            );
-          });
+            matchedProduct = products.find(p => {
+              const customerItem = p.customer_item?.toLowerCase() || '';
+              const sku = p.sku?.toLowerCase() || '';
+              const description = p.item_description?.toLowerCase() || '';
+              
+              return (
+                // Match against customer_item (most reliable)
+                customerItem.includes(searchCode) ||
+                searchCode.includes(customerItem) ||
+                // Match against SKU
+                sku.includes(searchCode) ||
+                searchCode.includes(sku) ||
+                // Match against item_description
+                description.includes(searchCode) ||
+                searchCode.includes(description)
+              );
+            });
+          }
+          
           if (matchedProduct) {
             setSelectedProductId(matchedProduct.id);
           }

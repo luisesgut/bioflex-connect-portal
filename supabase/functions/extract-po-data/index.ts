@@ -52,21 +52,23 @@ serve(async (req) => {
               {
                 type: 'text',
                 text: `Extract the following information from this purchase order PDF:
-1. PO Number (the main purchase order number, often labeled as "PO #" or "Customer PO")
+1. PO Number (the main purchase order number, often labeled as "PO #" or "Customer PO" or "Destiny PO#")
 2. PO Date (the date the PO was created, format: YYYY-MM-DD)
 3. Requested Delivery Date (the date when delivery is requested, format: YYYY-MM-DD)
-4. Item/Product Code (the vendor item number or product SKU, like "TANTANIM3CTROM0010C3UBB17")
-5. Quantity (the order quantity as a number, e.g., 1250000 for 1,250,000)
-6. Unit Price (price per thousand or per unit as a number)
-7. Total Price (total order amount as a number)
-8. Notes (any special instructions or notes from the PO)
+4. Item/Product Code (the vendor item number or product SKU)
+5. Item ID Code (look for "ID#" followed by a code like "62036-11/61494-16NZ" - this is critical for matching)
+6. Quantity (the order quantity as a number, e.g., 1250000 for 1,250,000)
+7. Unit Price (price per thousand or per unit as a number)
+8. Total Price (total order amount as a number)
+9. Notes (any special instructions or notes from the PO)
 
 Return the data as JSON with these exact field names:
 {
   "po_number": "string",
   "po_date": "YYYY-MM-DD",
   "requested_delivery_date": "YYYY-MM-DD or null",
-  "product_code": "string",
+  "product_code": "string (vendor item number)",
+  "item_id_code": "string (the ID# code if present)",
   "quantity": number,
   "unit_price": number or null,
   "total_price": number or null,
@@ -97,6 +99,7 @@ Only return the JSON object, no other text.`
                   po_date: { type: 'string', description: 'PO date in YYYY-MM-DD format' },
                   requested_delivery_date: { type: 'string', description: 'Requested delivery date in YYYY-MM-DD format, or null' },
                   product_code: { type: 'string', description: 'Product code or vendor item number' },
+                  item_id_code: { type: 'string', description: 'The ID# code from the label (e.g., 62036-11/61494-16NZ)' },
                   quantity: { type: 'number', description: 'Order quantity' },
                   unit_price: { type: 'number', description: 'Price per thousand or unit' },
                   total_price: { type: 'number', description: 'Total order price' },
