@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock, Sparkles } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,17 @@ interface Product {
   item_description: string | null;
 }
 
+interface ExtractedPOData {
+  po_number?: string;
+  po_date?: string;
+  requested_delivery_date?: string;
+  product_code?: string;
+  quantity?: number;
+  unit_price?: number;
+  total_price?: number;
+  notes?: string;
+}
+
 export default function CreateOrder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -45,6 +56,7 @@ export default function CreateOrder() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [extractingData, setExtractingData] = useState(false);
   const [poNumber, setPoNumber] = useState("");
   const [poNumberError, setPoNumberError] = useState<string | null>(null);
   const [checkingPoNumber, setCheckingPoNumber] = useState(false);
@@ -129,7 +141,7 @@ export default function CreateOrder() {
     return Math.ceil(quantity / selectedProduct.pieces_per_pallet);
   }, [quantity, selectedProduct]);
 
-  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -140,6 +152,83 @@ export default function CreateOrder() {
 
     setUploadedFile(file);
     toast.success('PDF attached successfully!');
+    
+    // Auto-extract data from PDF
+    await extractPOData(file);
+  };
+
+  const extractPOData = async (file: File) => {
+    setExtractingData(true);
+    
+    try {
+      // Convert file to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          ''
+        )
+      );
+
+      const { data, error } = await supabase.functions.invoke('extract-po-data', {
+        body: { pdfBase64: base64 }
+      });
+
+      if (error) {
+        console.error('Error extracting PO data:', error);
+        toast.error('Could not auto-fill from PDF');
+        return;
+      }
+
+      if (data?.success && data?.data) {
+        const extracted: ExtractedPOData = data.data;
+        
+        // Fill in the form fields
+        if (extracted.po_number) {
+          setPoNumber(extracted.po_number);
+        }
+        if (extracted.po_date) {
+          setPoDate(extracted.po_date);
+        }
+        if (extracted.requested_delivery_date) {
+          setRequestedDate(extracted.requested_delivery_date);
+        }
+        if (extracted.quantity) {
+          setQuantity(extracted.quantity);
+          setQuantityInput(extracted.quantity.toLocaleString());
+        }
+        if (extracted.unit_price) {
+          setPricePerThousand(extracted.unit_price);
+        }
+        if (extracted.notes) {
+          setNotes(extracted.notes);
+        }
+        
+        // Try to match product by code
+        if (extracted.product_code && products.length > 0) {
+          const matchedProduct = products.find(p => 
+            p.customer_item?.toLowerCase().includes(extracted.product_code!.toLowerCase()) ||
+            p.sku?.toLowerCase().includes(extracted.product_code!.toLowerCase()) ||
+            extracted.product_code!.toLowerCase().includes(p.customer_item?.toLowerCase() || '') ||
+            extracted.product_code!.toLowerCase().includes(p.sku?.toLowerCase() || '')
+          );
+          if (matchedProduct) {
+            setSelectedProductId(matchedProduct.id);
+          }
+        }
+        
+        toast.success('Form auto-filled from PDF!', {
+          description: `PO #${extracted.po_number || 'extracted'} - ${extracted.quantity?.toLocaleString() || 'N/A'} units`
+        });
+      } else {
+        toast.error(data?.error || 'Could not extract data from PDF');
+      }
+    } catch (err) {
+      console.error('Error extracting PO data:', err);
+      toast.error('Failed to process PDF');
+    } finally {
+      setExtractingData(false);
+    }
   };
 
   const removeUploadedFile = () => {
@@ -272,11 +361,11 @@ export default function CreateOrder() {
           {/* PDF Upload Section */}
           <div className="rounded-xl border border-dashed border-accent/50 bg-gradient-to-br from-accent/5 to-accent/10 p-6 shadow-card animate-slide-up">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-card-foreground mb-4">
-              <Upload className="h-5 w-5 text-accent" />
-              Attach PO Document
+              <Sparkles className="h-5 w-5 text-accent" />
+              AI-Powered Auto-Fill
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Upload the PDF of your purchase order
+              Upload your PO PDF and we'll automatically extract the information
             </p>
             
             <input
@@ -285,6 +374,7 @@ export default function CreateOrder() {
               accept=".pdf"
               onChange={handlePdfUpload}
               className="hidden"
+              disabled={extractingData}
             />
             
             <div className="flex items-center gap-4">
@@ -294,24 +384,45 @@ export default function CreateOrder() {
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                   className="gap-2"
+                  disabled={extractingData}
                 >
-                  <FileText className="h-4 w-4" />
+                  <Upload className="h-4 w-4" />
                   Upload PO PDF
                 </Button>
               ) : (
                 <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
-                  <FileText className="h-4 w-4 text-accent" />
-                  <span className="text-sm text-card-foreground">{uploadedFile.name}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 ml-2"
-                    onClick={removeUploadedFile}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {extractingData ? (
+                    <Loader2 className="h-4 w-4 text-accent animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-accent" />
+                  )}
+                  <span className="text-sm text-card-foreground">
+                    {extractingData ? 'Extracting data...' : uploadedFile.name}
+                  </span>
+                  {!extractingData && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 ml-2"
+                      onClick={removeUploadedFile}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
+              )}
+              {uploadedFile && !extractingData && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => extractPOData(uploadedFile)}
+                  className="gap-2 text-accent hover:text-accent"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Re-extract
+                </Button>
               )}
             </div>
           </div>

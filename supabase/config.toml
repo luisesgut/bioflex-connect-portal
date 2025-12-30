@@ -1,1 +1,4 @@
 project_id = "heevwrvyglhhydyinkol"
+
+[functions.extract-po-data]
+verify_jwt = false
