@@ -11,7 +11,7 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import CreateOrder from "./pages/CreateOrder";
-import HotOrders from "./pages/HotOrders";
+
 import NonConformance from "./pages/NonConformance";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
@@ -41,7 +41,7 @@ const App = () => (
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
               <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
               <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
-              <Route path="/hot-orders" element={<ProtectedRoute><HotOrders /></ProtectedRoute>} />
+              
               <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />

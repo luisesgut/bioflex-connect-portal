@@ -3,7 +3,7 @@ import {
   LayoutDashboard, 
   Package, 
   FileText, 
-  Flame,
+  
   FileWarning,
   Settings,
   LogOut,
@@ -27,7 +27,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
-  { name: "Hot Orders", href: "/hot-orders", icon: Flame },
+  
   { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
   { name: "Change Requests", href: "/change-requests", icon: FileEdit },
@@ -120,11 +120,6 @@ export function Sidebar() {
                     isActive && "text-sidebar-primary"
                   )} />
                   {item.name}
-                  {item.name === "Hot Orders" && (
-                    <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
-                      3
-                    </span>
-                  )}
                 </Link>
               );
             })}
