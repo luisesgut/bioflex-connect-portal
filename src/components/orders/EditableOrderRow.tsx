@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
-import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
 import { POActivityTimeline } from "./POActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +126,7 @@ export function EditableOrderRow({
   onRequestChange,
   onUpdated,
 }: EditableOrderRowProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -600,23 +601,48 @@ export function EditableOrderRow({
     );
   }
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('[data-radix-collection-item]')
+    ) {
+      return;
+    }
+    navigate(`/orders/${order.id}`);
+  };
+
   return (
-    <tr className="transition-colors hover:bg-muted/20" onDoubleClick={() => isAdmin && setIsEditing(true)}>
+    <tr 
+      className="transition-colors hover:bg-muted/20 cursor-pointer" 
+      onClick={handleRowClick}
+      onDoubleClick={() => isAdmin && setIsEditing(true)}
+    >
       <td className="whitespace-nowrap px-6 py-4">
-        {order.pdf_url ? (
-          <a 
-            href={order.pdf_url} 
-            target="_blank" 
-            rel="noopener noreferrer"
+        <div className="flex items-center gap-2">
+          <Link 
+            to={`/orders/${order.id}`}
             className="font-mono text-sm font-medium text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
             {order.po_number}
-          </a>
-        ) : (
-          <span className="font-mono text-sm font-medium text-card-foreground">
-            {order.po_number}
-          </span>
-        )}
+          </Link>
+          {order.pdf_url && (
+            <a 
+              href={order.pdf_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary"
+              onClick={(e) => e.stopPropagation()}
+              title="View PDF"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4">
         <span className="text-sm font-medium text-card-foreground">
