@@ -59,6 +59,7 @@ interface OrderDetails {
     item_description: string | null;
     dp_sales_csr_names: string | null;
     codigo_producto: string | null;
+    pieces_per_pallet: number | null;
   } | null;
 }
 
@@ -138,7 +139,8 @@ export default function OrderDetail() {
           customer_item,
           item_description,
           dp_sales_csr_names,
-          codigo_producto
+          codigo_producto,
+          pieces_per_pallet
         )
       `)
       .eq("id", id)
@@ -355,17 +357,23 @@ export default function OrderDetail() {
                     <label className="text-sm text-muted-foreground">PO Date</label>
                     <p className="font-medium">{formatDate(order.po_date)}</p>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Sales Order #</label>
-                    <p className="font-medium">{order.sales_order_number || "—"}</p>
-                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Sales Order #</label>
+                      <p className="font-medium">{order.sales_order_number || "—"}</p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm text-muted-foreground">Quantity</label>
                     <p className="font-medium">{order.quantity.toLocaleString()}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Pallets Needed</label>
-                    <p className="font-medium">{order.pallets_needed || "—"}</p>
+                    <p className="font-medium">
+                      {order.product?.pieces_per_pallet && order.quantity
+                        ? Math.ceil(order.quantity / order.product.pieces_per_pallet).toLocaleString()
+                        : "—"}
+                    </p>
                   </div>
                   {isAdmin && (
                     <>
