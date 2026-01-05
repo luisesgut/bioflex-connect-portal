@@ -58,6 +58,7 @@ import {
   Send,
   Trash2,
   CalendarIcon,
+  FileDown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -75,6 +76,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 
 interface InventoryFilters {
   fecha: string[];
@@ -104,6 +106,9 @@ interface LoadPallet {
     unit: string;
     traceability: string;
     fecha: string;
+    gross_weight: number | null;
+    net_weight: number | null;
+    pieces: number | null;
   };
 }
 
@@ -232,7 +237,7 @@ export default function LoadDetail() {
           release_number,
           release_pdf_url,
           is_on_hold,
-          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha)
+          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces)
         `)
         .eq("load_id", id);
 
@@ -1098,6 +1103,81 @@ export default function LoadDetail() {
     handleUpdateLoadStatus("delivered", deliveryDates);
   };
 
+  const handleGenerateCustomsDocument = async () => {
+    if (!load || pallets.length === 0) {
+      toast.error("No pallets in load to generate document");
+      return;
+    }
+
+    try {
+      // Get unique customer_lots from pallets
+      const customerLots = [...new Set(
+        pallets
+          .map(p => p.pallet.customer_lot)
+          .filter((lot): lot is string => !!lot)
+      )];
+
+      // Fetch order info for each customer_lot
+      const { data: ordersData } = await supabase
+        .from("purchase_orders")
+        .select(`
+          po_number,
+          sales_order_number,
+          price_per_thousand,
+          product:products(pieces_per_pallet, piezas_por_paquete)
+        `)
+        .in("po_number", customerLots);
+
+      // Build order info map
+      const orderInfoMap = new Map<string, {
+        customer_lot: string;
+        sales_order_number: string | null;
+        price_per_thousand: number | null;
+        pieces_per_pallet: number | null;
+        piezas_por_paquete: number | null;
+      }>();
+
+      (ordersData || []).forEach((order: any) => {
+        orderInfoMap.set(order.po_number, {
+          customer_lot: order.po_number,
+          sales_order_number: order.sales_order_number,
+          price_per_thousand: order.price_per_thousand,
+          pieces_per_pallet: order.product?.pieces_per_pallet || null,
+          piezas_por_paquete: order.product?.piezas_por_paquete || null,
+        });
+      });
+
+      // Convert pallets to required format
+      const palletData = pallets.filter(p => !p.is_on_hold).map(p => ({
+        pt_code: p.pallet.pt_code,
+        description: p.pallet.description,
+        destination: p.destination,
+        quantity: p.quantity,
+        gross_weight: p.pallet.gross_weight,
+        net_weight: p.pallet.net_weight,
+        pieces: p.pallet.pieces,
+        unit: p.pallet.unit,
+        customer_lot: p.pallet.customer_lot,
+        bfx_order: p.pallet.bfx_order,
+      }));
+
+      generateCustomsDocument(
+        {
+          loadNumber: load.load_number,
+          shippingDate: load.shipping_date,
+          releaseNumber: load.release_number,
+        },
+        palletData,
+        orderInfoMap
+      );
+
+      toast.success("Customs document generated successfully");
+    } catch (error) {
+      console.error("Error generating customs document:", error);
+      toast.error("Failed to generate customs document");
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -1171,6 +1251,13 @@ export default function LoadDetail() {
                   <Send className="mr-2 h-4 w-4" />
                 )}
                 Send for Release
+              </Button>
+            )}
+            {/* Generate Customs Document Button - visible for in_transit or delivered status */}
+            {isAdmin && (load.status === "in_transit" || load.status === "delivered") && pallets.length > 0 && (
+              <Button variant="outline" onClick={handleGenerateCustomsDocument}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Customs Document
               </Button>
             )}
             {isAdmin && (
