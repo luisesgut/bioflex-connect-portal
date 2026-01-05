@@ -978,6 +978,33 @@ export default function LoadDetail() {
     return [...new Set(destinations)];
   }, [pallets]);
 
+  // Validation helper for in_transit transition
+  const validateForInTransit = (): { valid: boolean; message: string } => {
+    if (pallets.length === 0) {
+      return { valid: false, message: "Cannot transition to In Transit: No pallets in load" };
+    }
+
+    const palletsNotShip = pallets.filter((p) => p.is_on_hold || (!p.is_on_hold && p.destination === null));
+    const palletsWithoutDestination = pallets.filter((p) => !p.is_on_hold && (!p.destination || p.destination === "tbd"));
+    const palletsOnHold = pallets.filter((p) => p.is_on_hold);
+
+    if (palletsOnHold.length > 0) {
+      return { 
+        valid: false, 
+        message: `Cannot transition to In Transit: ${palletsOnHold.length} pallet(s) are still on hold. All pallets must be set to "Ship" status.` 
+      };
+    }
+
+    if (palletsWithoutDestination.length > 0) {
+      return { 
+        valid: false, 
+        message: `Cannot transition to In Transit: ${palletsWithoutDestination.length} pallet(s) do not have a valid destination selected.` 
+      };
+    }
+
+    return { valid: true, message: "" };
+  };
+
   const handleStatusChange = (newStatus: string) => {
     if (newStatus === "delivered") {
       // Initialize delivery dates for each destination
@@ -989,6 +1016,12 @@ export default function LoadDetail() {
       setPendingStatus(newStatus);
       setStatusDialogOpen(true);
     } else if (newStatus === "in_transit") {
+      // Validate before showing confirmation
+      const validation = validateForInTransit();
+      if (!validation.valid) {
+        toast.error(validation.message);
+        return;
+      }
       // Show confirmation dialog for in_transit status
       setInTransitConfirmOpen(true);
     } else {
@@ -998,6 +1031,13 @@ export default function LoadDetail() {
   };
 
   const handleConfirmInTransit = () => {
+    // Double-check validation before proceeding
+    const validation = validateForInTransit();
+    if (!validation.valid) {
+      toast.error(validation.message);
+      setInTransitConfirmOpen(false);
+      return;
+    }
     setInTransitConfirmOpen(false);
     handleUpdateLoadStatus("in_transit");
   };
