@@ -59,6 +59,9 @@ import {
   Trash2,
   CalendarIcon,
   FileDown,
+  AlertTriangle,
+  CheckCircle,
+  Info,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -147,6 +150,17 @@ interface AvailablePallet {
   fecha: string;
   bfx_order: string | null;
   unit: string;
+  pieces_per_pallet?: number | null;
+}
+
+interface ActivePOWithInventory {
+  po_number: string;
+  product_pt_code: string;
+  product_description: string;
+  total_quantity: number;
+  pieces_per_pallet: number | null;
+  inventory_pallets: number;
+  inventory_volume: number;
 }
 
 const statusStyles: Record<string, string> = {
@@ -212,6 +226,8 @@ export default function LoadDetail() {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
+  const [activePOsWithInventory, setActivePOsWithInventory] = useState<ActivePOWithInventory[]>([]);
+  const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -279,6 +295,50 @@ export default function LoadDetail() {
       );
 
       setAvailablePallets(filteredPallets);
+
+      // Fetch active POs with their product PT codes
+      const { data: activePOs } = await supabase
+        .from("purchase_orders")
+        .select(`
+          po_number,
+          quantity,
+          product:products(codigo_producto, name, pieces_per_pallet)
+        `)
+        .in("status", ["pending", "confirmed", "in_production"]);
+
+      // Build products map for pieces_per_pallet validation
+      const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
+      (activePOs || []).forEach((po: any) => {
+        if (po.product?.codigo_producto) {
+          prodMap.set(po.product.codigo_producto, {
+            pieces_per_pallet: po.product.pieces_per_pallet || null
+          });
+        }
+      });
+      setProductsMap(prodMap);
+
+      // Match POs with available inventory by PT code
+      const poInventoryData: ActivePOWithInventory[] = [];
+      (activePOs || []).forEach((po: any) => {
+        if (!po.product?.codigo_producto) return;
+        
+        const ptCode = po.product.codigo_producto;
+        const matchingPallets = filteredPallets.filter(p => p.pt_code === ptCode);
+        
+        if (matchingPallets.length > 0) {
+          poInventoryData.push({
+            po_number: po.po_number,
+            product_pt_code: ptCode,
+            product_description: po.product.name || "",
+            total_quantity: po.quantity,
+            pieces_per_pallet: po.product.pieces_per_pallet,
+            inventory_pallets: matchingPallets.length,
+            inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
+          });
+        }
+      });
+      setActivePOsWithInventory(poInventoryData);
+
     } catch (error) {
       console.error("Error fetching load data:", error);
       toast.error("Failed to load data");
@@ -775,6 +835,36 @@ export default function LoadDetail() {
       fetchLoadData();
     } catch (error) {
       console.error("Error uploading pallet PDF:", error);
+      toast.error("Failed to upload PDF");
+    }
+  };
+
+  const handleLoadReleasePdfUpload = async (file: File) => {
+    if (!id) return;
+    
+    try {
+      const fileName = `loads/${id}/release_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("release-documents")
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from("shipping_loads")
+        .update({ release_pdf_url: urlData.publicUrl })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Release authorization PDF uploaded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading load release PDF:", error);
       toast.error("Failed to upload PDF");
     }
   };
@@ -1375,6 +1465,71 @@ export default function LoadDetail() {
           </Card>
         </div>
 
+        {/* Customer Release PDF Upload - Shown when release is pending */}
+        {releaseRequest?.status === "pending" && (
+          <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-yellow-600" />
+                <CardTitle className="text-lg">Customer Release Approval</CardTitle>
+              </div>
+              <CardDescription>
+                Upload the release authorization PDF sent by the customer to approve the shipment
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                {load.release_pdf_url ? (
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={load.release_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-2"
+                    >
+                      <FileText className="h-5 w-5" />
+                      View Release PDF
+                    </a>
+                    <label className="cursor-pointer">
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLoadReleasePdfUpload(file);
+                        }}
+                      />
+                      <span className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary cursor-pointer">
+                        <Upload className="h-4 w-4" />
+                        Replace
+                      </span>
+                    </label>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer">
+                    <Input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLoadReleasePdfUpload(file);
+                      }}
+                    />
+                    <Button variant="outline" asChild>
+                      <span>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Release PDF
+                      </span>
+                    </Button>
+                  </label>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Pallets Table */}
         <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1695,6 +1850,53 @@ export default function LoadDetail() {
           </CardContent>
         </Card>
 
+        {/* Active POs with Available Inventory - Shown for admins when assembling */}
+        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Active POs with Available Inventory</CardTitle>
+              </div>
+              <CardDescription>
+                These active Purchase Orders have matching materials in your current inventory
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>PO #</TableHead>
+                      <TableHead>PT Code</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">PO Qty</TableHead>
+                      <TableHead className="text-center">Pallets Available</TableHead>
+                      <TableHead className="text-right">Volume Available</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activePOsWithInventory.map((po) => (
+                      <TableRow key={po.po_number}>
+                        <TableCell className="font-medium">{po.po_number}</TableCell>
+                        <TableCell className="font-mono text-sm">{po.product_pt_code}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                        <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-primary">
+                          {po.inventory_volume.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Available Inventory Table - Shown for admins when not in_transit or delivered */}
         {isAdmin && load.status !== "delivered" && load.status !== "in_transit" && (
           <Card>
@@ -1763,6 +1965,7 @@ export default function LoadDetail() {
                           <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                           <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                           <TableHead className="text-right">Stock</TableHead>
+                          <TableHead className="text-center">Vol. OK</TableHead>
                           <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
                         </TableRow>
@@ -1788,6 +1991,22 @@ export default function LoadDetail() {
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {pallet.stock.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {(() => {
+                                const productInfo = productsMap.get(pallet.pt_code);
+                                if (!productInfo?.pieces_per_pallet) {
+                                  return <span className="text-muted-foreground">-</span>;
+                                }
+                                const meetsVolume = pallet.stock >= productInfo.pieces_per_pallet;
+                                return meetsVolume ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 mx-auto" />
+                                ) : (
+                                  <span title={`Expected: ${productInfo.pieces_per_pallet.toLocaleString()}`}>
+                                    <AlertTriangle className="h-4 w-4 text-amber-500 mx-auto" />
+                                  </span>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-sm">{pallet.unit}</TableCell>
