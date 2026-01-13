@@ -228,6 +228,9 @@ export default function LoadDetail() {
   const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
   const [activePOsWithInventory, setActivePOsWithInventory] = useState<ActivePOWithInventory[]>([]);
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
+  const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
+  const [releaseUploadDialogOpen, setReleaseUploadDialogOpen] = useState(false);
+  const [processingRelease, setProcessingRelease] = useState(false);
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
@@ -1068,6 +1071,80 @@ export default function LoadDetail() {
     return [...new Set(destinations)];
   }, [pallets]);
 
+  // Separate pallets into released (has release PDF) and pending (no release PDF) for assembly view
+  const releasedPallets = useMemo(() => 
+    pallets.filter((p) => p.release_pdf_url), 
+    [pallets]
+  );
+  
+  const pendingPallets = useMemo(() => 
+    pallets.filter((p) => !p.release_pdf_url), 
+    [pallets]
+  );
+
+  // Toggle selection for release workflow
+  const togglePalletForRelease = (palletId: string) => {
+    setSelectedPalletsForRelease((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(palletId)) {
+        newSet.delete(palletId);
+      } else {
+        newSet.add(palletId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllPendingPalletsForRelease = () => {
+    if (selectedPalletsForRelease.size === pendingPallets.length) {
+      setSelectedPalletsForRelease(new Set());
+    } else {
+      setSelectedPalletsForRelease(new Set(pendingPallets.map((p) => p.id)));
+    }
+  };
+
+  // Handle batch release PDF upload
+  const handleBatchReleasePdfUpload = async (file: File) => {
+    if (selectedPalletsForRelease.size === 0) {
+      toast.error("Please select pallets to release");
+      return;
+    }
+
+    setProcessingRelease(true);
+    try {
+      // Upload the PDF once
+      const fileName = `batch-releases/${id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("release-documents")
+        .getPublicUrl(fileName);
+
+      // Update all selected pallets with the same PDF URL
+      const palletIds = Array.from(selectedPalletsForRelease);
+      const { error: updateError } = await supabase
+        .from("load_pallets")
+        .update({ release_pdf_url: urlData.publicUrl })
+        .in("id", palletIds);
+
+      if (updateError) throw updateError;
+
+      toast.success(`${palletIds.length} pallet(s) released with document`);
+      setSelectedPalletsForRelease(new Set());
+      setReleaseUploadDialogOpen(false);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error processing batch release:", error);
+      toast.error("Failed to process release");
+    } finally {
+      setProcessingRelease(false);
+    }
+  };
+
   // Validation helper for in_transit transition
   const validateForInTransit = (): { valid: boolean; message: string } => {
     if (pallets.length === 0) {
@@ -1530,272 +1607,468 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Pallets Table */}
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>Pallets in Load</CardTitle>
-              <CardDescription>
-                {load.status === "assembling" 
-                  ? "Select pallets from the inventory below to add to this load"
-                  : isAdmin 
+        {/* Pallets Section - Assembly mode shows Released/Pending split, other modes show regular table */}
+        {load.status === "assembling" && pallets.length > 0 ? (
+          <>
+            {/* Released Pallets Table */}
+            <Card className="border-green-200 dark:border-green-900">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Pallets with release authorization documents attached
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {releasedPallets.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Package className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground text-sm">No pallets released yet</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          <TableHead>Description</TableHead>
+                          <TableHead>Customer PO</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead>Release PDF</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {releasedPallets.map((pallet) => (
+                          <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
+                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <a
+                                href={pallet.release_pdf_url || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                <FileText className="h-4 w-4" />
+                                View
+                              </a>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pending Pallets Table */}
+            <Card className="border-yellow-200 dark:border-yellow-900">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <CardTitle>Pending Pallets ({pendingPallets.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Pallets awaiting release authorization - select pallets and upload release document to move them to released
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedPalletsForRelease.size > 0 && (
+                    <Button 
+                      onClick={() => setReleaseUploadDialogOpen(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Release ({selectedPalletsForRelease.size})
+                    </Button>
+                  )}
+                  {isAdmin && selectedPalletsToDelete.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
+                          {deletingHoldPallets ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="mr-2 h-4 w-4" />
+                          )}
+                          Delete ({selectedPalletsToDelete.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedPalletsToDelete.size} pallet(s) from this load. 
+                            They will be returned to available inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete Pallets
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {pendingPallets.length === 0 ? (
+                  <div className="text-center py-6">
+                    <CheckCircle className="h-10 w-10 mx-auto text-green-500 mb-2" />
+                    <p className="text-muted-foreground text-sm">All pallets have been released!</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={pendingPallets.length > 0 && selectedPalletsForRelease.size === pendingPallets.length}
+                              onCheckedChange={toggleAllPendingPalletsForRelease}
+                            />
+                          </TableHead>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <span className="text-xs text-destructive">Del</span>
+                            </TableHead>
+                          )}
+                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          <TableHead>Description</TableHead>
+                          <TableHead>Customer PO</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingPallets.map((pallet) => (
+                          <TableRow key={pallet.id} className={selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedPalletsForRelease.has(pallet.id)}
+                                onCheckedChange={() => togglePalletForRelease(pallet.id)}
+                              />
+                            </TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedPalletsToDelete.has(pallet.id)}
+                                  onCheckedChange={() => togglePalletToDelete(pallet.id)}
+                                  className="border-destructive data-[state=checked]:bg-destructive"
+                                />
+                              </TableCell>
+                            )}
+                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
+                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          /* Regular Pallets Table for non-assembling states */
+          <Card>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>Pallets in Load</CardTitle>
+                <CardDescription>
+                  {isAdmin 
                     ? "Customer will assign status to each pallet"
                     : "Select Ship or Hold for each pallet"}
-              </CardDescription>
-            </div>
-            {isAdmin && pallets.length > 0 && (
-              <div className="flex items-center gap-2">
-                {selectedPalletsToDelete.size > 0 && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
-                        {deletingHoldPallets ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="mr-2 h-4 w-4" />
-                        )}
-                        Delete Selected ({selectedPalletsToDelete.size})
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Selected Pallets?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove {selectedPalletsToDelete.size} pallet(s) from this load. 
-                          They will be returned to available inventory. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Delete Pallets
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                </CardDescription>
               </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {pallets.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No pallets added yet</p>
-              </div>
-            ) : (
-              <div className="rounded-md border overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {isAdmin && (
-                        <TableHead className="w-[40px]">
-                          <Checkbox
-                            checked={selectedPalletsToDelete.size === pallets.length && pallets.length > 0}
-                            onCheckedChange={toggleAllPalletsToDelete}
-                          />
-                        </TableHead>
-                      )}
-                      {isAdmin && <TableHead>PT Code</TableHead>}
-                      <TableHead>Description</TableHead>
-                      <TableHead>Customer PO</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead>Status</TableHead>
-                      {!isAdmin && <TableHead>Release Date</TableHead>}
-                      <TableHead>Destination</TableHead>
-                      <TableHead>Release #</TableHead>
-                      <TableHead>Release PDF</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pallets.map((pallet) => {
-                      // Determine pallet status based on is_on_hold and release_date
-                      // - "hold" if is_on_hold is true
-                      // - "ship" if release_date matches load's shipping_date (customer chose to ship)
-                      // - "pending" otherwise (awaiting customer decision)
-                      const hasChosenToShip = !pallet.is_on_hold && pallet.pallet.release_date === load?.shipping_date;
-                      const palletStatus = pallet.is_on_hold ? "hold" : (hasChosenToShip ? "ship" : "pending");
-                      return (
-                      <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
-                        {isAdmin && (
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedPalletsToDelete.has(pallet.id)}
-                              onCheckedChange={() => togglePalletToDelete(pallet.id)}
-                            />
-                          </TableCell>
-                        )}
-                        {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
-                        <TableCell className="max-w-[200px] truncate">
-                          {pallet.pallet.description}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {pallet.pallet.customer_lot || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {/* Only customers can change status when release is pending */}
-                          {releaseRequest?.status === "pending" && !isAdmin ? (
-                            <Select
-                              value={palletStatus}
-                              onValueChange={(val) => {
-                                if (val === "ship") {
-                                  handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
-                                }
-                                if (val === "hold") {
-                                  handleTogglePalletHold(pallet.id, pallet.pallet_id, true);
-                                }
-                              }}
-                            >
-                              <SelectTrigger
-                                className={`w-[120px] ${
-                                  palletStatus === "hold"
-                                    ? "border-destructive text-destructive"
-                                    : palletStatus === "pending"
-                                      ? "border-yellow-500 text-yellow-600"
-                                      : "border-green-500 text-green-600"
-                                }`}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending" disabled>
-                                  <span className="flex items-center gap-1 text-yellow-600">Pending</span>
-                                </SelectItem>
-                                <SelectItem value="ship">
-                                  <span className="flex items-center gap-1">
-                                    <Check className="h-3 w-3 text-green-600" />
-                                    Ship
-                                  </span>
-                                </SelectItem>
-                                <SelectItem value="hold">
-                                  <span className="flex items-center gap-1">
-                                    <X className="h-3 w-3 text-destructive" />
-                                    Hold
-                                  </span>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+              {isAdmin && pallets.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {selectedPalletsToDelete.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingHoldPallets}>
+                          {deletingHoldPallets ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
-                            /* Admin sees read-only status */
-                            <Badge
-                              variant={
-                                palletStatus === "hold"
-                                  ? "destructive"
-                                  : palletStatus === "pending"
-                                    ? "outline"
-                                    : "default"
-                              }
-                              className={
-                                palletStatus === "pending"
-                                  ? "border-yellow-500 text-yellow-600"
-                                  : palletStatus === "ship"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                    : ""
-                              }
-                            >
-                              {palletStatus === "hold" ? "On Hold" : palletStatus === "pending" ? "Pending" : "Ship"}
-                              {palletStatus === "hold" && pallet.pallet.release_date && (
-                                <span className="ml-1 text-xs">({format(new Date(pallet.pallet.release_date), "MMM d")})</span>
-                              )}
-                            </Badge>
+                            <Trash2 className="mr-2 h-4 w-4" />
                           )}
-                        </TableCell>
-                        {!isAdmin && (
+                          Delete Selected ({selectedPalletsToDelete.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedPalletsToDelete.size} pallet(s) from this load. 
+                            They will be returned to available inventory. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete Pallets
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {pallets.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No pallets added yet</p>
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {isAdmin && (
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={selectedPalletsToDelete.size === pallets.length && pallets.length > 0}
+                              onCheckedChange={toggleAllPalletsToDelete}
+                            />
+                          </TableHead>
+                        )}
+                        {isAdmin && <TableHead>PT Code</TableHead>}
+                        <TableHead>Description</TableHead>
+                        <TableHead>Customer PO</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead>Status</TableHead>
+                        {!isAdmin && <TableHead>Release Date</TableHead>}
+                        <TableHead>Destination</TableHead>
+                        <TableHead>Release #</TableHead>
+                        <TableHead>Release PDF</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pallets.map((pallet) => {
+                        const hasChosenToShip = !pallet.is_on_hold && pallet.pallet.release_date === load?.shipping_date;
+                        const palletStatus = pallet.is_on_hold ? "hold" : (hasChosenToShip ? "ship" : "pending");
+                        return (
+                        <TableRow key={pallet.id} className={pallet.is_on_hold ? "bg-red-50 dark:bg-red-950/20" : ""}>
+                          {isAdmin && (
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedPalletsToDelete.has(pallet.id)}
+                                onCheckedChange={() => togglePalletToDelete(pallet.id)}
+                              />
+                            </TableCell>
+                          )}
+                          {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                          <TableCell className="max-w-[200px] truncate">
+                            {pallet.pallet.description}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {pallet.pallet.customer_lot || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           <TableCell>
-                            {pallet.is_on_hold && releaseRequest?.status === "pending" ? (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(
-                                      "w-[160px] justify-start text-left font-normal",
-                                      !pallet.pallet.release_date && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {pallet.pallet.release_date
-                                      ? format(new Date(pallet.pallet.release_date), "MMM d, yyyy")
-                                      : "Select release date"}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={
-                                      pallet.pallet.release_date
-                                        ? new Date(pallet.pallet.release_date)
-                                        : undefined
-                                    }
-                                    onSelect={(date) => {
-                                      if (date) handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
-                                    }}
-                                    disabled={(date) => date < new Date()}
-                                    initialFocus
-                                    className={cn("p-3 pointer-events-auto")}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            ) : pallet.is_on_hold && pallet.pallet.release_date ? (
-                              <span className="text-sm">{format(new Date(pallet.pallet.release_date), "MMM d, yyyy")}</span>
+                            {releaseRequest?.status === "pending" && !isAdmin ? (
+                              <Select
+                                value={palletStatus}
+                                onValueChange={(val) => {
+                                  if (val === "ship") {
+                                    handleTogglePalletHold(pallet.id, pallet.pallet_id, false);
+                                  }
+                                  if (val === "hold") {
+                                    handleTogglePalletHold(pallet.id, pallet.pallet_id, true);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger
+                                  className={`w-[120px] ${
+                                    palletStatus === "hold"
+                                      ? "border-destructive text-destructive"
+                                      : palletStatus === "pending"
+                                        ? "border-yellow-500 text-yellow-600"
+                                        : "border-green-500 text-green-600"
+                                  }`}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending" disabled>
+                                    <span className="flex items-center gap-1 text-yellow-600">Pending</span>
+                                  </SelectItem>
+                                  <SelectItem value="ship">
+                                    <span className="flex items-center gap-1">
+                                      <Check className="h-3 w-3 text-green-600" />
+                                      Ship
+                                    </span>
+                                  </SelectItem>
+                                  <SelectItem value="hold">
+                                    <span className="flex items-center gap-1">
+                                      <X className="h-3 w-3 text-destructive" />
+                                      Hold
+                                    </span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             ) : (
-                              <span className="text-muted-foreground">-</span>
+                              <Badge
+                                variant={
+                                  palletStatus === "hold"
+                                    ? "destructive"
+                                    : palletStatus === "pending"
+                                      ? "outline"
+                                      : "default"
+                                }
+                                className={
+                                  palletStatus === "pending"
+                                    ? "border-yellow-500 text-yellow-600"
+                                    : palletStatus === "ship"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                      : ""
+                                }
+                              >
+                                {palletStatus === "hold" ? "On Hold" : palletStatus === "pending" ? "Pending" : "Ship"}
+                                {palletStatus === "hold" && pallet.pallet.release_date && (
+                                  <span className="ml-1 text-xs">({format(new Date(pallet.pallet.release_date), "MMM d")})</span>
+                                )}
+                              </Badge>
                             )}
                           </TableCell>
-                        )}
-                        <TableCell>
-                          {pallet.is_on_hold ? (
-                            <span className="text-muted-foreground italic">N/A (on hold)</span>
-                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" || isAdmin ? (
-                            <Select
-                              value={pallet.destination || ""}
-                              onValueChange={(val) => handleUpdateDestination(pallet.id, val)}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Select destination" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {destinations.map((dest) => (
-                                  <SelectItem key={dest.value} value={dest.value}>
-                                    {dest.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {pallet.destination
-                                ? destinations.find((d) => d.value === pallet.destination)?.label
-                                : "Pending"}
-                            </span>
+                          {!isAdmin && (
+                            <TableCell>
+                              {pallet.is_on_hold && releaseRequest?.status === "pending" ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className={cn(
+                                        "w-[160px] justify-start text-left font-normal",
+                                        !pallet.pallet.release_date && "text-muted-foreground"
+                                      )}
+                                    >
+                                      {pallet.pallet.release_date
+                                        ? format(new Date(pallet.pallet.release_date), "MMM d, yyyy")
+                                        : "Select release date"}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={
+                                        pallet.pallet.release_date
+                                          ? new Date(pallet.pallet.release_date)
+                                          : undefined
+                                      }
+                                      onSelect={(date) => {
+                                        if (date) handleTogglePalletHold(pallet.id, pallet.pallet_id, true, date);
+                                      }}
+                                      disabled={(date) => date < new Date()}
+                                      initialFocus
+                                      className={cn("p-3 pointer-events-auto")}
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              ) : pallet.is_on_hold && pallet.pallet.release_date ? (
+                                <span className="text-sm">{format(new Date(pallet.pallet.release_date), "MMM d, yyyy")}</span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {pallet.is_on_hold ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
-                            <Input
-                              placeholder="Release #"
-                              defaultValue={pallet.release_number || ""}
-                              className="w-[120px]"
-                              onBlur={(e) => {
-                                if (e.target.value !== (pallet.release_number || "")) {
-                                  handleUpdatePalletReleaseNumber(pallet.id, e.target.value);
-                                }
-                              }}
-                            />
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {pallet.release_number || "-"}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {pallet.is_on_hold ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
-                            <div className="flex items-center gap-2">
-                              {pallet.release_pdf_url ? (
+                          <TableCell>
+                            {pallet.is_on_hold ? (
+                              <span className="text-muted-foreground italic">N/A (on hold)</span>
+                            ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" || isAdmin ? (
+                              <Select
+                                value={pallet.destination || ""}
+                                onValueChange={(val) => handleUpdateDestination(pallet.id, val)}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue placeholder="Select destination" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {destinations.map((dest) => (
+                                    <SelectItem key={dest.value} value={dest.value}>
+                                      {dest.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {pallet.destination
+                                  ? destinations.find((d) => d.value === pallet.destination)?.label
+                                  : "Pending"}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {pallet.is_on_hold ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                              <Input
+                                placeholder="Release #"
+                                defaultValue={pallet.release_number || ""}
+                                className="w-[120px]"
+                                onBlur={(e) => {
+                                  if (e.target.value !== (pallet.release_number || "")) {
+                                    handleUpdatePalletReleaseNumber(pallet.id, e.target.value);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">
+                                {pallet.release_number || "-"}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {pallet.is_on_hold ? (
+                              <span className="text-muted-foreground">-</span>
+                            ) : releaseRequest?.status === "pending" || releaseRequest?.status === "approved" ? (
+                              <div className="flex items-center gap-2">
+                                {pallet.release_pdf_url ? (
+                                  <a
+                                    href={pallet.release_pdf_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline flex items-center gap-1"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    View
+                                  </a>
+                                ) : null}
+                                <label className="cursor-pointer">
+                                  <Input
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        handlePalletReleasePdfUpload(pallet.id, file);
+                                      }
+                                    }}
+                                  />
+                                  <span className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                                    <Upload className="h-3 w-3" />
+                                    {pallet.release_pdf_url ? "Replace" : "Upload"}
+                                  </span>
+                                </label>
+                              </div>
+                            ) : (
+                              pallet.release_pdf_url ? (
                                 <a
                                   href={pallet.release_pdf_url}
                                   target="_blank"
@@ -1805,53 +2078,24 @@ export default function LoadDetail() {
                                   <FileText className="h-4 w-4" />
                                   View
                                 </a>
-                              ) : null}
-                              <label className="cursor-pointer">
-                                <Input
-                                  type="file"
-                                  accept=".pdf"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      handlePalletReleasePdfUpload(pallet.id, file);
-                                    }
-                                  }}
-                                />
-                                <span className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                                  <Upload className="h-3 w-3" />
-                                  {pallet.release_pdf_url ? "Replace" : "Upload"}
-                                </span>
-                              </label>
-                            </div>
-                          ) : (
-                            pallet.release_pdf_url ? (
-                              <a
-                                href={pallet.release_pdf_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline flex items-center gap-1"
-                              >
-                                <FileText className="h-4 w-4" />
-                                View
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Active POs with Available Inventory - Shown for admins when assembling */}
-        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
+        {/* Active POs with Available Inventory - Shown for all views when inventory available */}
+        {activePOsWithInventory.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -1859,7 +2103,7 @@ export default function LoadDetail() {
                 <CardTitle className="text-lg">Active POs with Available Inventory</CardTitle>
               </div>
               <CardDescription>
-                These active Purchase Orders have matching materials in your current inventory
+                These active Purchase Orders have matching materials available in inventory
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1868,7 +2112,7 @@ export default function LoadDetail() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>PO #</TableHead>
-                      <TableHead>PT Code</TableHead>
+                      {isAdmin && <TableHead>PT Code</TableHead>}
                       <TableHead>Product</TableHead>
                       <TableHead className="text-right">PO Qty</TableHead>
                       <TableHead className="text-center">Pallets Available</TableHead>
@@ -1879,7 +2123,7 @@ export default function LoadDetail() {
                     {activePOsWithInventory.map((po) => (
                       <TableRow key={po.po_number}>
                         <TableCell className="font-medium">{po.po_number}</TableCell>
-                        <TableCell className="font-mono text-sm">{po.product_pt_code}</TableCell>
+                        {isAdmin && <TableCell className="font-mono text-sm">{po.product_pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                         <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-center">
@@ -2154,6 +2398,66 @@ export default function LoadDetail() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Release Upload Dialog */}
+        <Dialog open={releaseUploadDialogOpen} onOpenChange={setReleaseUploadDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload Release Authorization</DialogTitle>
+              <DialogDescription>
+                Upload the customer release authorization PDF to mark {selectedPalletsForRelease.size} pallet(s) as released.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium mb-2">Selected Pallets ({selectedPalletsForRelease.size})</h4>
+                <ScrollArea className="h-32">
+                  <ul className="space-y-1 text-sm">
+                    {pendingPallets
+                      .filter((p) => selectedPalletsForRelease.has(p.id))
+                      .map((p) => (
+                        <li key={p.id} className="flex justify-between">
+                          <span className="truncate max-w-[200px]">{p.pallet.description}</span>
+                          <span className="text-muted-foreground">{p.quantity.toLocaleString()}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+              <div>
+                <Label htmlFor="release-pdf">Release Authorization PDF</Label>
+                <Input
+                  id="release-pdf"
+                  type="file"
+                  accept=".pdf"
+                  className="mt-2"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleBatchReleasePdfUpload(file);
+                    }
+                  }}
+                  disabled={processingRelease}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReleaseUploadDialogOpen(false)} disabled={processingRelease}>
+                Cancel
+              </Button>
+              <Button disabled className="pointer-events-none opacity-50">
+                {processingRelease ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Select file above to release"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
