@@ -110,6 +110,41 @@ export type Database = {
         }
         Relationships: []
       }
+      load_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          load_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          id?: string
+          load_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          load_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_comments_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       load_pallets: {
         Row: {
           created_at: string
