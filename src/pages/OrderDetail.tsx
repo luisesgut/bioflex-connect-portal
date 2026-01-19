@@ -1,35 +1,26 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
   ArrowLeft,
   FileText,
   Flame,
-  Calendar,
   Package,
   Truck,
-  DollarSign,
-  Hash,
-  User,
   Clock,
   ExternalLink,
   Loader2,
-  Send,
-  MessageSquare,
-  Trash2,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
+import { POComments } from "@/components/orders/POComments";
 import { cn } from "@/lib/utils";
 
 interface OrderDetails {
@@ -63,12 +54,6 @@ interface OrderDetails {
   } | null;
 }
 
-interface Comment {
-  id: string;
-  comment: string;
-  user_id: string;
-  created_at: string;
-}
 
 const statusStyles: Record<string, string> = {
   pending: "bg-info/10 text-info border-info/20",
@@ -91,20 +76,15 @@ const statusLabels: Record<string, string> = {
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { isAdmin } = useAdmin();
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [submittingComment, setSubmittingComment] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchOrderDetails();
-      fetchComments();
     }
   }, [id]);
 
@@ -166,58 +146,6 @@ export default function OrderDetail() {
     setLoading(false);
   };
 
-  const fetchComments = async () => {
-    if (!id) return;
-
-    const { data, error } = await supabase
-      .from("po_comments")
-      .select("*")
-      .eq("purchase_order_id", id)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching comments:", error);
-      return;
-    }
-
-    setComments(data || []);
-  };
-
-  const handleSubmitComment = async () => {
-    if (!newComment.trim() || !user || !id) return;
-
-    setSubmittingComment(true);
-    const { error } = await supabase.from("po_comments").insert({
-      purchase_order_id: id,
-      user_id: user.id,
-      comment: newComment.trim(),
-    });
-
-    if (error) {
-      console.error("Error adding comment:", error);
-      toast.error("Failed to add comment");
-    } else {
-      toast.success("Comment added");
-      setNewComment("");
-      fetchComments();
-    }
-    setSubmittingComment(false);
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    const { error } = await supabase
-      .from("po_comments")
-      .delete()
-      .eq("id", commentId);
-
-    if (error) {
-      console.error("Error deleting comment:", error);
-      toast.error("Failed to delete comment");
-    } else {
-      toast.success("Comment deleted");
-      fetchComments();
-    }
-  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
@@ -443,75 +371,22 @@ export default function OrderDetail() {
           </div>
 
           {/* Comments Section */}
-          <div className="lg:col-span-1">
-            <Card className="h-full flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Comments
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <ScrollArea className="flex-1 max-h-[400px] pr-4 mb-4">
-                  {comments.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No comments yet</p>
-                      <p className="text-sm">Be the first to add a comment</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {comments.map((comment) => (
-                        <div
-                          key={comment.id}
-                          className="bg-muted/50 rounded-lg p-3 border"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm">{comment.comment}</p>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                {formatDateTime(comment.created_at)}
-                              </p>
-                            </div>
-                            {comment.user_id === user?.id && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleDeleteComment(comment.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
+          <div className="lg:col-span-1 space-y-4">
+            {/* Customer Comments */}
+            <POComments
+              purchaseOrderId={order.id}
+              isInternal={false}
+              title="Customer Comments"
+            />
 
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                  />
-                  <Button
-                    className="w-full"
-                    onClick={handleSubmitComment}
-                    disabled={!newComment.trim() || submittingComment}
-                  >
-                    {submittingComment ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Add Comment
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Internal Notes - Admin Only */}
+            {isAdmin && (
+              <POComments
+                purchaseOrderId={order.id}
+                isInternal={true}
+                title="Internal Notes"
+              />
+            )}
           </div>
         </div>
       </div>
