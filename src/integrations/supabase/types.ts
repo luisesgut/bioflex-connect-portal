@@ -299,6 +299,7 @@ export type Database = {
           comment: string
           created_at: string
           id: string
+          is_internal: boolean
           purchase_order_id: string
           updated_at: string
           user_id: string
@@ -307,6 +308,7 @@ export type Database = {
           comment: string
           created_at?: string
           id?: string
+          is_internal?: boolean
           purchase_order_id: string
           updated_at?: string
           user_id: string
@@ -315,6 +317,7 @@ export type Database = {
           comment?: string
           created_at?: string
           id?: string
+          is_internal?: boolean
           purchase_order_id?: string
           updated_at?: string
           user_id?: string
