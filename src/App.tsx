@@ -23,6 +23,9 @@ import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
 import ReleaseRequests from "./pages/ReleaseRequests";
 import ShippedPallets from "./pages/ShippedPallets";
+import ProductRequests from "./pages/ProductRequests";
+import NewProductRequest from "./pages/NewProductRequest";
+import ProductRequestDetail from "./pages/ProductRequestDetail";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +54,9 @@ const App = () => (
               <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
               <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
               <Route path="/shipped-pallets" element={<ProtectedRoute><ShippedPallets /></ProtectedRoute>} />
+              <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
+              <Route path="/product-requests/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
+              <Route path="/product-requests/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AdminProvider>

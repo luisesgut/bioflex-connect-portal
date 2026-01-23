@@ -14,7 +14,8 @@ import {
   Warehouse,
   Truck,
   ClipboardCheck,
-  PackageCheck
+  PackageCheck,
+  FilePlus
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
-  
+  { name: "New Product Requests", href: "/product-requests", icon: FilePlus },
   { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
   { name: "Change Requests", href: "/change-requests", icon: FileEdit },

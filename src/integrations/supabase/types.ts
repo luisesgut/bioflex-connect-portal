@@ -294,6 +294,59 @@ export type Database = {
           },
         ]
       }
+      pc_versions: {
+        Row: {
+          customer_feedback: string | null
+          file_name: string
+          file_url: string
+          id: string
+          product_request_id: string
+          review_comments: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["pc_version_status"]
+          uploaded_at: string
+          uploaded_by: string
+          version_number: number
+        }
+        Insert: {
+          customer_feedback?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          product_request_id: string
+          review_comments?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pc_version_status"]
+          uploaded_at?: string
+          uploaded_by: string
+          version_number?: number
+        }
+        Update: {
+          customer_feedback?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          product_request_id?: string
+          review_comments?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["pc_version_status"]
+          uploaded_at?: string
+          uploaded_by?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pc_versions_product_request_id_fkey"
+            columns: ["product_request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       po_comments: {
         Row: {
           comment: string
@@ -366,6 +419,113 @@ export type Database = {
             columns: ["purchase_order_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_requests: {
+        Row: {
+          alto: number | null
+          ancho: number | null
+          artwork_files: string[] | null
+          bionet_code: string | null
+          bionet_registered_at: string | null
+          bionet_registered_by: string | null
+          created_at: string
+          created_by: string
+          customer: string | null
+          estructura: string | null
+          fuelle_de_fondo: number | null
+          id: string
+          item_description: string | null
+          item_type: string | null
+          material: string | null
+          notes: string | null
+          paquete_por_caja: number | null
+          pestana_al_alto: number | null
+          pestana_al_ancho: number | null
+          pieces_per_pallet: number | null
+          piezas_por_paquete: number | null
+          product_id: string | null
+          product_name: string
+          sap_code: string | null
+          sap_registered_at: string | null
+          sap_registered_by: string | null
+          status: Database["public"]["Enums"]["product_request_status"]
+          tipo_embalaje: string | null
+          tipo_empaque: string | null
+          updated_at: string
+        }
+        Insert: {
+          alto?: number | null
+          ancho?: number | null
+          artwork_files?: string[] | null
+          bionet_code?: string | null
+          bionet_registered_at?: string | null
+          bionet_registered_by?: string | null
+          created_at?: string
+          created_by: string
+          customer?: string | null
+          estructura?: string | null
+          fuelle_de_fondo?: number | null
+          id?: string
+          item_description?: string | null
+          item_type?: string | null
+          material?: string | null
+          notes?: string | null
+          paquete_por_caja?: number | null
+          pestana_al_alto?: number | null
+          pestana_al_ancho?: number | null
+          pieces_per_pallet?: number | null
+          piezas_por_paquete?: number | null
+          product_id?: string | null
+          product_name: string
+          sap_code?: string | null
+          sap_registered_at?: string | null
+          sap_registered_by?: string | null
+          status?: Database["public"]["Enums"]["product_request_status"]
+          tipo_embalaje?: string | null
+          tipo_empaque?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alto?: number | null
+          ancho?: number | null
+          artwork_files?: string[] | null
+          bionet_code?: string | null
+          bionet_registered_at?: string | null
+          bionet_registered_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer?: string | null
+          estructura?: string | null
+          fuelle_de_fondo?: number | null
+          id?: string
+          item_description?: string | null
+          item_type?: string | null
+          material?: string | null
+          notes?: string | null
+          paquete_por_caja?: number | null
+          pestana_al_alto?: number | null
+          pestana_al_ancho?: number | null
+          pieces_per_pallet?: number | null
+          piezas_por_paquete?: number | null
+          product_id?: string | null
+          product_name?: string
+          sap_code?: string | null
+          sap_registered_at?: string | null
+          sap_registered_by?: string | null
+          status?: Database["public"]["Enums"]["product_request_status"]
+          tipo_embalaje?: string | null
+          tipo_empaque?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -869,6 +1029,18 @@ export type Database = {
         | "delivered"
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
+      pc_version_status: "pending" | "approved" | "rejected" | "superseded"
+      product_request_status:
+        | "draft"
+        | "specs_submitted"
+        | "artwork_uploaded"
+        | "pc_in_review"
+        | "pc_approved"
+        | "bionet_pending"
+        | "bionet_registered"
+        | "sap_pending"
+        | "sap_registered"
+        | "completed"
       release_status: "pending" | "approved" | "on_hold" | "shipped"
     }
     CompositeTypes: {
@@ -1013,6 +1185,19 @@ export const Constants = {
       ],
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],
+      pc_version_status: ["pending", "approved", "rejected", "superseded"],
+      product_request_status: [
+        "draft",
+        "specs_submitted",
+        "artwork_uploaded",
+        "pc_in_review",
+        "pc_approved",
+        "bionet_pending",
+        "bionet_registered",
+        "sap_pending",
+        "sap_registered",
+        "completed",
+      ],
       release_status: ["pending", "approved", "on_hold", "shipped"],
     },
   },
