@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, isWithinInterval, parseISO, differenceInDays } from "date-fns";
-import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Flame, Printer, Settings, Package } from "lucide-react";
@@ -47,7 +46,7 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
       result.push({
         start: weekStart,
         end: weekEnd,
-        label: format(weekStart, "d MMM", { locale: es }),
+        label: format(weekStart, "MMM d"),
         isCurrent: i === 0,
       });
     }
@@ -58,16 +57,16 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
     const dates: { type: 'printing' | 'conversion' | 'delivery' | 'requested'; date: Date; label: string }[] = [];
     
     if (order.printing_date) {
-      dates.push({ type: 'printing', date: parseISO(order.printing_date), label: 'Impresión' });
+      dates.push({ type: 'printing', date: parseISO(order.printing_date), label: 'Printing' });
     }
     if (order.conversion_date) {
-      dates.push({ type: 'conversion', date: parseISO(order.conversion_date), label: 'Conversión' });
+      dates.push({ type: 'conversion', date: parseISO(order.conversion_date), label: 'Conversion' });
     }
     if (order.estimated_delivery_date) {
-      dates.push({ type: 'delivery', date: parseISO(order.estimated_delivery_date), label: 'Entrega Est.' });
+      dates.push({ type: 'delivery', date: parseISO(order.estimated_delivery_date), label: 'Est. Delivery' });
     }
     if (order.requested_delivery_date) {
-      dates.push({ type: 'requested', date: parseISO(order.requested_delivery_date), label: 'Fecha Cliente' });
+      dates.push({ type: 'requested', date: parseISO(order.requested_delivery_date), label: 'Customer Date' });
     }
     
     return dates;
@@ -124,33 +123,33 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
     <TooltipProvider>
       <div className="rounded-xl border bg-card shadow-card overflow-hidden">
         <div className="border-b p-4">
-          <h2 className="text-lg font-semibold text-card-foreground">Línea del Tiempo de Producción</h2>
-          <p className="text-sm text-muted-foreground">Vista semanal de fechas de producción y entrega</p>
+          <h2 className="text-lg font-semibold text-card-foreground">Production Timeline</h2>
+          <p className="text-sm text-muted-foreground">Weekly view of production and delivery dates</p>
           
           <div className="flex gap-4 mt-3 text-xs">
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded bg-info flex items-center justify-center">
                 <Printer className="h-2.5 w-2.5 text-info-foreground" />
               </div>
-              <span className="text-muted-foreground">Impresión</span>
+              <span className="text-muted-foreground">Printing</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded bg-primary flex items-center justify-center">
                 <Settings className="h-2.5 w-2.5 text-primary-foreground" />
               </div>
-              <span className="text-muted-foreground">Conversión</span>
+              <span className="text-muted-foreground">Conversion</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded bg-success flex items-center justify-center">
                 <Package className="h-2.5 w-2.5 text-success-foreground" />
               </div>
-              <span className="text-muted-foreground">Entrega Estimada</span>
+              <span className="text-muted-foreground">Est. Delivery</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-4 w-4 rounded bg-accent flex items-center justify-center">
                 <Package className="h-2.5 w-2.5 text-accent-foreground" />
               </div>
-              <span className="text-muted-foreground">Fecha Cliente</span>
+              <span className="text-muted-foreground">Customer Date</span>
             </div>
           </div>
         </div>
@@ -178,7 +177,7 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
             {/* Orders */}
             {filteredOrders.length === 0 ? (
               <div className="px-6 py-12 text-center text-muted-foreground">
-                No hay órdenes con fechas programadas en este período
+                No orders with scheduled dates in this period
               </div>
             ) : (
               filteredOrders.map((order) => (
@@ -202,11 +201,11 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
                       {order.product_name || "Producto no especificado"}
                     </span>
                     <Badge variant="outline" className={cn("w-fit text-[10px] mt-0.5", statusColors[order.status])}>
-                      {order.status === 'in-production' ? 'En Producción' : 
-                       order.status === 'pending' ? 'Pendiente' :
-                       order.status === 'accepted' ? 'Aceptada' :
-                       order.status === 'shipped' ? 'Enviada' :
-                       order.status === 'delivered' ? 'Entregada' : order.status}
+                      {order.status === 'in-production' ? 'In Production' : 
+                       order.status === 'pending' ? 'Pending' :
+                       order.status === 'accepted' ? 'Accepted' :
+                       order.status === 'shipped' ? 'Shipped' :
+                       order.status === 'delivered' ? 'Delivered' : order.status}
                     </Badge>
                   </div>
 
@@ -234,10 +233,10 @@ export function ProductionTimeline({ orders, weeksToShow = 8 }: ProductionTimeli
                                 {dateTypeIcons[dateInfo.type]}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent>
+                          <TooltipContent>
                               <p className="font-medium">{dateInfo.label}</p>
                               <p className="text-xs text-muted-foreground">
-                                {format(dateInfo.date, "EEEE d 'de' MMMM", { locale: es })}
+                                {format(dateInfo.date, "EEEE, MMMM d")}
                               </p>
                             </TooltipContent>
                           </Tooltip>

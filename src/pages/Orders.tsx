@@ -625,11 +625,11 @@ export default function Orders() {
             <TabsList>
               <TabsTrigger value="list" className="gap-2">
                 <List className="h-4 w-4" />
-                Lista
+                List
               </TabsTrigger>
               <TabsTrigger value="timeline" className="gap-2">
                 <CalendarDays className="h-4 w-4" />
-                Línea de Tiempo
+                Timeline
               </TabsTrigger>
             </TabsList>
           </Tabs>
