@@ -518,6 +518,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           accepted_by: string | null
+          conversion_date: string | null
           created_at: string
           do_not_delay: boolean
           estimated_delivery_date: string | null
@@ -529,6 +530,7 @@ export type Database = {
           po_date: string
           po_number: string
           price_per_thousand: number | null
+          printing_date: string | null
           product_id: string | null
           quantity: number
           requested_delivery_date: string | null
@@ -541,6 +543,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           accepted_by?: string | null
+          conversion_date?: string | null
           created_at?: string
           do_not_delay?: boolean
           estimated_delivery_date?: string | null
@@ -552,6 +555,7 @@ export type Database = {
           po_date?: string
           po_number: string
           price_per_thousand?: number | null
+          printing_date?: string | null
           product_id?: string | null
           quantity: number
           requested_delivery_date?: string | null
@@ -564,6 +568,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           accepted_by?: string | null
+          conversion_date?: string | null
           created_at?: string
           do_not_delay?: boolean
           estimated_delivery_date?: string | null
@@ -575,6 +580,7 @@ export type Database = {
           po_date?: string
           po_number?: string
           price_per_thousand?: number | null
+          printing_date?: string | null
           product_id?: string | null
           quantity?: number
           requested_delivery_date?: string | null

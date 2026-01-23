@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Loader2, Package, PackageCheck } from "lucide-react";
+import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { FilterableColumnHeader } from "@/components/orders/FilterableColumnHeader";
 import { differenceInHours } from "date-fns";
+import { ProductionTimeline } from "@/components/orders/ProductionTimeline";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LoadDetail {
   load_number: string;
@@ -64,6 +66,8 @@ interface Order {
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
+  printing_date: string | null;
+  conversion_date: string | null;
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
@@ -113,6 +117,9 @@ export default function Orders() {
   const [customerDeliverySort, setCustomerDeliverySort] = useState<"asc" | "desc" | null>(null);
   const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
+  // View mode toggle
+  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
+
   const fetchOrders = async () => {
     if (!user) return;
 
@@ -131,6 +138,8 @@ export default function Orders() {
         do_not_delay,
         requested_delivery_date,
         estimated_delivery_date,
+        printing_date,
+        conversion_date,
         created_at,
         pdf_url,
         sales_order_number,
@@ -420,6 +429,8 @@ export default function Orders() {
         do_not_delay: order.do_not_delay ?? false,
         requested_delivery_date: order.requested_delivery_date,
         estimated_delivery_date: order.estimated_delivery_date,
+        printing_date: order.printing_date || null,
+        conversion_date: order.conversion_date || null,
         created_at: order.created_at,
         pdf_url: order.pdf_url,
         sales_order_number: order.sales_order_number,
@@ -583,29 +594,45 @@ export default function Orders() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by PO number or product..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by PO number or product..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {statusFilters.map((status) => (
+                <Button
+                  key={status}
+                  variant={selectedStatus === status ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStatus(status)}
+                  className="transition-all duration-200"
+                >
+                  {status}
+                </Button>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {statusFilters.map((status) => (
-              <Button
-                key={status}
-                variant={selectedStatus === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStatus(status)}
-                className="transition-all duration-200"
-              >
-                {status}
-              </Button>
-            ))}
-          </div>
+          
+          {/* View Mode Toggle */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline")} className="w-auto">
+            <TabsList>
+              <TabsTrigger value="list" className="gap-2">
+                <List className="h-4 w-4" />
+                Lista
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                Línea de Tiempo
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Loading State */}
@@ -615,8 +642,26 @@ export default function Orders() {
           </div>
         )}
 
+        {/* Timeline View */}
+        {!loading && viewMode === "timeline" && (
+          <ProductionTimeline 
+            orders={filteredAndSortedOrders.map(o => ({
+              id: o.id,
+              po_number: o.po_number,
+              product_name: o.product_name || undefined,
+              quantity: o.quantity,
+              requested_delivery_date: o.requested_delivery_date,
+              printing_date: o.printing_date,
+              conversion_date: o.conversion_date,
+              estimated_delivery_date: o.estimated_delivery_date,
+              is_hot_order: o.is_hot_order,
+              status: o.status,
+            }))}
+          />
+        )}
+
         {/* Active Orders Table */}
-        {!loading && (
+        {!loading && viewMode === "list" && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
