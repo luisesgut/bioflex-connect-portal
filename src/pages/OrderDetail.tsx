@@ -10,6 +10,11 @@ import {
   Clock,
   ExternalLink,
   Loader2,
+  Printer,
+  Settings,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -23,6 +28,10 @@ import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
 import { cn } from "@/lib/utils";
 
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+
 interface OrderDetails {
   id: string;
   po_number: string;
@@ -35,6 +44,8 @@ interface OrderDetails {
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
+  printing_date: string | null;
+  conversion_date: string | null;
   created_at: string;
   accepted_at: string | null;
   pdf_url: string | null;
@@ -81,6 +92,13 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  
+  // Editing states for production dates
+  const [editingPrintingDate, setEditingPrintingDate] = useState(false);
+  const [editingConversionDate, setEditingConversionDate] = useState(false);
+  const [printingDate, setPrintingDate] = useState<Date | undefined>(undefined);
+  const [conversionDate, setConversionDate] = useState<Date | undefined>(undefined);
+  const [savingDates, setSavingDates] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -105,6 +123,8 @@ export default function OrderDetail() {
         do_not_delay,
         requested_delivery_date,
         estimated_delivery_date,
+        printing_date,
+        conversion_date,
         created_at,
         accepted_at,
         pdf_url,
@@ -139,11 +159,51 @@ export default function OrderDetail() {
       return;
     }
 
-    setOrder({
+    const orderData: OrderDetails = {
       ...data,
+      printing_date: data.printing_date || null,
+      conversion_date: data.conversion_date || null,
       product: data.products as OrderDetails["product"],
-    });
+    };
+    setOrder(orderData);
+    
+    // Initialize date states
+    if (data.printing_date) {
+      setPrintingDate(new Date(data.printing_date));
+    }
+    if (data.conversion_date) {
+      setConversionDate(new Date(data.conversion_date));
+    }
+    
     setLoading(false);
+  };
+
+  const saveProductionDate = async (field: 'printing_date' | 'conversion_date', date: Date | undefined) => {
+    if (!order) return;
+    
+    setSavingDates(true);
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ [field]: date ? format(date, 'yyyy-MM-dd') : null })
+      .eq("id", order.id);
+
+    if (error) {
+      toast.error("Failed to save date");
+      console.error(error);
+    } else {
+      toast.success("Date saved");
+      setOrder({
+        ...order,
+        [field]: date ? format(date, 'yyyy-MM-dd') : null,
+      });
+    }
+    
+    setSavingDates(false);
+    if (field === 'printing_date') {
+      setEditingPrintingDate(false);
+    } else {
+      setEditingConversionDate(false);
+    }
   };
 
 
@@ -368,6 +428,135 @@ export default function OrderDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Production Schedule - Admin Only */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    Production Schedule
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Printing Date */}
+                    <div>
+                      <label className="text-sm text-muted-foreground flex items-center gap-1.5 mb-1">
+                        <Printer className="h-3.5 w-3.5" />
+                        Printing Date
+                      </label>
+                      {editingPrintingDate ? (
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="justify-start text-left font-normal w-full">
+                                {printingDate ? format(printingDate, "MMM d, yyyy") : "Select date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={printingDate}
+                                onSelect={setPrintingDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => saveProductionDate('printing_date', printingDate)}
+                            disabled={savingDates}
+                          >
+                            <Check className="h-4 w-4 text-success" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingPrintingDate(false);
+                              setPrintingDate(order.printing_date ? new Date(order.printing_date) : undefined);
+                            }}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{formatDate(order.printing_date)}</p>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setEditingPrintingDate(true)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Conversion Date */}
+                    <div>
+                      <label className="text-sm text-muted-foreground flex items-center gap-1.5 mb-1">
+                        <Settings className="h-3.5 w-3.5" />
+                        Conversion Date
+                      </label>
+                      {editingConversionDate ? (
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="justify-start text-left font-normal w-full">
+                                {conversionDate ? format(conversionDate, "MMM d, yyyy") : "Select date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={conversionDate}
+                                onSelect={setConversionDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => saveProductionDate('conversion_date', conversionDate)}
+                            disabled={savingDates}
+                          >
+                            <Check className="h-4 w-4 text-success" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingConversionDate(false);
+                              setConversionDate(order.conversion_date ? new Date(order.conversion_date) : undefined);
+                            }}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{formatDate(order.conversion_date)}</p>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setEditingConversionDate(true)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Comments Section */}
