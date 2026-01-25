@@ -55,19 +55,73 @@ interface ProductRequest {
   customer: string | null;
   item_description: string | null;
   item_type: string | null;
+  product_line: string | null;
+  item_id_code: string | null;
+  customer_item_code: string | null;
+  
+  // Measurements in inches
+  width_inches: number | null;
+  length_inches: number | null;
+  gusset_inches: number | null;
+  zipper_inches: number | null;
+  lip_front_inches: number | null;
+  lip_back_inches: number | null;
+  flip_size_inches: number | null;
+  
+  // Measurements in cm
+  width_cm: number | null;
+  length_cm: number | null;
+  gusset_cm: number | null;
+  zipper_cm: number | null;
+  lip_front_cm: number | null;
+  lip_back_cm: number | null;
+  flip_size_cm: number | null;
+  
+  // Thickness
+  thickness_value: number | null;
+  thickness_unit: string | null;
+  
+  // Film specs
+  film_type: string | null;
+  seal_type: string | null;
+  extrusion_type: string | null;
+  clarity_grade: string | null;
+  
+  // Vents
+  vents_count: number | null;
+  vent_size: string | null;
+  vents_across: number | null;
+  vents_down: number | null;
+  
+  // Wicket
+  wicket_size: string | null;
+  wicket_hole: string | null;
+  bags_per_wicket: number | null;
+  
+  // Packaging
+  bags_per_case: number | null;
+  cases_per_pallet: number | null;
+  pallet_size: string | null;
+  box_color: string | null;
+  
+  // Print
+  pms_colors: string[] | null;
+  eye_mark: string | null;
+  upc_number: string | null;
+  language: string | null;
+  country_of_origin: string | null;
+  
+  // Legacy fields
   ancho: number | null;
   alto: number | null;
-  fuelle_de_fondo: number | null;
-  pestana_al_ancho: number | null;
-  pestana_al_alto: number | null;
   material: string | null;
   estructura: string | null;
   tipo_empaque: string | null;
-  tipo_embalaje: string | null;
-  piezas_por_paquete: number | null;
-  paquete_por_caja: number | null;
   pieces_per_pallet: number | null;
+  
   artwork_files: string[] | null;
+  tech_spec_pdf_url: string | null;
+  tech_spec_filename: string | null;
   status: ProductRequestStatus;
   notes: string | null;
   bionet_code: string | null;
@@ -372,77 +426,252 @@ export default function ProductRequestDetail() {
                 <CardTitle>Product Specifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
-                    <Label className="text-muted-foreground">Item Description</Label>
-                    <p className="font-medium">{request.item_description || '-'}</p>
+                    <Label className="text-muted-foreground">Item ID Code</Label>
+                    <p className="font-medium">{request.item_id_code || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Item Type</Label>
-                    <p className="font-medium">{request.item_type || '-'}</p>
+                    <Label className="text-muted-foreground">Customer Item Code</Label>
+                    <p className="font-medium">{request.customer_item_code || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Product Line</Label>
+                    <p className="font-medium">{request.product_line?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Customer</Label>
+                    <p className="font-medium">{request.customer || '-'}</p>
                   </div>
                 </div>
                 
                 <Separator />
                 
                 <div>
-                  <Label className="text-muted-foreground mb-2 block">Dimensions</Label>
-                  <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Width</p>
-                      <p className="font-medium">{request.ancho ? `${request.ancho} mm` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Height</p>
-                      <p className="font-medium">{request.alto ? `${request.alto} mm` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Bottom Gusset</p>
-                      <p className="font-medium">{request.fuelle_de_fondo ? `${request.fuelle_de_fondo} mm` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Width Flap</p>
-                      <p className="font-medium">{request.pestana_al_ancho ? `${request.pestana_al_ancho} mm` : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Height Flap</p>
-                      <p className="font-medium">{request.pestana_al_alto ? `${request.pestana_al_alto} mm` : '-'}</p>
-                    </div>
+                  <Label className="text-muted-foreground mb-2 block">Dimensions (inches / cm)</Label>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {request.width_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Width</p>
+                        <p className="font-medium">{request.width_inches}" / {request.width_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.length_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Length</p>
+                        <p className="font-medium">{request.length_inches}" / {request.length_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.gusset_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gusset</p>
+                        <p className="font-medium">{request.gusset_inches}" / {request.gusset_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.zipper_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Zipper</p>
+                        <p className="font-medium">{request.zipper_inches}" / {request.zipper_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.lip_front_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Lip Front</p>
+                        <p className="font-medium">{request.lip_front_inches}" / {request.lip_front_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.lip_back_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Lip Back</p>
+                        <p className="font-medium">{request.lip_back_inches}" / {request.lip_back_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.flip_size_inches && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Flip Size</p>
+                        <p className="font-medium">{request.flip_size_inches}" / {request.flip_size_cm?.toFixed(2)} cm</p>
+                      </div>
+                    )}
+                    {request.thickness_value && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Thickness</p>
+                        <p className="font-medium">{request.thickness_value} {request.thickness_unit}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="text-muted-foreground">Material</Label>
-                    <p className="font-medium">{request.material || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Structure</Label>
-                    <p className="font-medium">{request.estructura || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Packaging Type</Label>
-                    <p className="font-medium">{request.tipo_empaque || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Pieces per Pallet</Label>
-                    <p className="font-medium">{request.pieces_per_pallet || '-'}</p>
-                  </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {request.film_type && (
+                    <div>
+                      <Label className="text-muted-foreground">Film Type</Label>
+                      <p className="font-medium">{request.film_type}</p>
+                    </div>
+                  )}
+                  {request.seal_type && (
+                    <div>
+                      <Label className="text-muted-foreground">Seal Type</Label>
+                      <p className="font-medium">{request.seal_type}</p>
+                    </div>
+                  )}
+                  {request.extrusion_type && (
+                    <div>
+                      <Label className="text-muted-foreground">Extrusion Type</Label>
+                      <p className="font-medium">{request.extrusion_type}</p>
+                    </div>
+                  )}
+                  {request.clarity_grade && (
+                    <div>
+                      <Label className="text-muted-foreground">Clarity Grade</Label>
+                      <p className="font-medium">{request.clarity_grade}</p>
+                    </div>
+                  )}
                 </div>
+
+                {(request.vents_count || request.vent_size) && (
+                  <>
+                    <Separator />
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {request.vents_count && (
+                        <div>
+                          <Label className="text-muted-foreground">Vents Count</Label>
+                          <p className="font-medium">{request.vents_count}</p>
+                        </div>
+                      )}
+                      {request.vent_size && (
+                        <div>
+                          <Label className="text-muted-foreground">Vent Size</Label>
+                          <p className="font-medium">{request.vent_size}</p>
+                        </div>
+                      )}
+                      {request.vents_across !== null && request.vents_across !== undefined && (
+                        <div>
+                          <Label className="text-muted-foreground">Vents Across</Label>
+                          <p className="font-medium">{request.vents_across}</p>
+                        </div>
+                      )}
+                      {request.vents_down !== null && request.vents_down !== undefined && (
+                        <div>
+                          <Label className="text-muted-foreground">Vents Down</Label>
+                          <p className="font-medium">{request.vents_down}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {(request.bags_per_case || request.cases_per_pallet || request.pallet_size) && (
+                  <>
+                    <Separator />
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {request.bags_per_case && (
+                        <div>
+                          <Label className="text-muted-foreground">Bags per Case</Label>
+                          <p className="font-medium">{request.bags_per_case}</p>
+                        </div>
+                      )}
+                      {request.cases_per_pallet && (
+                        <div>
+                          <Label className="text-muted-foreground">Cases per Pallet</Label>
+                          <p className="font-medium">{request.cases_per_pallet}</p>
+                        </div>
+                      )}
+                      {request.pallet_size && (
+                        <div>
+                          <Label className="text-muted-foreground">Pallet Size</Label>
+                          <p className="font-medium">{request.pallet_size}</p>
+                        </div>
+                      )}
+                      {request.box_color && (
+                        <div>
+                          <Label className="text-muted-foreground">Box Color</Label>
+                          <p className="font-medium">{request.box_color}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {request.pms_colors && request.pms_colors.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <Label className="text-muted-foreground mb-2 block">PMS Colors</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {request.pms_colors.map((color, index) => (
+                          <Badge key={index} variant="secondary">{color}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {(request.eye_mark || request.upc_number || request.language || request.country_of_origin) && (
+                  <>
+                    <Separator />
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {request.eye_mark && (
+                        <div>
+                          <Label className="text-muted-foreground">Eye Mark</Label>
+                          <p className="font-medium">{request.eye_mark}</p>
+                        </div>
+                      )}
+                      {request.upc_number && (
+                        <div>
+                          <Label className="text-muted-foreground">UPC Number</Label>
+                          <p className="font-medium">{request.upc_number}</p>
+                        </div>
+                      )}
+                      {request.language && (
+                        <div>
+                          <Label className="text-muted-foreground">Language</Label>
+                          <p className="font-medium">{request.language}</p>
+                        </div>
+                      )}
+                      {request.country_of_origin && (
+                        <div>
+                          <Label className="text-muted-foreground">Country of Origin</Label>
+                          <p className="font-medium">{request.country_of_origin}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 {request.notes && (
                   <>
                     <Separator />
                     <div>
                       <Label className="text-muted-foreground">Notes</Label>
-                      <p className="font-medium">{request.notes}</p>
+                      <p className="font-medium whitespace-pre-wrap">{request.notes}</p>
                     </div>
                   </>
                 )}
               </CardContent>
             </Card>
+
+            {/* Tech Spec PDF */}
+            {request.tech_spec_pdf_url && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Technical Specification</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <a
+                    href={request.tech_spec_pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
+                  >
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <span className="flex-1 truncate">{request.tech_spec_filename || 'Tech Spec PDF'}</span>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </a>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Artwork Files */}
             {request.artwork_files && request.artwork_files.length > 0 && (
