@@ -27,9 +27,19 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Convert file to base64
+    // Convert file to base64 using chunked approach to avoid stack overflow
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Chunk-based base64 encoding to avoid call stack issues with large files
+    let base64 = "";
+    const chunkSize = 32768; // 32KB chunks
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      base64 += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    base64 = btoa(base64);
+    
     const mimeType = file.type || "application/pdf";
 
     // Build extraction prompt based on product line
