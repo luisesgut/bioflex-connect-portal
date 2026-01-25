@@ -50,6 +50,80 @@ export type Database = {
         }
         Relationships: []
       }
+      engineering_proposals: {
+        Row: {
+          customer_approved: boolean | null
+          customer_feedback: string | null
+          customer_response_at: string | null
+          flip_size_cm: number | null
+          gusset_cm: number | null
+          id: string
+          is_active: boolean | null
+          length_cm: number | null
+          lip_back_cm: number | null
+          lip_front_cm: number | null
+          product_request_id: string
+          proposed_at: string
+          proposed_by: string
+          reason: string
+          thickness_unit: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value: number | null
+          version_number: number
+          width_cm: number | null
+          zipper_cm: number | null
+        }
+        Insert: {
+          customer_approved?: boolean | null
+          customer_feedback?: string | null
+          customer_response_at?: string | null
+          flip_size_cm?: number | null
+          gusset_cm?: number | null
+          id?: string
+          is_active?: boolean | null
+          length_cm?: number | null
+          lip_back_cm?: number | null
+          lip_front_cm?: number | null
+          product_request_id: string
+          proposed_at?: string
+          proposed_by: string
+          reason: string
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
+          version_number?: number
+          width_cm?: number | null
+          zipper_cm?: number | null
+        }
+        Update: {
+          customer_approved?: boolean | null
+          customer_feedback?: string | null
+          customer_response_at?: string | null
+          flip_size_cm?: number | null
+          gusset_cm?: number | null
+          id?: string
+          is_active?: boolean | null
+          length_cm?: number | null
+          lip_back_cm?: number | null
+          lip_front_cm?: number | null
+          product_request_id?: string
+          proposed_at?: string
+          proposed_by?: string
+          reason?: string
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
+          version_number?: number
+          width_cm?: number | null
+          zipper_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engineering_proposals_product_request_id_fkey"
+            columns: ["product_request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_pallets: {
         Row: {
           bfx_order: string | null
@@ -428,97 +502,238 @@ export type Database = {
           alto: number | null
           ancho: number | null
           artwork_files: string[] | null
+          bags_per_case: number | null
+          bags_per_wicket: number | null
           bionet_code: string | null
           bionet_registered_at: string | null
           bionet_registered_by: string | null
+          box_color: string | null
+          cases_per_pallet: number | null
+          clarity_grade: string | null
+          country_of_origin: string | null
           created_at: string
           created_by: string
           customer: string | null
+          customer_item_code: string | null
+          engineering_notes: string | null
+          engineering_reviewed_at: string | null
+          engineering_reviewed_by: string | null
+          engineering_status:
+            | Database["public"]["Enums"]["engineering_review_status"]
+            | null
           estructura: string | null
+          extrusion_type: string | null
+          eye_mark: string | null
+          film_type: string | null
+          flip_size_cm: number | null
+          flip_size_inches: number | null
           fuelle_de_fondo: number | null
+          gusset_cm: number | null
+          gusset_inches: number | null
           id: string
           item_description: string | null
+          item_id_code: string | null
           item_type: string | null
+          language: string | null
+          length_cm: number | null
+          length_inches: number | null
+          lip_back_cm: number | null
+          lip_back_inches: number | null
+          lip_front_cm: number | null
+          lip_front_inches: number | null
           material: string | null
           notes: string | null
+          pallet_size: string | null
           paquete_por_caja: number | null
           pestana_al_alto: number | null
           pestana_al_ancho: number | null
           pieces_per_pallet: number | null
           piezas_por_paquete: number | null
+          pms_colors: string[] | null
           product_id: string | null
+          product_line: Database["public"]["Enums"]["product_line"] | null
           product_name: string
           sap_code: string | null
           sap_registered_at: string | null
           sap_registered_by: string | null
+          seal_type: string | null
           status: Database["public"]["Enums"]["product_request_status"]
+          tech_spec_filename: string | null
+          tech_spec_pdf_url: string | null
+          thickness_unit: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value: number | null
           tipo_embalaje: string | null
           tipo_empaque: string | null
+          upc_number: string | null
           updated_at: string
+          vent_size: string | null
+          vents_across: number | null
+          vents_count: number | null
+          vents_down: number | null
+          wicket_hole: string | null
+          wicket_size: string | null
+          width_cm: number | null
+          width_inches: number | null
+          zipper_cm: number | null
+          zipper_inches: number | null
         }
         Insert: {
           alto?: number | null
           ancho?: number | null
           artwork_files?: string[] | null
+          bags_per_case?: number | null
+          bags_per_wicket?: number | null
           bionet_code?: string | null
           bionet_registered_at?: string | null
           bionet_registered_by?: string | null
+          box_color?: string | null
+          cases_per_pallet?: number | null
+          clarity_grade?: string | null
+          country_of_origin?: string | null
           created_at?: string
           created_by: string
           customer?: string | null
+          customer_item_code?: string | null
+          engineering_notes?: string | null
+          engineering_reviewed_at?: string | null
+          engineering_reviewed_by?: string | null
+          engineering_status?:
+            | Database["public"]["Enums"]["engineering_review_status"]
+            | null
           estructura?: string | null
+          extrusion_type?: string | null
+          eye_mark?: string | null
+          film_type?: string | null
+          flip_size_cm?: number | null
+          flip_size_inches?: number | null
           fuelle_de_fondo?: number | null
+          gusset_cm?: number | null
+          gusset_inches?: number | null
           id?: string
           item_description?: string | null
+          item_id_code?: string | null
           item_type?: string | null
+          language?: string | null
+          length_cm?: number | null
+          length_inches?: number | null
+          lip_back_cm?: number | null
+          lip_back_inches?: number | null
+          lip_front_cm?: number | null
+          lip_front_inches?: number | null
           material?: string | null
           notes?: string | null
+          pallet_size?: string | null
           paquete_por_caja?: number | null
           pestana_al_alto?: number | null
           pestana_al_ancho?: number | null
           pieces_per_pallet?: number | null
           piezas_por_paquete?: number | null
+          pms_colors?: string[] | null
           product_id?: string | null
+          product_line?: Database["public"]["Enums"]["product_line"] | null
           product_name: string
           sap_code?: string | null
           sap_registered_at?: string | null
           sap_registered_by?: string | null
+          seal_type?: string | null
           status?: Database["public"]["Enums"]["product_request_status"]
+          tech_spec_filename?: string | null
+          tech_spec_pdf_url?: string | null
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
           tipo_embalaje?: string | null
           tipo_empaque?: string | null
+          upc_number?: string | null
           updated_at?: string
+          vent_size?: string | null
+          vents_across?: number | null
+          vents_count?: number | null
+          vents_down?: number | null
+          wicket_hole?: string | null
+          wicket_size?: string | null
+          width_cm?: number | null
+          width_inches?: number | null
+          zipper_cm?: number | null
+          zipper_inches?: number | null
         }
         Update: {
           alto?: number | null
           ancho?: number | null
           artwork_files?: string[] | null
+          bags_per_case?: number | null
+          bags_per_wicket?: number | null
           bionet_code?: string | null
           bionet_registered_at?: string | null
           bionet_registered_by?: string | null
+          box_color?: string | null
+          cases_per_pallet?: number | null
+          clarity_grade?: string | null
+          country_of_origin?: string | null
           created_at?: string
           created_by?: string
           customer?: string | null
+          customer_item_code?: string | null
+          engineering_notes?: string | null
+          engineering_reviewed_at?: string | null
+          engineering_reviewed_by?: string | null
+          engineering_status?:
+            | Database["public"]["Enums"]["engineering_review_status"]
+            | null
           estructura?: string | null
+          extrusion_type?: string | null
+          eye_mark?: string | null
+          film_type?: string | null
+          flip_size_cm?: number | null
+          flip_size_inches?: number | null
           fuelle_de_fondo?: number | null
+          gusset_cm?: number | null
+          gusset_inches?: number | null
           id?: string
           item_description?: string | null
+          item_id_code?: string | null
           item_type?: string | null
+          language?: string | null
+          length_cm?: number | null
+          length_inches?: number | null
+          lip_back_cm?: number | null
+          lip_back_inches?: number | null
+          lip_front_cm?: number | null
+          lip_front_inches?: number | null
           material?: string | null
           notes?: string | null
+          pallet_size?: string | null
           paquete_por_caja?: number | null
           pestana_al_alto?: number | null
           pestana_al_ancho?: number | null
           pieces_per_pallet?: number | null
           piezas_por_paquete?: number | null
+          pms_colors?: string[] | null
           product_id?: string | null
+          product_line?: Database["public"]["Enums"]["product_line"] | null
           product_name?: string
           sap_code?: string | null
           sap_registered_at?: string | null
           sap_registered_by?: string | null
+          seal_type?: string | null
           status?: Database["public"]["Enums"]["product_request_status"]
+          tech_spec_filename?: string | null
+          tech_spec_pdf_url?: string | null
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
           tipo_embalaje?: string | null
           tipo_empaque?: string | null
+          upc_number?: string | null
           updated_at?: string
+          vent_size?: string | null
+          vents_across?: number | null
+          vents_count?: number | null
+          vents_down?: number | null
+          wicket_hole?: string | null
+          wicket_size?: string | null
+          width_cm?: number | null
+          width_inches?: number | null
+          zipper_cm?: number | null
+          zipper_inches?: number | null
         }
         Relationships: [
           {
@@ -1018,6 +1233,11 @@ export type Database = {
         | "coachella"
         | "yuma"
         | "tbd"
+      engineering_review_status:
+        | "pending"
+        | "approved"
+        | "changes_required"
+        | "customer_review"
       inventory_status: "available" | "assigned" | "shipped"
       load_status:
         | "assembling"
@@ -1030,6 +1250,12 @@ export type Database = {
       ncr_priority: "low" | "medium" | "high" | "critical"
       ncr_status: "open" | "under_review" | "resolved" | "closed"
       pc_version_status: "pending" | "approved" | "rejected" | "superseded"
+      product_line:
+        | "bag_no_wicket_zipper"
+        | "bag_wicket"
+        | "bag_zipper"
+        | "film"
+        | "pouch"
       product_request_status:
         | "draft"
         | "specs_submitted"
@@ -1042,6 +1268,7 @@ export type Database = {
         | "sap_registered"
         | "completed"
       release_status: "pending" | "approved" | "on_hold" | "shipped"
+      thickness_unit: "gauge" | "microns"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1173,6 +1400,12 @@ export const Constants = {
       change_request_status: ["pending", "approved", "rejected"],
       change_request_type: ["volume_change", "cancellation", "do_not_delay"],
       customer_location: ["salinas", "bakersfield", "coachella", "yuma", "tbd"],
+      engineering_review_status: [
+        "pending",
+        "approved",
+        "changes_required",
+        "customer_review",
+      ],
       inventory_status: ["available", "assigned", "shipped"],
       load_status: [
         "assembling",
@@ -1186,6 +1419,13 @@ export const Constants = {
       ncr_priority: ["low", "medium", "high", "critical"],
       ncr_status: ["open", "under_review", "resolved", "closed"],
       pc_version_status: ["pending", "approved", "rejected", "superseded"],
+      product_line: [
+        "bag_no_wicket_zipper",
+        "bag_wicket",
+        "bag_zipper",
+        "film",
+        "pouch",
+      ],
       product_request_status: [
         "draft",
         "specs_submitted",
@@ -1199,6 +1439,7 @@ export const Constants = {
         "completed",
       ],
       release_status: ["pending", "approved", "on_hold", "shipped"],
+      thickness_unit: ["gauge", "microns"],
     },
   },
 } as const
