@@ -1,24 +1,61 @@
-import { User, Building2, Bell, Shield, CreditCard } from "lucide-react";
+import { User, Building2, Bell, Shield, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useAdmin } from "@/hooks/useAdmin";
 
 export default function Settings() {
+  const { language, setLanguage, t } = useLanguage();
+  const { isActualAdmin } = useAdmin();
+
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Header */}
         <div className="animate-fade-in">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Settings
+            {t('settings.title')}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Manage your account and notification preferences
+            {t('settings.subtitle')}
           </p>
         </div>
+
+        {/* Language Section - Admin Only */}
+        {isActualAdmin && (
+          <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.05s" }}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Globe className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-card-foreground">{t('settings.language')}</h2>
+                <p className="text-sm text-muted-foreground">{t('settings.languageDesc')}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <Button 
+                variant={language === 'en' ? 'default' : 'outline'}
+                onClick={() => setLanguage('en')}
+                className="flex-1"
+              >
+                🇺🇸 {t('settings.english')}
+              </Button>
+              <Button 
+                variant={language === 'es' ? 'default' : 'outline'}
+                onClick={() => setLanguage('es')}
+                className="flex-1"
+              >
+                🇲🇽 {t('settings.spanish')}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Profile Section */}
         <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.1s" }}>
