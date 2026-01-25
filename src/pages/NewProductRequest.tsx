@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { ProductLineSelector, ProductLine, getProductLineLabel } from "@/components/product-requests/ProductLineSelector";
 import { TechSpecUploader } from "@/components/product-requests/TechSpecUploader";
 import { MeasurementInput, ThicknessInput } from "@/components/product-requests/MeasurementInput";
+import { ContactsManager, Contact } from "@/components/product-requests/ContactsManager";
 
 interface FormData {
   // Basic info
@@ -121,17 +122,20 @@ function getSteps(productLine: ProductLine | null) {
   if (productLine === "bag_wicket") {
     baseSteps.push({ id: 5, name: "Wicket Specs", description: "Wicket details" });
     baseSteps.push({ id: 6, name: "Packaging", description: "Packing info" });
-    baseSteps.push({ id: 7, name: "Artwork", description: "Upload artwork" });
-    baseSteps.push({ id: 8, name: "Review", description: "Confirm & submit" });
+    baseSteps.push({ id: 7, name: "Contacts", description: "Approvers & notifications" });
+    baseSteps.push({ id: 8, name: "Artwork", description: "Upload artwork" });
+    baseSteps.push({ id: 9, name: "Review", description: "Confirm & submit" });
   } else if (productLine === "film") {
     baseSteps.push({ id: 5, name: "Roll Specs", description: "Film specifications" });
-    baseSteps.push({ id: 6, name: "Artwork", description: "Upload artwork" });
-    baseSteps.push({ id: 7, name: "Review", description: "Confirm & submit" });
+    baseSteps.push({ id: 6, name: "Contacts", description: "Approvers & notifications" });
+    baseSteps.push({ id: 7, name: "Artwork", description: "Upload artwork" });
+    baseSteps.push({ id: 8, name: "Review", description: "Confirm & submit" });
   } else {
     baseSteps.push({ id: 5, name: "Film & Vents", description: "Material details" });
     baseSteps.push({ id: 6, name: "Packaging", description: "Packing info" });
-    baseSteps.push({ id: 7, name: "Artwork", description: "Upload artwork" });
-    baseSteps.push({ id: 8, name: "Review", description: "Confirm & submit" });
+    baseSteps.push({ id: 7, name: "Contacts", description: "Approvers & notifications" });
+    baseSteps.push({ id: 8, name: "Artwork", description: "Upload artwork" });
+    baseSteps.push({ id: 9, name: "Review", description: "Confirm & submit" });
   }
   
   return baseSteps;
@@ -145,6 +149,8 @@ export default function NewProductRequest() {
   const [artworkFiles, setArtworkFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [pmsColorInput, setPmsColorInput] = useState("");
+  const [clientApprovers, setClientApprovers] = useState<Contact[]>([]);
+  const [internalContacts, setInternalContacts] = useState<Contact[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -367,6 +373,30 @@ export default function NewProductRequest() {
             tech_spec_pdf_url: techSpecUrl
           })
           .eq('id', request.id);
+      }
+
+      // Save contacts
+      if (request && (clientApprovers.length > 0 || internalContacts.length > 0)) {
+        const contactsToInsert = [
+          ...clientApprovers.map(c => ({
+            product_request_id: request.id,
+            contact_type: 'client_approver' as const,
+            name: c.name,
+            email: c.email,
+            role_description: c.role_description || null,
+          })),
+          ...internalContacts.map(c => ({
+            product_request_id: request.id,
+            contact_type: 'internal_notify' as const,
+            name: c.name,
+            email: c.email,
+            role_description: c.role_description || null,
+          })),
+        ];
+        
+        await supabase
+          .from('product_request_contacts')
+          .insert(contactsToInsert);
       }
 
       toast.success("Product request created successfully!");
@@ -664,8 +694,8 @@ export default function NewProductRequest() {
 
       case 6:
         if (productLine === "film") {
-          // Artwork step for film
-          return renderArtworkStep();
+          // Contacts step for film
+          return renderContactsStep();
         }
         // Packaging step for other types
         return (
@@ -780,13 +810,21 @@ export default function NewProductRequest() {
 
       case 7:
         if (productLine === "film") {
+          // Artwork step for film
+          return renderArtworkStep();
+        }
+        // Contacts step for other types
+        return renderContactsStep();
+
+      case 8:
+        if (productLine === "film") {
           // Review step for film
           return renderReviewStep();
         }
         // Artwork step for other types
         return renderArtworkStep();
 
-      case 8:
+      case 9:
         // Review step for bag types
         return renderReviewStep();
 
@@ -845,6 +883,20 @@ export default function NewProductRequest() {
           </div>
         </div>
       )}
+    </div>
+  );
+
+  const renderContactsStep = () => (
+    <div className="space-y-4">
+      <p className="text-muted-foreground">
+        Add contacts who will be involved in the design approval process and those who should receive notifications.
+      </p>
+      <ContactsManager
+        clientApprovers={clientApprovers}
+        internalContacts={internalContacts}
+        onClientApproversChange={setClientApprovers}
+        onInternalContactsChange={setInternalContacts}
+      />
     </div>
   );
 
