@@ -98,6 +98,39 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.english': 'English',
     'settings.spanish': 'Spanish',
     
+    // Team Management
+    'teamManagement.title': 'Team Management',
+    'teamManagement.subtitle': 'Manage engineers, designers, and other team members',
+    'teamManagement.addMember': 'Add Member',
+    'teamManagement.editMember': 'Edit Member',
+    'teamManagement.fullName': 'Full Name',
+    'teamManagement.email': 'Email',
+    'teamManagement.role': 'Role',
+    'teamManagement.selectRole': 'Select a role',
+    'teamManagement.active': 'Active',
+    'teamManagement.noMembers': 'No team members added yet',
+    'teamManagement.memberAdded': 'Member Added',
+    'teamManagement.memberAddedDesc': 'Team member has been added successfully',
+    'teamManagement.memberUpdated': 'Member Updated',
+    'teamManagement.memberUpdatedDesc': 'Team member has been updated successfully',
+    'teamManagement.memberDeleted': 'Member Deleted',
+    'teamManagement.memberDeletedDesc': 'Team member has been removed',
+    
+    // Team Roles
+    'teamRoles.engineering_leader': 'Engineering Leader',
+    'teamRoles.engineer': 'Engineer',
+    'teamRoles.design_leader': 'Design Leader',
+    'teamRoles.designer': 'Designer',
+    'teamRoles.sales_rep': 'Sales Rep',
+    'teamRoles.customer_service': 'Customer Service',
+    
+    // Common
+    'common.loading': 'Loading',
+    'common.cancel': 'Cancel',
+    'common.save': 'Save',
+    'common.add': 'Add',
+    'common.actions': 'Actions',
+    
     // User info
     'user.admin': 'Admin',
     'user.customer': 'Customer',
@@ -191,6 +224,39 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.languageDesc': 'Elige tu idioma preferido',
     'settings.english': 'Inglés',
     'settings.spanish': 'Español',
+    
+    // Team Management
+    'teamManagement.title': 'Gestión de Equipo',
+    'teamManagement.subtitle': 'Administra ingenieros, diseñadores y otros miembros del equipo',
+    'teamManagement.addMember': 'Agregar Miembro',
+    'teamManagement.editMember': 'Editar Miembro',
+    'teamManagement.fullName': 'Nombre Completo',
+    'teamManagement.email': 'Correo Electrónico',
+    'teamManagement.role': 'Rol',
+    'teamManagement.selectRole': 'Selecciona un rol',
+    'teamManagement.active': 'Activo',
+    'teamManagement.noMembers': 'No hay miembros del equipo aún',
+    'teamManagement.memberAdded': 'Miembro Agregado',
+    'teamManagement.memberAddedDesc': 'El miembro del equipo ha sido agregado exitosamente',
+    'teamManagement.memberUpdated': 'Miembro Actualizado',
+    'teamManagement.memberUpdatedDesc': 'El miembro del equipo ha sido actualizado exitosamente',
+    'teamManagement.memberDeleted': 'Miembro Eliminado',
+    'teamManagement.memberDeletedDesc': 'El miembro del equipo ha sido removido',
+    
+    // Team Roles
+    'teamRoles.engineering_leader': 'Líder de Ingeniería',
+    'teamRoles.engineer': 'Ingeniero',
+    'teamRoles.design_leader': 'Líder de Diseño',
+    'teamRoles.designer': 'Diseñador',
+    'teamRoles.sales_rep': 'Representante de Ventas',
+    'teamRoles.customer_service': 'Servicio al Cliente',
+    
+    // Common
+    'common.loading': 'Cargando',
+    'common.cancel': 'Cancelar',
+    'common.save': 'Guardar',
+    'common.add': 'Agregar',
+    'common.actions': 'Acciones',
     
     // User info
     'user.admin': 'Administrador',

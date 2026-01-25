@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
-
+import { TeamManagement } from "@/components/settings/TeamManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -57,8 +57,15 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Team Management Section - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.1s" }}>
+            <TeamManagement />
+          </div>
+        )}
+
         {/* Profile Section */}
-        <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.15s" }}>
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <User className="h-5 w-5 text-primary" />
