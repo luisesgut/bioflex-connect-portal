@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AdminProvider } from "@/hooks/useAdmin";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
@@ -37,28 +38,30 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AdminProvider>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-              <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
-              <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
-              
-              <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
-              <Route path="/change-requests" element={<ProtectedRoute><ChangeRequests /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-              <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
-              <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
-              <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
-              <Route path="/shipped-pallets" element={<ProtectedRoute><ShippedPallets /></ProtectedRoute>} />
-              <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
-              <Route path="/product-requests/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
-              <Route path="/product-requests/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <LanguageProvider>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+                <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
+                
+                <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+                <Route path="/change-requests" element={<ProtectedRoute><ChangeRequests /></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+                <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
+                <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
+                <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
+                <Route path="/shipped-pallets" element={<ProtectedRoute><ShippedPallets /></ProtectedRoute>} />
+                <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
+                <Route path="/product-requests/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
+                <Route path="/product-requests/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </LanguageProvider>
           </AdminProvider>
         </AuthProvider>
       </BrowserRouter>

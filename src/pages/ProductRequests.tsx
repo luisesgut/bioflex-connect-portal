@@ -3,10 +3,12 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye } from "lucide-react";
+import { Plus, FileText, Eye, Trash2, MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import {
   Table,
@@ -16,6 +18,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ProductRequestStatus = 
   | 'draft'
@@ -93,8 +111,12 @@ const getCustomerVisibleStatus = (status: ProductRequestStatus, isAdmin: boolean
 export default function ProductRequests() {
   const [requests, setRequests] = useState<ProductRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<ProductRequest | null>(null);
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchRequests();
@@ -116,20 +138,54 @@ export default function ProductRequests() {
     }
   };
 
+  const handleDeleteClick = (request: ProductRequest) => {
+    setRequestToDelete(request);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!requestToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('product_requests')
+        .delete()
+        .eq('id', requestToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: t('productRequests.deleteSuccess'),
+        description: requestToDelete.product_name,
+      });
+
+      setRequests(requests.filter(r => r.id !== requestToDelete.id));
+    } catch (error) {
+      console.error('Error deleting product request:', error);
+      toast({
+        title: t('productRequests.deleteError'),
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">New Product Requests</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t('productRequests.title')}</h1>
             <p className="text-muted-foreground">
-              Manage new product onboarding and approvals
+              {t('productRequests.subtitle')}
             </p>
           </div>
           <Button onClick={() => navigate('/product-requests/new')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Request
+            {t('action.newRequest')}
           </Button>
         </div>
 
@@ -138,7 +194,7 @@ export default function ProductRequests() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Product Requests
+              {t('productRequests.title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -149,25 +205,25 @@ export default function ProductRequests() {
             ) : requests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">No product requests yet</h3>
+                <h3 className="text-lg font-medium">{t('productRequests.noRequests')}</h3>
                 <p className="text-muted-foreground mb-4">
-                  Start by creating a new product request
+                  {t('productRequests.startByCreating')}
                 </p>
                 <Button onClick={() => navigate('/product-requests/new')}>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Request
+                  {t('action.newRequest')}
                 </Button>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Updated</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('table.productName')}</TableHead>
+                    <TableHead>{t('table.customer')}</TableHead>
+                    <TableHead>{t('table.status')}</TableHead>
+                    <TableHead>{t('table.created')}</TableHead>
+                    <TableHead>{t('table.updated')}</TableHead>
+                    <TableHead className="text-right">{t('table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -189,14 +245,28 @@ export default function ProductRequests() {
                         {format(new Date(request.updated_at), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/product-requests/${request.id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/product-requests/${request.id}`)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              {t('action.view')}
+                            </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteClick(request)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t('action.delete')}
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -206,6 +276,26 @@ export default function ProductRequests() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('action.delete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('productRequests.deleteConfirm')}
+              <br />
+              <strong>{requestToDelete?.product_name}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('action.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('action.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
