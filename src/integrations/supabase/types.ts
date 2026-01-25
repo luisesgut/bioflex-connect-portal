@@ -497,11 +497,95 @@ export type Database = {
           },
         ]
       }
+      product_request_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          assigned_to: string
+          assignment_type: string
+          completed_at: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          product_request_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          assigned_to: string
+          assignment_type: string
+          completed_at?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          product_request_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          assigned_to?: string
+          assignment_type?: string
+          completed_at?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          product_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_request_assignments_product_request_id_fkey"
+            columns: ["product_request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_request_contacts: {
+        Row: {
+          contact_type: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          product_request_id: string
+          role_description: string | null
+        }
+        Insert: {
+          contact_type: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          product_request_id: string
+          role_description?: string | null
+        }
+        Update: {
+          contact_type?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          product_request_id?: string
+          role_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_request_contacts_product_request_id_fkey"
+            columns: ["product_request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_requests: {
         Row: {
           alto: number | null
           ancho: number | null
           artwork_files: string[] | null
+          assigned_designer: string | null
+          assigned_engineer: string | null
           bags_per_case: number | null
           bags_per_wicket: number | null
           bionet_code: string | null
@@ -515,6 +599,9 @@ export type Database = {
           created_by: string
           customer: string | null
           customer_item_code: string | null
+          design_reviewed_at: string | null
+          design_reviewed_by: string | null
+          design_status: string | null
           engineering_notes: string | null
           engineering_reviewed_at: string | null
           engineering_reviewed_by: string | null
@@ -581,6 +668,8 @@ export type Database = {
           alto?: number | null
           ancho?: number | null
           artwork_files?: string[] | null
+          assigned_designer?: string | null
+          assigned_engineer?: string | null
           bags_per_case?: number | null
           bags_per_wicket?: number | null
           bionet_code?: string | null
@@ -594,6 +683,9 @@ export type Database = {
           created_by: string
           customer?: string | null
           customer_item_code?: string | null
+          design_reviewed_at?: string | null
+          design_reviewed_by?: string | null
+          design_status?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
@@ -660,6 +752,8 @@ export type Database = {
           alto?: number | null
           ancho?: number | null
           artwork_files?: string[] | null
+          assigned_designer?: string | null
+          assigned_engineer?: string | null
           bags_per_case?: number | null
           bags_per_wicket?: number | null
           bionet_code?: string | null
@@ -673,6 +767,9 @@ export type Database = {
           created_by?: string
           customer?: string | null
           customer_item_code?: string | null
+          design_reviewed_at?: string | null
+          design_reviewed_by?: string | null
+          design_status?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
@@ -1151,6 +1248,39 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          team_role: Database["public"]["Enums"]["team_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          team_role: Database["public"]["Enums"]["team_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          team_role?: Database["public"]["Enums"]["team_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transit_updates: {
         Row: {
           created_at: string
@@ -1268,6 +1398,13 @@ export type Database = {
         | "sap_registered"
         | "completed"
       release_status: "pending" | "approved" | "on_hold" | "shipped"
+      team_role:
+        | "sales_rep"
+        | "engineering_leader"
+        | "engineer"
+        | "design_leader"
+        | "designer"
+        | "customer_service"
       thickness_unit: "gauge" | "microns"
     }
     CompositeTypes: {
@@ -1439,6 +1576,14 @@ export const Constants = {
         "completed",
       ],
       release_status: ["pending", "approved", "on_hold", "shipped"],
+      team_role: [
+        "sales_rep",
+        "engineering_leader",
+        "engineer",
+        "design_leader",
+        "designer",
+        "customer_service",
+      ],
       thickness_unit: ["gauge", "microns"],
     },
   },

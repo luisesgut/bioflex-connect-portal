@@ -20,32 +20,32 @@ interface ProductLineOption {
 const productLines: ProductLineOption[] = [
   {
     value: "bag_no_wicket_zipper",
-    label: "Bag (No Wicket/Zipper)",
-    description: "Side seal bags without wicket or zipper closure",
+    label: "Sello Lateral (Sin Wicket/Zipper)",
+    description: "Bolsas de sello lateral sin wicket ni zipper",
     icon: Package,
   },
   {
     value: "bag_wicket",
-    label: "Bag Wicket",
-    description: "Bags with wicket for automated packaging lines",
+    label: "Bolsa Wicket",
+    description: "Bolsas con wicket para líneas de empaque automatizado",
     icon: Layers,
   },
   {
     value: "bag_zipper",
-    label: "Bag with Zipper",
-    description: "Side seal bags with zipper/resealable closure",
+    label: "Sello Lateral con Zipper",
+    description: "Bolsas de sello lateral con cierre resellable",
     icon: Archive,
   },
   {
     value: "film",
-    label: "Film / Roll Stock",
-    description: "Printed film rolls for form-fill-seal machines",
+    label: "Bobina / Rollstock",
+    description: "Rollos de película impresos para máquinas form-fill-seal",
     icon: Film,
   },
   {
     value: "pouch",
     label: "Stand Up Pouch",
-    description: "Laminated stand up pouches with bottom gusset",
+    description: "Pouches laminados con fuelle de fondo (Doypack)",
     icon: ShoppingBag,
   },
 ];
