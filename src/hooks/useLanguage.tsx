@@ -49,6 +49,11 @@ const translations: Record<Language, Record<string, string>> = {
     'productRequests.deleteConfirm': 'Are you sure you want to delete this product request?',
     'productRequests.deleteSuccess': 'Product request deleted successfully',
     'productRequests.deleteError': 'Failed to delete product request',
+    'productRequests.viewAll': 'All',
+    'productRequests.viewEngineering': 'Engineering',
+    'productRequests.viewDesign': 'Design',
+    'productRequests.noRequestsInView': 'No requests in this view',
+    'productRequests.noRequestsInViewDesc': 'There are no requests matching the current filter',
     'productRequests.clientApprovers': 'Client Design Approvers',
     'productRequests.clientApproversDescription': 'Client contacts who will approve design versions',
     'productRequests.internalContacts': 'Internal Notification Contacts',
@@ -73,6 +78,8 @@ const translations: Record<Language, Record<string, string>> = {
     'table.name': 'Name',
     'table.email': 'Email',
     'table.role': 'Role',
+    'table.engineeringStatus': 'Engineering Status',
+    'table.designStatus': 'Design Status',
     
     // Status labels
     'status.draft': 'Draft',
@@ -187,6 +194,11 @@ const translations: Record<Language, Record<string, string>> = {
     'productRequests.deleteConfirm': '¿Estás seguro de que deseas eliminar esta solicitud de producto?',
     'productRequests.deleteSuccess': 'Solicitud de producto eliminada exitosamente',
     'productRequests.deleteError': 'Error al eliminar la solicitud de producto',
+    'productRequests.viewAll': 'Todas',
+    'productRequests.viewEngineering': 'Ingeniería',
+    'productRequests.viewDesign': 'Diseño',
+    'productRequests.noRequestsInView': 'No hay solicitudes en esta vista',
+    'productRequests.noRequestsInViewDesc': 'No hay solicitudes que coincidan con el filtro actual',
     'productRequests.clientApprovers': 'Aprobadores de Diseño del Cliente',
     'productRequests.clientApproversDescription': 'Contactos del cliente que aprobarán versiones de diseño',
     'productRequests.internalContacts': 'Contactos Internos de Notificación',
@@ -211,6 +223,8 @@ const translations: Record<Language, Record<string, string>> = {
     'table.name': 'Nombre',
     'table.email': 'Correo',
     'table.role': 'Rol',
+    'table.engineeringStatus': 'Estado Ingeniería',
+    'table.designStatus': 'Estado Diseño',
     
     // Status labels
     'status.draft': 'Borrador',
