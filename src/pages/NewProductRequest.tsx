@@ -25,6 +25,9 @@ interface FormData {
   item_id_code: string;
   customer_item_code: string;
   
+  // Sello lateral zipper option
+  has_zipper: boolean;
+  
   // Measurements in inches
   width_inches: string;
   length_inches: string;
@@ -34,9 +37,10 @@ interface FormData {
   lip_back_inches: string;
   flip_size_inches: string;
   
-  // Thickness
+  // Thickness / Structure
   thickness_value: string;
   thickness_unit: "gauge" | "microns";
+  estructura: string;
   
   // Film specs
   film_type: string;
@@ -78,6 +82,7 @@ const initialFormData: FormData = {
   item_description: "",
   item_id_code: "",
   customer_item_code: "",
+  has_zipper: false,
   width_inches: "",
   length_inches: "",
   gusset_inches: "",
@@ -87,6 +92,7 @@ const initialFormData: FormData = {
   flip_size_inches: "",
   thickness_value: "",
   thickness_unit: "gauge",
+  estructura: "",
   film_type: "",
   seal_type: "",
   extrusion_type: "",
@@ -109,6 +115,14 @@ const initialFormData: FormData = {
   country_of_origin: "",
   notes: "",
 };
+
+// Map UI product line to database enum
+function getDbProductLine(uiProductLine: ProductLine, hasZipper: boolean): string {
+  if (uiProductLine === "sello_lateral") {
+    return hasZipper ? "bag_zipper" : "bag_no_wicket_zipper";
+  }
+  return uiProductLine;
+}
 
 function getSteps(productLine: ProductLine | null) {
   const baseSteps = [
@@ -296,7 +310,7 @@ export default function NewProductRequest() {
           product_name: formData.product_name,
           customer: formData.customer || null,
           item_description: formData.item_description || null,
-          product_line: productLine,
+          product_line: getDbProductLine(productLine, formData.has_zipper) as any,
           item_id_code: formData.item_id_code || null,
           customer_item_code: formData.customer_item_code || null,
           
@@ -352,6 +366,7 @@ export default function NewProductRequest() {
           language: formData.language || null,
           country_of_origin: formData.country_of_origin || null,
           
+          estructura: formData.estructura || null,
           notes: formData.notes || null,
           tech_spec_filename: techSpecFile?.name || null,
           status: artworkFiles.length > 0 ? 'artwork_uploaded' : 'specs_submitted',
@@ -501,6 +516,22 @@ export default function NewProductRequest() {
       case 4:
         return (
           <div className="space-y-6">
+            {/* Zipper option for Sello Lateral */}
+            {productLine === "sello_lateral" && (
+              <div className="flex items-center space-x-2 p-4 bg-muted rounded-lg">
+                <input
+                  type="checkbox"
+                  id="has_zipper"
+                  checked={formData.has_zipper}
+                  onChange={(e) => setFormData(prev => ({ ...prev, has_zipper: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="has_zipper" className="cursor-pointer">
+                  Includes Resealable Zipper
+                </Label>
+              </div>
+            )}
+            
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MeasurementInput
                 id="width"
@@ -514,7 +545,7 @@ export default function NewProductRequest() {
                 valueInches={formData.length_inches}
                 onChange={(v) => updateField("length_inches", v)}
               />
-              {(productLine === "pouch" || productLine === "bag_no_wicket_zipper" || productLine === "bag_wicket") && (
+              {(productLine === "pouch" || productLine === "sello_lateral" || productLine === "bag_wicket") && (
                 <MeasurementInput
                   id="gusset"
                   label="Bottom Gusset"
@@ -522,7 +553,7 @@ export default function NewProductRequest() {
                   onChange={(v) => updateField("gusset_inches", v)}
                 />
               )}
-              {productLine === "bag_zipper" && (
+              {(productLine === "sello_lateral" && formData.has_zipper) && (
                 <MeasurementInput
                   id="zipper"
                   label="Zipper Header"
@@ -553,9 +584,23 @@ export default function NewProductRequest() {
               />
             </div>
 
+            {/* Structure field for material layers */}
+            <div className="space-y-2">
+              <Label htmlFor="estructura">Material Structure</Label>
+              <Input
+                id="estructura"
+                value={formData.estructura}
+                onChange={(e) => updateField("estructura", e.target.value)}
+                placeholder="e.g., LDPE 150 ga, PET 12 / CPP 30"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the film structure with layer thickness (e.g., LDPE 150 ga, PET 12 / CPP 30)
+              </p>
+            </div>
+
             <ThicknessInput
               id="thickness"
-              label="Film Thickness"
+              label="Total Film Thickness (optional)"
               value={formData.thickness_value}
               unit={formData.thickness_unit}
               onValueChange={(v) => updateField("thickness_value", v)}
