@@ -63,6 +63,14 @@ interface EngineeringProposal {
   zipper_cm: number | null;
   thickness_value: number | null;
   thickness_unit: 'gauge' | 'microns';
+  proposed_structure: string | null;
+  original_width_cm: number | null;
+  original_length_cm: number | null;
+  original_gusset_cm: number | null;
+  original_zipper_cm: number | null;
+  original_thickness_value: number | null;
+  original_thickness_unit: 'gauge' | 'microns' | null;
+  original_structure: string | null;
   reason: string;
   customer_approved: boolean | null;
   customer_response_at: string | null;
@@ -760,6 +768,7 @@ export default function ProductRequestDetail() {
                   zipper_cm: request.zipper_cm,
                   thickness_value: request.thickness_value,
                   thickness_unit: request.thickness_unit || 'gauge',
+                  estructura: request.estructura,
                   engineering_status: request.engineering_status || 'pending',
                   engineering_notes: request.engineering_notes,
                 }}

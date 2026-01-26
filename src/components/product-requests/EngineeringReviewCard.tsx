@@ -36,6 +36,14 @@ interface EngineeringProposal {
   zipper_cm: number | null;
   thickness_value: number | null;
   thickness_unit: 'gauge' | 'microns';
+  proposed_structure: string | null;
+  original_width_cm: number | null;
+  original_length_cm: number | null;
+  original_gusset_cm: number | null;
+  original_zipper_cm: number | null;
+  original_thickness_value: number | null;
+  original_thickness_unit: 'gauge' | 'microns' | null;
+  original_structure: string | null;
   reason: string;
   customer_approved: boolean | null;
   customer_response_at: string | null;
@@ -56,6 +64,7 @@ interface ProductRequest {
   zipper_cm: number | null;
   thickness_value: number | null;
   thickness_unit: 'gauge' | 'microns';
+  estructura: string | null;
   engineering_status: EngineeringStatus;
   engineering_notes: string | null;
 }
@@ -92,6 +101,7 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
   const [proposedGusset, setProposedGusset] = useState("");
   const [proposedThickness, setProposedThickness] = useState("");
   const [proposedThicknessUnit, setProposedThicknessUnit] = useState<"gauge" | "microns">("microns");
+  const [proposedStructure, setProposedStructure] = useState("");
   const [proposalReason, setProposalReason] = useState("");
 
   // Customer response state
@@ -136,7 +146,7 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
         .update({ is_active: false })
         .eq('product_request_id', request.id);
 
-      // Create new proposal
+      // Create new proposal with original values for comparison
       await supabase
         .from('engineering_proposals')
         .insert({
@@ -147,6 +157,14 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
           gusset_cm: proposedGusset ? parseFloat(proposedGusset) : null,
           thickness_value: proposedThickness ? parseFloat(proposedThickness) : null,
           thickness_unit: proposedThicknessUnit,
+          proposed_structure: proposedStructure || null,
+          // Store original values for comparison
+          original_width_cm: request.width_cm,
+          original_length_cm: request.length_cm,
+          original_gusset_cm: request.gusset_cm,
+          original_thickness_value: request.thickness_value,
+          original_thickness_unit: request.thickness_unit,
+          original_structure: request.estructura,
           reason: proposalReason,
           is_active: true,
         });
@@ -187,17 +205,29 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
         .eq('id', activeProposal.id);
 
       if (approved) {
-        // Update request with new measurements
+        // Update request with new measurements and structure
         const updates: Record<string, unknown> = {
           engineering_status: 'approved',
         };
         
-        if (activeProposal.width_cm) updates.width_cm = activeProposal.width_cm;
-        if (activeProposal.length_cm) updates.length_cm = activeProposal.length_cm;
-        if (activeProposal.gusset_cm) updates.gusset_cm = activeProposal.gusset_cm;
+        if (activeProposal.width_cm) {
+          updates.width_cm = activeProposal.width_cm;
+          updates.width_inches = activeProposal.width_cm / 2.54;
+        }
+        if (activeProposal.length_cm) {
+          updates.length_cm = activeProposal.length_cm;
+          updates.length_inches = activeProposal.length_cm / 2.54;
+        }
+        if (activeProposal.gusset_cm) {
+          updates.gusset_cm = activeProposal.gusset_cm;
+          updates.gusset_inches = activeProposal.gusset_cm / 2.54;
+        }
         if (activeProposal.thickness_value) {
           updates.thickness_value = activeProposal.thickness_value;
           updates.thickness_unit = activeProposal.thickness_unit;
+        }
+        if (activeProposal.proposed_structure) {
+          updates.estructura = activeProposal.proposed_structure;
         }
 
         await supabase
@@ -228,6 +258,7 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
     setProposedGusset(request.gusset_cm?.toString() || "");
     setProposedThickness(request.thickness_value?.toString() || "");
     setProposedThicknessUnit(request.thickness_unit || "microns");
+    setProposedStructure(request.estructura || "");
     setProposalReason("");
   };
 
@@ -255,9 +286,18 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Current Measurements */}
+        {/* Current Specifications */}
         <div>
-          <Label className="text-muted-foreground mb-2 block">Current Measurements</Label>
+          <Label className="text-muted-foreground mb-2 block">Current Specifications</Label>
+          
+          {/* Structure/Material */}
+          {request.estructura && (
+            <div className="p-3 bg-muted rounded-lg mb-4">
+              <p className="text-muted-foreground text-sm">Structure / Material</p>
+              <p className="font-medium">{request.estructura}</p>
+            </div>
+          )}
+          
           <div className="grid gap-4 sm:grid-cols-4 text-sm">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-muted-foreground">Width</p>
@@ -306,23 +346,51 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
                   </p>
                 </div>
                 
-                <div className="grid gap-2 sm:grid-cols-3 text-sm">
-                  {activeProposal.width_cm && (
-                    <div>
-                      <span className="text-muted-foreground">New Width: </span>
-                      <span className="font-medium">{cmToInches(activeProposal.width_cm)}" ({activeProposal.width_cm.toFixed(2)} cm)</span>
+                {/* Structure change */}
+                {activeProposal.proposed_structure && activeProposal.proposed_structure !== activeProposal.original_structure && (
+                  <div className="p-2 bg-white/50 dark:bg-white/5 rounded border text-sm mb-2">
+                    <p className="text-muted-foreground text-xs mb-1">Structure Change:</p>
+                    <p className="line-through text-red-600">{activeProposal.original_structure || 'N/A'}</p>
+                    <p className="text-green-600 font-medium">{activeProposal.proposed_structure}</p>
+                  </div>
+                )}
+
+                <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                  {activeProposal.width_cm && activeProposal.width_cm !== activeProposal.original_width_cm && (
+                    <div className="p-2 bg-white/50 dark:bg-white/5 rounded border">
+                      <span className="text-muted-foreground text-xs block">Width:</span>
+                      <span className="line-through text-red-600 text-xs">{activeProposal.original_width_cm?.toFixed(2) || '-'} cm</span>
+                      <span className="mx-1">→</span>
+                      <span className="text-green-600 font-medium">{activeProposal.width_cm.toFixed(2)} cm ({cmToInches(activeProposal.width_cm)}")</span>
                     </div>
                   )}
-                  {activeProposal.length_cm && (
-                    <div>
-                      <span className="text-muted-foreground">New Length: </span>
-                      <span className="font-medium">{cmToInches(activeProposal.length_cm)}" ({activeProposal.length_cm.toFixed(2)} cm)</span>
+                  {activeProposal.length_cm && activeProposal.length_cm !== activeProposal.original_length_cm && (
+                    <div className="p-2 bg-white/50 dark:bg-white/5 rounded border">
+                      <span className="text-muted-foreground text-xs block">Length:</span>
+                      <span className="line-through text-red-600 text-xs">{activeProposal.original_length_cm?.toFixed(2) || '-'} cm</span>
+                      <span className="mx-1">→</span>
+                      <span className="text-green-600 font-medium">{activeProposal.length_cm.toFixed(2)} cm ({cmToInches(activeProposal.length_cm)}")</span>
+                    </div>
+                  )}
+                  {activeProposal.gusset_cm && activeProposal.gusset_cm !== activeProposal.original_gusset_cm && (
+                    <div className="p-2 bg-white/50 dark:bg-white/5 rounded border">
+                      <span className="text-muted-foreground text-xs block">Gusset:</span>
+                      <span className="line-through text-red-600 text-xs">{activeProposal.original_gusset_cm?.toFixed(2) || '-'} cm</span>
+                      <span className="mx-1">→</span>
+                      <span className="text-green-600 font-medium">{activeProposal.gusset_cm.toFixed(2)} cm</span>
                     </div>
                   )}
                   {activeProposal.thickness_value && (
-                    <div>
-                      <span className="text-muted-foreground">New Thickness: </span>
-                      <span className="font-medium">
+                    activeProposal.thickness_value !== activeProposal.original_thickness_value ||
+                    activeProposal.thickness_unit !== activeProposal.original_thickness_unit
+                  ) && (
+                    <div className="p-2 bg-white/50 dark:bg-white/5 rounded border">
+                      <span className="text-muted-foreground text-xs block">Thickness:</span>
+                      <span className="line-through text-red-600 text-xs">
+                        {activeProposal.original_thickness_value || '-'} {activeProposal.original_thickness_unit === 'gauge' ? 'ga' : 'μm'}
+                      </span>
+                      <span className="mx-1">→</span>
+                      <span className="text-green-600 font-medium">
                         {activeProposal.thickness_value} {activeProposal.thickness_unit === 'gauge' ? 'ga' : 'μm'}
                       </span>
                     </div>
@@ -376,18 +444,18 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
                 <History className="h-4 w-4 text-muted-foreground" />
                 <Label className="text-muted-foreground">Proposal History</Label>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {proposals.map((proposal) => (
                   <div
                     key={proposal.id}
                     className={cn(
-                      "p-3 rounded-lg border text-sm",
+                      "p-4 rounded-lg border text-sm",
                       proposal.customer_approved === true && "bg-green-50 border-green-200 dark:bg-green-950/20",
                       proposal.customer_approved === false && "bg-red-50 border-red-200 dark:bg-red-950/20",
                       proposal.customer_approved === null && proposal.is_active && "bg-blue-50 border-blue-200 dark:bg-blue-950/20"
                     )}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="font-medium">Version {proposal.version_number}</span>
                       <Badge variant="outline" className="text-xs">
                         {proposal.customer_approved === true && "Approved"}
@@ -395,9 +463,61 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
                         {proposal.customer_approved === null && "Pending"}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground mt-1">{proposal.reason}</p>
+                    <p className="text-muted-foreground mb-3">{proposal.reason}</p>
+                    
+                    {/* Changes comparison */}
+                    <div className="space-y-2 text-xs">
+                      {proposal.proposed_structure && proposal.proposed_structure !== proposal.original_structure && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-muted-foreground font-medium">Structure:</span>
+                          <span className="line-through text-red-600">{proposal.original_structure || 'N/A'}</span>
+                          <span>→</span>
+                          <span className="text-green-600 font-medium">{proposal.proposed_structure}</span>
+                        </div>
+                      )}
+                      {proposal.width_cm && proposal.width_cm !== proposal.original_width_cm && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-muted-foreground font-medium">Width:</span>
+                          <span className="line-through text-red-600">{proposal.original_width_cm?.toFixed(2) || '-'} cm</span>
+                          <span>→</span>
+                          <span className="text-green-600 font-medium">{proposal.width_cm.toFixed(2)} cm</span>
+                        </div>
+                      )}
+                      {proposal.length_cm && proposal.length_cm !== proposal.original_length_cm && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-muted-foreground font-medium">Length:</span>
+                          <span className="line-through text-red-600">{proposal.original_length_cm?.toFixed(2) || '-'} cm</span>
+                          <span>→</span>
+                          <span className="text-green-600 font-medium">{proposal.length_cm.toFixed(2)} cm</span>
+                        </div>
+                      )}
+                      {proposal.gusset_cm && proposal.gusset_cm !== proposal.original_gusset_cm && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-muted-foreground font-medium">Gusset:</span>
+                          <span className="line-through text-red-600">{proposal.original_gusset_cm?.toFixed(2) || '-'} cm</span>
+                          <span>→</span>
+                          <span className="text-green-600 font-medium">{proposal.gusset_cm.toFixed(2)} cm</span>
+                        </div>
+                      )}
+                      {proposal.thickness_value && (
+                        proposal.thickness_value !== proposal.original_thickness_value ||
+                        proposal.thickness_unit !== proposal.original_thickness_unit
+                      ) && (
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-muted-foreground font-medium">Thickness:</span>
+                          <span className="line-through text-red-600">
+                            {proposal.original_thickness_value || '-'} {proposal.original_thickness_unit === 'gauge' ? 'ga' : 'μm'}
+                          </span>
+                          <span>→</span>
+                          <span className="text-green-600 font-medium">
+                            {proposal.thickness_value} {proposal.thickness_unit === 'gauge' ? 'ga' : 'μm'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
                     {proposal.customer_feedback && (
-                      <p className="mt-2 text-sm italic">
+                      <p className="mt-3 text-sm italic border-t pt-2">
                         Customer: "{proposal.customer_feedback}"
                       </p>
                     )}
@@ -411,15 +531,31 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
 
       {/* Proposal Dialog */}
       <Dialog open={proposalDialogOpen} onOpenChange={setProposalDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Propose Measurement Changes</DialogTitle>
+            <DialogTitle>Propose Specification Changes</DialogTitle>
             <DialogDescription>
-              Enter the adjusted measurements that are feasible for manufacturing. 
-              Values should be in centimeters (will be shown to customer in inches).
+              Adjust measurements or structure for manufacturing feasibility.
+              Original values are shown as placeholders.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Structure field */}
+            <div className="space-y-2">
+              <Label htmlFor="proposed_structure">Structure / Material</Label>
+              <Input
+                id="proposed_structure"
+                value={proposedStructure}
+                onChange={(e) => setProposedStructure(e.target.value)}
+                placeholder={request.estructura || "e.g., LDPE 150 ga, PET 12 / CPP 30"}
+              />
+              <p className="text-xs text-muted-foreground">
+                Layer composition with thickness (e.g., LDPE 150 ga, PET 12 / CPP 30)
+              </p>
+            </div>
+
+            <Separator />
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="proposed_width">Width (cm)</Label>
@@ -478,7 +614,7 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
                   <select
                     value={proposedThicknessUnit}
                     onChange={(e) => setProposedThicknessUnit(e.target.value as "gauge" | "microns")}
-                    className="w-20 border rounded-md px-2"
+                    className="w-20 border rounded-md px-2 bg-background"
                   >
                     <option value="gauge">ga</option>
                     <option value="microns">μm</option>
@@ -492,7 +628,7 @@ export function EngineeringReviewCard({ request, proposals, onUpdate }: Engineer
                 id="proposal_reason"
                 value={proposalReason}
                 onChange={(e) => setProposalReason(e.target.value)}
-                placeholder="Explain why these measurements need to be adjusted for manufacturing..."
+                placeholder="Explain why these specifications need to be adjusted for manufacturing..."
                 rows={3}
               />
             </div>
