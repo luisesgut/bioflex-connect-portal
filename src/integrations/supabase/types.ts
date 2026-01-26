@@ -62,9 +62,19 @@ export type Database = {
           length_cm: number | null
           lip_back_cm: number | null
           lip_front_cm: number | null
+          original_gusset_cm: number | null
+          original_length_cm: number | null
+          original_structure: string | null
+          original_thickness_unit:
+            | Database["public"]["Enums"]["thickness_unit"]
+            | null
+          original_thickness_value: number | null
+          original_width_cm: number | null
+          original_zipper_cm: number | null
           product_request_id: string
           proposed_at: string
           proposed_by: string
+          proposed_structure: string | null
           reason: string
           thickness_unit: Database["public"]["Enums"]["thickness_unit"] | null
           thickness_value: number | null
@@ -83,9 +93,19 @@ export type Database = {
           length_cm?: number | null
           lip_back_cm?: number | null
           lip_front_cm?: number | null
+          original_gusset_cm?: number | null
+          original_length_cm?: number | null
+          original_structure?: string | null
+          original_thickness_unit?:
+            | Database["public"]["Enums"]["thickness_unit"]
+            | null
+          original_thickness_value?: number | null
+          original_width_cm?: number | null
+          original_zipper_cm?: number | null
           product_request_id: string
           proposed_at?: string
           proposed_by: string
+          proposed_structure?: string | null
           reason: string
           thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
           thickness_value?: number | null
@@ -104,9 +124,19 @@ export type Database = {
           length_cm?: number | null
           lip_back_cm?: number | null
           lip_front_cm?: number | null
+          original_gusset_cm?: number | null
+          original_length_cm?: number | null
+          original_structure?: string | null
+          original_thickness_unit?:
+            | Database["public"]["Enums"]["thickness_unit"]
+            | null
+          original_thickness_value?: number | null
+          original_width_cm?: number | null
+          original_zipper_cm?: number | null
           product_request_id?: string
           proposed_at?: string
           proposed_by?: string
+          proposed_structure?: string | null
           reason?: string
           thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
           thickness_value?: number | null
