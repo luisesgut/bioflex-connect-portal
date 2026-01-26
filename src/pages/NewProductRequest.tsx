@@ -16,6 +16,7 @@ import { ProductLineSelector, ProductLine, getProductLineLabel } from "@/compone
 import { TechSpecUploader } from "@/components/product-requests/TechSpecUploader";
 import { MeasurementInput, ThicknessInput } from "@/components/product-requests/MeasurementInput";
 import { ContactsManager, Contact } from "@/components/product-requests/ContactsManager";
+import { MaterialStructureInput } from "@/components/product-requests/MaterialStructureInput";
 
 interface FormData {
   // Basic info
@@ -585,18 +586,11 @@ export default function NewProductRequest() {
             </div>
 
             {/* Structure field for material layers */}
-            <div className="space-y-2">
-              <Label htmlFor="estructura">Material Structure</Label>
-              <Input
-                id="estructura"
-                value={formData.estructura}
-                onChange={(e) => updateField("estructura", e.target.value)}
-                placeholder="e.g., LDPE 150 ga, PET 12 / CPP 30"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter the film structure with layer thickness (e.g., LDPE 150 ga, PET 12 / CPP 30)
-              </p>
-            </div>
+            <MaterialStructureInput
+              value={formData.estructura}
+              onChange={(v) => updateField("estructura", v)}
+              label="Material Structure"
+            />
 
             <ThicknessInput
               id="thickness"
