@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EngineeringReviewCard } from "@/components/product-requests/EngineeringReviewCard";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,26 @@ type ProductRequestStatus =
   | 'completed';
 
 type PCVersionStatus = 'pending' | 'approved' | 'rejected' | 'superseded';
+
+type EngineeringStatus = 'pending' | 'approved' | 'changes_required' | 'customer_review';
+
+interface EngineeringProposal {
+  id: string;
+  version_number: number;
+  proposed_by: string;
+  proposed_at: string;
+  width_cm: number | null;
+  length_cm: number | null;
+  gusset_cm: number | null;
+  zipper_cm: number | null;
+  thickness_value: number | null;
+  thickness_unit: 'gauge' | 'microns';
+  reason: string;
+  customer_approved: boolean | null;
+  customer_response_at: string | null;
+  customer_feedback: string | null;
+  is_active: boolean;
+}
 
 interface ProductRequest {
   id: string;
@@ -79,7 +100,7 @@ interface ProductRequest {
   
   // Thickness
   thickness_value: number | null;
-  thickness_unit: string | null;
+  thickness_unit: 'gauge' | 'microns' | null;
   
   // Film specs
   film_type: string | null;
@@ -130,6 +151,10 @@ interface ProductRequest {
   sap_registered_at: string | null;
   created_at: string;
   updated_at: string;
+  
+  // Engineering fields
+  engineering_status: EngineeringStatus | null;
+  engineering_notes: string | null;
 }
 
 interface PCVersion {
@@ -184,6 +209,7 @@ export default function ProductRequestDetail() {
   
   const [request, setRequest] = useState<ProductRequest | null>(null);
   const [pcVersions, setPcVersions] = useState<PCVersion[]>([]);
+  const [engineeringProposals, setEngineeringProposals] = useState<EngineeringProposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   
@@ -205,6 +231,7 @@ export default function ProductRequestDetail() {
     if (id) {
       fetchRequest();
       fetchPCVersions();
+      fetchEngineeringProposals();
     }
   }, [id]);
 
@@ -240,6 +267,21 @@ export default function ProductRequestDetail() {
       setPcVersions(data || []);
     } catch (error) {
       console.error('Error fetching PC versions:', error);
+    }
+  };
+
+  const fetchEngineeringProposals = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('engineering_proposals')
+        .select('*')
+        .eq('product_request_id', id)
+        .order('version_number', { ascending: false });
+
+      if (error) throw error;
+      setEngineeringProposals(data || []);
+    } catch (error) {
+      console.error('Error fetching engineering proposals:', error);
     }
   };
 
@@ -699,7 +741,37 @@ export default function ProductRequestDetail() {
               </Card>
             )}
 
-            {/* PC Versions */}
+            {/* Engineering Review */}
+            {(request.status === 'artwork_uploaded' || 
+              request.status === 'pc_in_review' || 
+              request.status === 'pc_approved' ||
+              request.engineering_status !== 'pending') && (
+              <EngineeringReviewCard
+                request={{
+                  id: request.id,
+                  product_name: request.product_name,
+                  width_inches: request.width_inches,
+                  length_inches: request.length_inches,
+                  gusset_inches: request.gusset_inches,
+                  zipper_inches: request.zipper_inches,
+                  width_cm: request.width_cm,
+                  length_cm: request.length_cm,
+                  gusset_cm: request.gusset_cm,
+                  zipper_cm: request.zipper_cm,
+                  thickness_value: request.thickness_value,
+                  thickness_unit: request.thickness_unit || 'gauge',
+                  engineering_status: request.engineering_status || 'pending',
+                  engineering_notes: request.engineering_notes,
+                }}
+                proposals={engineeringProposals}
+                onUpdate={() => {
+                  fetchRequest();
+                  fetchEngineeringProposals();
+                }}
+              />
+            )}
+
+            {/* PC Versions - Only show if engineering approved */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -845,6 +917,7 @@ export default function ProductRequestDetail() {
                   {[
                     { status: 'specs_submitted', label: 'Specifications' },
                     { status: 'artwork_uploaded', label: 'Artwork' },
+                    { status: 'engineering_approved', label: 'Engineering Review', isEngineering: true },
                     { status: 'pc_in_review', label: 'PC Review' },
                     { status: 'pc_approved', label: 'PC Approved' },
                     ...(isAdmin ? [
@@ -858,6 +931,41 @@ export default function ProductRequestDetail() {
                       'pc_approved', 'bionet_pending', 'bionet_registered', 
                       'sap_pending', 'sap_registered', 'completed'
                     ];
+                    
+                    // Handle engineering step separately
+                    if ((step as { isEngineering?: boolean }).isEngineering) {
+                      const engStatus = request.engineering_status;
+                      const isComplete = engStatus === 'approved';
+                      const isCurrent = engStatus === 'pending' || engStatus === 'changes_required' || engStatus === 'customer_review';
+                      
+                      return (
+                        <div key={step.status} className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-sm",
+                            isComplete ? "bg-primary text-primary-foreground" :
+                            isCurrent ? "border-2 border-primary text-primary" :
+                            "border-2 border-muted text-muted-foreground"
+                          )}>
+                            {isComplete ? <Check className="h-4 w-4" /> : index + 1}
+                          </div>
+                          <span className={cn(
+                            "flex-1",
+                            isComplete ? "font-medium" : isCurrent ? "font-medium text-primary" : "text-muted-foreground"
+                          )}>
+                            {step.label}
+                            {isCurrent && engStatus === 'customer_review' && (
+                              <Badge variant="outline" className="ml-2 text-xs bg-blue-500/10 text-blue-600">
+                                Awaiting Response
+                              </Badge>
+                            )}
+                          </span>
+                          {index < arr.length - 1 && (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      );
+                    }
+                    
                     const currentIndex = statusOrder.indexOf(request.status);
                     const stepIndex = statusOrder.indexOf(step.status as ProductRequestStatus);
                     const isComplete = currentIndex >= stepIndex;
