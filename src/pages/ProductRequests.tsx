@@ -3,13 +3,14 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, FileText, Eye, Trash2, MoreHorizontal, Wrench, Palette, List } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -47,11 +48,15 @@ type ProductRequestStatus =
   | 'sap_registered'
   | 'completed';
 
+type ViewMode = 'all' | 'engineering' | 'design';
+
 interface ProductRequest {
   id: string;
   product_name: string;
   customer: string | null;
   status: ProductRequestStatus;
+  engineering_status: string | null;
+  design_status: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +118,7 @@ export default function ProductRequests() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<ProductRequest | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('all');
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
@@ -126,7 +132,7 @@ export default function ProductRequests() {
     try {
       const { data, error } = await supabase
         .from('product_requests')
-        .select('id, product_name, customer, status, created_at, updated_at')
+        .select('id, product_name, customer, status, engineering_status, design_status, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -137,6 +143,25 @@ export default function ProductRequests() {
       setLoading(false);
     }
   };
+
+  // Filter requests based on view mode
+  const filteredRequests = requests.filter(request => {
+    if (viewMode === 'all') return true;
+    if (viewMode === 'engineering') {
+      // Show requests that need engineering review (pending or changes_required)
+      return request.engineering_status === 'pending' || 
+             request.engineering_status === 'changes_required' ||
+             request.engineering_status === 'customer_review';
+    }
+    if (viewMode === 'design') {
+      // Show requests approved by engineering that are in design phase
+      return request.engineering_status === 'approved' && 
+             (request.design_status === 'pending' || 
+              request.design_status === 'in_progress' ||
+              request.status === 'pc_in_review');
+    }
+    return true;
+  });
 
   const handleDeleteClick = (request: ProductRequest) => {
     setRequestToDelete(request);
@@ -183,10 +208,33 @@ export default function ProductRequests() {
               {t('productRequests.subtitle')}
             </p>
           </div>
-          <Button onClick={() => navigate('/product-requests/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('action.newRequest')}
-          </Button>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <ToggleGroup 
+                type="single" 
+                value={viewMode} 
+                onValueChange={(value) => value && setViewMode(value as ViewMode)}
+                className="bg-muted p-1 rounded-lg"
+              >
+                <ToggleGroupItem value="all" aria-label="All requests" className="px-3 data-[state=on]:bg-background">
+                  <List className="h-4 w-4 mr-2" />
+                  {t('productRequests.viewAll')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="engineering" aria-label="Engineering view" className="px-3 data-[state=on]:bg-background">
+                  <Wrench className="h-4 w-4 mr-2" />
+                  {t('productRequests.viewEngineering')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="design" aria-label="Design view" className="px-3 data-[state=on]:bg-background">
+                  <Palette className="h-4 w-4 mr-2" />
+                  {t('productRequests.viewDesign')}
+                </ToggleGroupItem>
+              </ToggleGroup>
+            )}
+            <Button onClick={() => navigate('/product-requests/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('action.newRequest')}
+            </Button>
+          </div>
         </div>
 
         {/* Requests Table */}
@@ -202,17 +250,21 @@ export default function ProductRequests() {
               <div className="flex items-center justify-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
               </div>
-            ) : requests.length === 0 ? (
+            ) : filteredRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">{t('productRequests.noRequests')}</h3>
+                <h3 className="text-lg font-medium">
+                  {viewMode === 'all' ? t('productRequests.noRequests') : t('productRequests.noRequestsInView')}
+                </h3>
                 <p className="text-muted-foreground mb-4">
-                  {t('productRequests.startByCreating')}
+                  {viewMode === 'all' ? t('productRequests.startByCreating') : t('productRequests.noRequestsInViewDesc')}
                 </p>
-                <Button onClick={() => navigate('/product-requests/new')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('action.newRequest')}
-                </Button>
+                {viewMode === 'all' && (
+                  <Button onClick={() => navigate('/product-requests/new')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('action.newRequest')}
+                  </Button>
+                )}
               </div>
             ) : (
               <Table>
@@ -221,13 +273,15 @@ export default function ProductRequests() {
                     <TableHead>{t('table.productName')}</TableHead>
                     <TableHead>{t('table.customer')}</TableHead>
                     <TableHead>{t('table.status')}</TableHead>
+                    {viewMode === 'engineering' && <TableHead>{t('table.engineeringStatus')}</TableHead>}
+                    {viewMode === 'design' && <TableHead>{t('table.designStatus')}</TableHead>}
                     <TableHead>{t('table.created')}</TableHead>
                     <TableHead>{t('table.updated')}</TableHead>
                     <TableHead className="text-right">{t('table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.map((request) => (
+                  {filteredRequests.map((request) => (
                     <TableRow key={request.id}>
                       <TableCell className="font-medium">
                         {request.product_name}
@@ -238,6 +292,27 @@ export default function ProductRequests() {
                           {getCustomerVisibleStatus(request.status, isAdmin)}
                         </Badge>
                       </TableCell>
+                      {viewMode === 'engineering' && (
+                        <TableCell>
+                          <Badge variant={
+                            request.engineering_status === 'approved' ? 'default' :
+                            request.engineering_status === 'pending' ? 'secondary' :
+                            request.engineering_status === 'customer_review' ? 'outline' : 'destructive'
+                          }>
+                            {request.engineering_status || 'Pending'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {viewMode === 'design' && (
+                        <TableCell>
+                          <Badge variant={
+                            request.design_status === 'approved' ? 'default' :
+                            request.design_status === 'pending' ? 'secondary' : 'outline'
+                          }>
+                            {request.design_status || 'Pending'}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell>
                         {format(new Date(request.created_at), 'MMM d, yyyy')}
                       </TableCell>
@@ -251,7 +326,7 @@ export default function ProductRequests() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="bg-popover">
                             <DropdownMenuItem onClick={() => navigate(`/product-requests/${request.id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               {t('action.view')}
