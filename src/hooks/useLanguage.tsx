@@ -135,6 +135,17 @@ const translations: Record<Language, Record<string, string>> = {
     'user.admin': 'Admin',
     'user.customer': 'Customer',
     'user.viewingAsCustomer': 'Viewing as Customer',
+    
+    // Product Lines
+    'productLine.sello_lateral': 'Side Seal Bag',
+    'productLine.sello_lateral.desc': 'Side seal bags with optional zipper',
+    'productLine.bag_wicket': 'Wicket Bag',
+    'productLine.bag_wicket.desc': 'Bags with wicket for automated packaging lines',
+    'productLine.film': 'Film / Rollstock',
+    'productLine.film.desc': 'Printed film rolls for form-fill-seal machines',
+    'productLine.pouch': 'Stand Up Pouch',
+    'productLine.pouch.desc': 'Laminated pouches with bottom gusset (Doypack)',
+    'productLine.selected': 'Selected',
   },
   es: {
     // Navigation
@@ -262,6 +273,17 @@ const translations: Record<Language, Record<string, string>> = {
     'user.admin': 'Administrador',
     'user.customer': 'Cliente',
     'user.viewingAsCustomer': 'Viendo como Cliente',
+    
+    // Product Lines
+    'productLine.sello_lateral': 'Sello Lateral',
+    'productLine.sello_lateral.desc': 'Bolsas de sello lateral con zipper opcional',
+    'productLine.bag_wicket': 'Bolsa Wicket',
+    'productLine.bag_wicket.desc': 'Bolsas con wicket para líneas de empaque automatizado',
+    'productLine.film': 'Bobina / Rollstock',
+    'productLine.film.desc': 'Rollos de película impresos para máquinas form-fill-seal',
+    'productLine.pouch': 'Stand Up Pouch',
+    'productLine.pouch.desc': 'Pouches laminados con fuelle de fondo (Doypack)',
+    'productLine.selected': 'Seleccionado',
   },
 };
 

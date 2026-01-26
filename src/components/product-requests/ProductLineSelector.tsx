@@ -1,51 +1,47 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Package, Layers, Archive, Film, ShoppingBag } from "lucide-react";
+import { Package, Layers, Film, ShoppingBag } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
+// Database still uses bag_no_wicket_zipper and bag_zipper, but UI shows 4 categories
+// Sello Lateral handles both with/without zipper via questionnaire
 export type ProductLine = 
-  | "bag_no_wicket_zipper"
+  | "sello_lateral"
   | "bag_wicket"
-  | "bag_zipper"
   | "film"
   | "pouch";
 
 interface ProductLineOption {
   value: ProductLine;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: React.ElementType;
 }
 
-const productLines: ProductLineOption[] = [
+const productLineOptions: ProductLineOption[] = [
   {
-    value: "bag_no_wicket_zipper",
-    label: "Sello Lateral (Sin Wicket/Zipper)",
-    description: "Bolsas de sello lateral sin wicket ni zipper",
+    value: "sello_lateral",
+    labelKey: "productLine.sello_lateral",
+    descriptionKey: "productLine.sello_lateral.desc",
     icon: Package,
   },
   {
     value: "bag_wicket",
-    label: "Bolsa Wicket",
-    description: "Bolsas con wicket para líneas de empaque automatizado",
+    labelKey: "productLine.bag_wicket",
+    descriptionKey: "productLine.bag_wicket.desc",
     icon: Layers,
   },
   {
-    value: "bag_zipper",
-    label: "Sello Lateral con Zipper",
-    description: "Bolsas de sello lateral con cierre resellable",
-    icon: Archive,
-  },
-  {
     value: "film",
-    label: "Bobina / Rollstock",
-    description: "Rollos de película impresos para máquinas form-fill-seal",
+    labelKey: "productLine.film",
+    descriptionKey: "productLine.film.desc",
     icon: Film,
   },
   {
     value: "pouch",
-    label: "Stand Up Pouch",
-    description: "Pouches laminados con fuelle de fondo (Doypack)",
+    labelKey: "productLine.pouch",
+    descriptionKey: "productLine.pouch.desc",
     icon: ShoppingBag,
   },
 ];
@@ -56,9 +52,11 @@ interface ProductLineSelectorProps {
 }
 
 export function ProductLineSelector({ value, onChange }: ProductLineSelectorProps) {
+  const { t } = useLanguage();
+  
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {productLines.map((line) => {
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+      {productLineOptions.map((line) => {
         const Icon = line.icon;
         const isSelected = value === line.value;
         
@@ -79,13 +77,13 @@ export function ProductLineSelector({ value, onChange }: ProductLineSelectorProp
                 )}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <CardTitle className="text-base">{line.label}</CardTitle>
+                <CardTitle className="text-base">{t(line.labelKey)}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <CardDescription>{line.description}</CardDescription>
+              <CardDescription>{t(line.descriptionKey)}</CardDescription>
               {isSelected && (
-                <Badge className="mt-2" variant="secondary">Selected</Badge>
+                <Badge className="mt-2" variant="secondary">{t('productLine.selected')}</Badge>
               )}
             </CardContent>
           </Card>
@@ -95,6 +93,17 @@ export function ProductLineSelector({ value, onChange }: ProductLineSelectorProp
   );
 }
 
-export function getProductLineLabel(value: ProductLine): string {
-  return productLines.find(l => l.value === value)?.label || value;
+export function getProductLineLabel(value: ProductLine, t?: (key: string) => string): string {
+  if (t) {
+    const option = productLineOptions.find(l => l.value === value);
+    return option ? t(option.labelKey) : value;
+  }
+  // Fallback labels when t is not available
+  const fallbackLabels: Record<ProductLine, string> = {
+    sello_lateral: "Side Seal Bag",
+    bag_wicket: "Wicket Bag",
+    film: "Film / Rollstock",
+    pouch: "Stand Up Pouch",
+  };
+  return fallbackLabels[value] || value;
 }
