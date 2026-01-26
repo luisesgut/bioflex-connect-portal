@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { MainLayout, useViewMode } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Trash2, MoreHorizontal, Wrench, Palette, List } from "lucide-react";
+import { Plus, FileText, Eye, Trash2, MoreHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -47,8 +46,6 @@ type ProductRequestStatus =
   | 'sap_pending'
   | 'sap_registered'
   | 'completed';
-
-type ViewMode = 'all' | 'engineering' | 'design';
 
 interface ProductRequest {
   id: string;
@@ -118,7 +115,7 @@ export default function ProductRequests() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<ProductRequest | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const { viewMode } = useViewMode();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
@@ -208,33 +205,10 @@ export default function ProductRequests() {
               {t('productRequests.subtitle')}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <ToggleGroup 
-                type="single" 
-                value={viewMode} 
-                onValueChange={(value) => value && setViewMode(value as ViewMode)}
-                className="bg-muted p-1 rounded-lg"
-              >
-                <ToggleGroupItem value="all" aria-label="All requests" className="px-3 data-[state=on]:bg-background">
-                  <List className="h-4 w-4 mr-2" />
-                  {t('productRequests.viewAll')}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="engineering" aria-label="Engineering view" className="px-3 data-[state=on]:bg-background">
-                  <Wrench className="h-4 w-4 mr-2" />
-                  {t('productRequests.viewEngineering')}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="design" aria-label="Design view" className="px-3 data-[state=on]:bg-background">
-                  <Palette className="h-4 w-4 mr-2" />
-                  {t('productRequests.viewDesign')}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            )}
-            <Button onClick={() => navigate('/product-requests/new')}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('action.newRequest')}
-            </Button>
-          </div>
+          <Button onClick={() => navigate('/product-requests/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('action.newRequest')}
+          </Button>
         </div>
 
         {/* Requests Table */}
