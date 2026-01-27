@@ -3,7 +3,9 @@ import { MainLayout, useViewMode } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, FileText, Eye, Trash2, MoreHorizontal, LayoutList, Kanban } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ProductRequestsKanban } from "@/components/product-requests/ProductRequestsKanban";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -115,6 +117,7 @@ export default function ProductRequests() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<ProductRequest | null>(null);
+  const [displayMode, setDisplayMode] = useState<'list' | 'kanban'>('list');
   const { viewMode } = useViewMode();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
@@ -205,13 +208,30 @@ export default function ProductRequests() {
               {t('productRequests.subtitle')}
             </p>
           </div>
-          <Button onClick={() => navigate('/product-requests/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('action.newRequest')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <ToggleGroup 
+              type="single" 
+              value={displayMode} 
+              onValueChange={(v) => v && setDisplayMode(v as 'list' | 'kanban')}
+            >
+              <ToggleGroupItem value="list" aria-label="List view" size="sm">
+                <LayoutList className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Kanban view" size="sm">
+                <Kanban className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <Button onClick={() => navigate('/product-requests/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('action.newRequest')}
+            </Button>
+          </div>
         </div>
 
-        {/* Requests Table */}
+        {/* Kanban or List View */}
+        {displayMode === 'kanban' ? (
+          <ProductRequestsKanban requests={filteredRequests} isAdmin={isAdmin} />
+        ) : (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -324,6 +344,7 @@ export default function ProductRequests() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
