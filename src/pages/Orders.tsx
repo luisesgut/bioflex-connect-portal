@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays } from "lucide-react";
+import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { FilterableColumnHeader } from "@/components/orders/FilterableColumnHeader";
 import { differenceInHours } from "date-fns";
 import { ProductionTimeline } from "@/components/orders/ProductionTimeline";
+import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LoadDetail {
@@ -118,7 +119,7 @@ export default function Orders() {
   const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
   // View mode toggle
-  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
+  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board">("list");
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -621,7 +622,7 @@ export default function Orders() {
           </div>
           
           {/* View Mode Toggle */}
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline")} className="w-auto">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board")} className="w-auto">
             <TabsList>
               <TabsTrigger value="list" className="gap-2">
                 <List className="h-4 w-4" />
@@ -630,6 +631,10 @@ export default function Orders() {
               <TabsTrigger value="timeline" className="gap-2">
                 <CalendarDays className="h-4 w-4" />
                 Timeline
+              </TabsTrigger>
+              <TabsTrigger value="board" className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                Board
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -658,6 +663,11 @@ export default function Orders() {
               status: o.status,
             }))}
           />
+        )}
+
+        {/* Board View */}
+        {!loading && viewMode === "board" && (
+          <OrdersKanban orders={filteredAndSortedOrders} isAdmin={isAdmin} />
         )}
 
         {/* Active Orders Table */}
@@ -820,7 +830,7 @@ export default function Orders() {
         )}
 
         {/* Closed Orders Table */}
-        {!loading && closedOrders.length > 0 && (
+        {!loading && viewMode === "list" && closedOrders.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <PackageCheck className="h-5 w-5 text-success" />
