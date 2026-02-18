@@ -132,8 +132,12 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();
-    const path = `${folder}/${product?.id}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("print-cards").upload(path, file);
+    const safeName = `${Date.now()}.${ext}`;
+    const path = `${folder}/${product?.id}/${safeName}`;
+    const { error } = await supabase.storage.from("print-cards").upload(path, file, {
+      cacheControl: "3600",
+      upsert: true,
+    });
     if (error) {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
       return null;
