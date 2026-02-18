@@ -1,13 +1,6 @@
-import { useState, useRef } from "react";
-import { Download, Upload, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,10 +9,7 @@ interface BulkOrdersManagerProps {
 }
 
 export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
-  const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -104,121 +94,6 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const text = await file.text();
-      const lines = text.split("\n").filter((line) => line.trim());
-      
-      if (lines.length < 2) {
-        throw new Error("CSV file must have a header row and at least one data row");
-      }
-
-      // Parse header
-      const headers = parseCSVLine(lines[0]);
-      const poNumberIndex = headers.findIndex((h) => h.toLowerCase() === "po number");
-      const statusIndex = headers.findIndex((h) => h.toLowerCase() === "status");
-      const hotOrderIndex = headers.findIndex((h) => h.toLowerCase() === "is hot order");
-      const pricePerThousandIndex = headers.findIndex((h) => h.toLowerCase() === "price per thousand");
-      const estDeliveryIndex = headers.findIndex((h) => h.toLowerCase() === "estimated delivery date");
-      const salesOrderIndex = headers.findIndex((h) => h.toLowerCase() === "sales order number");
-      const notesIndex = headers.findIndex((h) => h.toLowerCase() === "notes");
-
-      if (poNumberIndex === -1) {
-        throw new Error("CSV must contain a 'PO Number' column");
-      }
-
-      // Parse data rows and update
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i]);
-        const poNumber = values[poNumberIndex]?.trim();
-        
-        if (!poNumber) continue;
-
-        const updateData: Record<string, any> = {};
-        
-        if (statusIndex !== -1 && values[statusIndex]?.trim()) {
-          updateData.status = values[statusIndex].trim().toLowerCase();
-        }
-        if (hotOrderIndex !== -1 && values[hotOrderIndex]?.trim()) {
-          updateData.is_hot_order = values[hotOrderIndex].trim().toLowerCase() === "yes";
-        }
-        if (pricePerThousandIndex !== -1 && values[pricePerThousandIndex]?.trim()) {
-          const priceValue = parseFloat(values[pricePerThousandIndex].trim());
-          if (!isNaN(priceValue)) {
-            updateData.price_per_thousand = priceValue;
-          }
-        }
-        if (estDeliveryIndex !== -1 && values[estDeliveryIndex]?.trim()) {
-          updateData.estimated_delivery_date = values[estDeliveryIndex].trim();
-        }
-        if (salesOrderIndex !== -1 && values[salesOrderIndex]?.trim()) {
-          updateData.sales_order_number = values[salesOrderIndex].trim();
-        }
-        if (notesIndex !== -1) {
-          updateData.notes = values[notesIndex]?.trim() || null;
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          const { error } = await supabase
-            .from("purchase_orders")
-            .update(updateData)
-            .eq("po_number", poNumber);
-
-          if (error) {
-            console.error(`Error updating order ${poNumber}:`, error);
-            errorCount++;
-          } else {
-            successCount++;
-          }
-        }
-      }
-
-      toast.success(`Updated ${successCount} orders${errorCount > 0 ? `, ${errorCount} failed` : ""}`);
-      onUpdated();
-      setUploadDialogOpen(false);
-    } catch (error: any) {
-      console.error("Error uploading orders:", error);
-      toast.error(error.message || "Failed to upload orders");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  // Helper to parse CSV line handling quoted values
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === "," && !inQuotes) {
-        result.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    result.push(current);
-    return result;
-  };
 
   return (
     <div className="flex items-center gap-2">
@@ -237,63 +112,6 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
         Export CSV
       </Button>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        onClick={() => setUploadDialogOpen(true)}
-      >
-        <Upload className="h-4 w-4" />
-        Import CSV
-      </Button>
-
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Update Orders</DialogTitle>
-            <DialogDescription>
-              Upload a CSV file to update multiple orders at once. The file must include a "PO Number" column.
-              Editable columns: Status, Is Hot Order, Price Per Thousand, Estimated Delivery Date, Sales Order Number, Notes.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="csv-upload"
-              />
-              <label
-                htmlFor="csv-upload"
-                className="cursor-pointer flex flex-col items-center gap-2"
-              >
-                {uploading ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : (
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {uploading ? "Uploading..." : "Click to select CSV file"}
-                </span>
-              </label>
-            </div>
-
-            <div className="text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Tips:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Download existing orders first to get the correct format</li>
-                <li>Only modify the columns you want to update</li>
-                <li>Status values: pending, submitted, accepted, in-production, shipped, delivered</li>
-                <li>Is Hot Order values: Yes or No</li>
-              </ul>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
