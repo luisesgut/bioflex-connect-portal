@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -69,8 +69,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   });
 
   // Initialize form when product changes
-  useState(() => {
-    if (product) {
+  useEffect(() => {
+    if (product && open) {
       setForm({
         customer_item: product.customer_item,
         item_description: product.item_description,
@@ -86,7 +86,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         activa: product.activa,
       });
     }
-  });
+  }, [product, open]);
 
   // Reset form when product changes
   const resetForm = () => {
