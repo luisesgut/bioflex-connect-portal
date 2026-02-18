@@ -82,41 +82,64 @@ export function BulkProductsManager({ products, onImported }: BulkProductsManage
       const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
 
       let updated = 0;
+      let created = 0;
       let errors = 0;
 
       for (const row of rows) {
         const id = row["ID (do not modify)"];
         const itemCode = row["Item Code"];
-        if (!id && !itemCode) { errors++; continue; }
+        if (!itemCode) { errors++; continue; }
 
-        const updateData: Record<string, unknown> = {};
+        const rowData: Record<string, unknown> = {};
         for (const col of EXPORT_COLUMNS) {
           if (col.key === "id") continue;
           const val = row[col.label];
           if (val === undefined) continue;
 
           if (col.key === "pieces_per_pallet") {
-            updateData[col.key] = val ? Number(val) : null;
+            rowData[col.key] = val ? Number(val) : null;
           } else if (col.key === "activa") {
-            updateData[col.key] = val?.toUpperCase() === "TRUE";
+            rowData[col.key] = val?.toUpperCase() === "TRUE";
           } else {
-            updateData[col.key] = val || null;
+            rowData[col.key] = val || null;
           }
         }
 
-        let query = supabase.from("products").update(updateData);
         if (id) {
-          query = query.eq("id", id);
+          // Update by ID
+          const { error } = await supabase.from("products").update(rowData).eq("id", id);
+          if (error) { errors++; } else { updated++; }
         } else {
-          query = query.eq("customer_item", itemCode);
+          // Check if product exists by customer_item
+          const { data: existing } = await supabase
+            .from("products")
+            .select("id")
+            .eq("customer_item", itemCode)
+            .maybeSingle();
+
+          if (existing) {
+            const { error } = await supabase.from("products").update(rowData).eq("id", existing.id);
+            if (error) { errors++; } else { updated++; }
+          } else {
+            // Insert new product
+            const { error } = await supabase.from("products").insert({
+              name: rowData.item_description as string || itemCode,
+              sku: itemCode,
+              ...rowData,
+            });
+            if (error) { errors++; } else { created++; }
+          }
         }
-        const { error } = await query;
-        if (error) { errors++; } else { updated++; }
       }
+
+      const parts: string[] = [];
+      if (updated > 0) parts.push(`${updated} updated`);
+      if (created > 0) parts.push(`${created} created`);
+      if (errors > 0) parts.push(`${errors} errors`);
 
       toast({
         title: "Import complete",
-        description: `${updated} products updated${errors > 0 ? `, ${errors} errors` : ""}.`,
+        description: parts.join(", ") + ".",
         variant: errors > 0 ? "destructive" : "default",
       });
       onImported();
