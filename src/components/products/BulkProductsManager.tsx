@@ -105,30 +105,29 @@ export function BulkProductsManager({ products, onImported }: BulkProductsManage
           }
         }
 
+        // Try to find existing product by ID or customer_item
+        let existingId: string | null = null;
+
         if (id) {
-          // Update by ID
-          const { error } = await supabase.from("products").update(rowData).eq("id", id);
+          const { data } = await supabase.from("products").select("id").eq("id", id).maybeSingle();
+          if (data) existingId = data.id;
+        }
+
+        if (!existingId && itemCode) {
+          const { data } = await supabase.from("products").select("id").eq("customer_item", itemCode).maybeSingle();
+          if (data) existingId = data.id;
+        }
+
+        if (existingId) {
+          const { error } = await supabase.from("products").update(rowData).eq("id", existingId);
           if (error) { errors++; } else { updated++; }
         } else {
-          // Check if product exists by customer_item
-          const { data: existing } = await supabase
-            .from("products")
-            .select("id")
-            .eq("customer_item", itemCode)
-            .maybeSingle();
-
-          if (existing) {
-            const { error } = await supabase.from("products").update(rowData).eq("id", existing.id);
-            if (error) { errors++; } else { updated++; }
-          } else {
-            // Insert new product
-            const { error } = await supabase.from("products").insert({
-              name: rowData.item_description as string || itemCode,
-              sku: itemCode,
-              ...rowData,
-            });
-            if (error) { errors++; } else { created++; }
-          }
+          const { error } = await supabase.from("products").insert({
+            name: rowData.item_description as string || itemCode,
+            sku: itemCode,
+            ...rowData,
+          });
+          if (error) { errors++; } else { created++; }
         }
       }
 
