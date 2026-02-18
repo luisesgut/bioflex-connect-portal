@@ -457,19 +457,20 @@ export default function OrderDetail() {
               />
             )}
           </div>
+          {/* Activity Timeline - Inline */}
+          <div className="lg:col-span-3">
+            <POActivityTimeline
+              order={{
+                id: order.id,
+                po_number: order.po_number,
+                sales_order_number: order.sales_order_number,
+                created_at: order.created_at,
+                status: order.status,
+                is_hot_order: order.is_hot_order,
+              }}
+            />
+          </div>
         </div>
-
-        {/* Activity Timeline - Inline */}
-        <POActivityTimeline
-          order={{
-            id: order.id,
-            po_number: order.po_number,
-            sales_order_number: order.sales_order_number,
-            created_at: order.created_at,
-            status: order.status,
-            is_hot_order: order.is_hot_order,
-          }}
-        />
       </div>
     </MainLayout>
   );
