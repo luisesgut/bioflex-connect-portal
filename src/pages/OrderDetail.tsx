@@ -62,6 +62,8 @@ interface OrderDetails {
     dp_sales_csr_names: string | null;
     codigo_producto: string | null;
     pieces_per_pallet: number | null;
+    print_card_url: string | null;
+    customer_tech_spec_url: string | null;
   } | null;
 }
 
@@ -140,7 +142,9 @@ export default function OrderDetail() {
           item_description,
           dp_sales_csr_names,
           codigo_producto,
-          pieces_per_pallet
+          pieces_per_pallet,
+          print_card_url,
+          customer_tech_spec_url
         )
       `)
       .eq("id", id)
@@ -327,6 +331,34 @@ export default function OrderDetail() {
                       <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
                     </div>
                   )}
+                  {/* Tech Spec Links */}
+                  {(order.product?.print_card_url || order.product?.customer_tech_spec_url) && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm text-muted-foreground">Technical Specifications</label>
+                      <div className="flex items-center gap-4 mt-1">
+                        {order.product?.print_card_url && (
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            BFX Tech Spec
+                          </Button>
+                        )}
+                        {order.product?.customer_tech_spec_url && (
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Customer Tech Spec
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -359,7 +391,10 @@ export default function OrderDetail() {
                     <label className="text-sm text-muted-foreground">Pallets Needed</label>
                     <p className="font-medium">
                       {order.product?.pieces_per_pallet && order.quantity
-                        ? Math.ceil(order.quantity / order.product.pieces_per_pallet).toLocaleString()
+                        ? (() => {
+                            const result = order.quantity / order.product.pieces_per_pallet;
+                            return Number.isInteger(result) ? result.toLocaleString() : parseFloat(result.toFixed(2)).toLocaleString();
+                          })()
                         : "—"}
                     </p>
                   </div>

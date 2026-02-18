@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN customer_tech_spec_url text;

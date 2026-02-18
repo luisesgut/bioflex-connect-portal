@@ -882,6 +882,7 @@ export type Database = {
           created_at: string
           customer: string | null
           customer_item: string | null
+          customer_tech_spec_url: string | null
           descripcion_caja: string | null
           descripcion_cliente: string | null
           dp_sales_csr_names: string | null
@@ -929,6 +930,7 @@ export type Database = {
           created_at?: string
           customer?: string | null
           customer_item?: string | null
+          customer_tech_spec_url?: string | null
           descripcion_caja?: string | null
           descripcion_cliente?: string | null
           dp_sales_csr_names?: string | null
@@ -976,6 +978,7 @@ export type Database = {
           created_at?: string
           customer?: string | null
           customer_item?: string | null
+          customer_tech_spec_url?: string | null
           descripcion_caja?: string | null
           descripcion_cliente?: string | null
           dp_sales_csr_names?: string | null
