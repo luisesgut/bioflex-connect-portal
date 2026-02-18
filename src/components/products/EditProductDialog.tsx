@@ -13,6 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, X, ChevronDown } from "lucide-react";
 
@@ -64,6 +65,23 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
       return data;
     },
   });
+
+  const { data: dropdownOptions } = useQuery({
+    queryKey: ["dropdown-options-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("dropdown_options")
+        .select("id, category, label")
+        .eq("is_active", true)
+        .order("sort_order")
+        .order("label");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getOptions = (category: string) =>
+    (dropdownOptions || []).filter((o) => o.category === category);
 
   // Initialize form when product changes
   useEffect(() => {
@@ -186,7 +204,16 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
             <div className="space-y-2">
               <Label>Final Customer</Label>
-              <Input value={form.customer || ""} onChange={(e) => setForm({ ...form, customer: e.target.value })} />
+              <Select value={form.customer || ""} onValueChange={(v) => setForm({ ...form, customer: v || null })}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Select customer..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {getOptions("final_customer").map((o) => (
+                    <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -198,11 +225,29 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Item Type</Label>
-              <Input value={form.item_type || ""} onChange={(e) => setForm({ ...form, item_type: e.target.value })} />
+              <Select value={form.item_type || ""} onValueChange={(v) => setForm({ ...form, item_type: v || null })}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {getOptions("item_type").map((o) => (
+                    <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Tipo Empaque</Label>
-              <Input value={form.tipo_empaque || ""} onChange={(e) => setForm({ ...form, tipo_empaque: e.target.value })} />
+              <Select value={form.tipo_empaque || ""} onValueChange={(v) => setForm({ ...form, tipo_empaque: v || null })}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Select tipo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {getOptions("tipo_empaque").map((o) => (
+                    <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

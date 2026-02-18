@@ -9,6 +9,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
 import { TeamManagement } from "@/components/settings/TeamManagement";
 import { DPContactsManagement } from "@/components/settings/DPContactsManagement";
+import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -69,6 +70,13 @@ export default function Settings() {
         {isActualAdmin && (
           <div style={{ animationDelay: "0.12s" }}>
             <DPContactsManagement />
+          </div>
+        )}
+
+        {/* Dropdown Options Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.14s" }}>
+            <DropdownOptionsManagement />
           </div>
         )}
 
