@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
 import { TeamManagement } from "@/components/settings/TeamManagement";
+import { DPContactsManagement } from "@/components/settings/DPContactsManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -61,6 +62,13 @@ export default function Settings() {
         {isActualAdmin && (
           <div style={{ animationDelay: "0.1s" }}>
             <TeamManagement />
+          </div>
+        )}
+
+        {/* DP Contacts Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.12s" }}>
+            <DPContactsManagement />
           </div>
         )}
 
