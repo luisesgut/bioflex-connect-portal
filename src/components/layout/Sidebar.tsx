@@ -35,14 +35,12 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
-  { name: "New Product Requests", href: "/product-requests", icon: FilePlus },
   { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
   { name: "Change Requests", href: "/change-requests", icon: FileEdit },
 ];
 
 const adminNavigation = [
-  { name: "Product Codes", href: "/admin/products", icon: ShieldAlert },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
   { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
   { name: "Shipped Pallets", href: "/shipped-pallets", icon: PackageCheck },
