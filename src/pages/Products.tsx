@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Package, Loader2, FileText, ChevronDown, X, ExternalLink } from "lucide-react";
+import { Search, Plus, Package, Loader2, FileText, ChevronDown, X, ExternalLink, Pencil } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditProductDialog } from "@/components/products/EditProductDialog";
+import { BulkProductsManager } from "@/components/products/BulkProductsManager";
 
 interface Product {
   id: string;
@@ -120,6 +122,8 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabValue>("active");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -295,6 +299,7 @@ export default function Products() {
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Customer Spec</th>
               {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">BFX Spec</th>}
               <ColumnFilterHeader label="DP Sales/CSR" filterKey="dp_sales_csr_names" options={getUniqueValues("dp_sales_csr_names")} />
+              {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Edit</th>}
               <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
@@ -351,6 +356,13 @@ export default function Products() {
                   </td>
                 )}
                 <td className="px-4 py-3 text-muted-foreground">{product.dp_sales_csr_names || "-"}</td>
+                {isAdmin && (
+                  <td className="px-4 py-3 text-center">
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(product); setEditDialogOpen(true); }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </td>
+                )}
                 <td className="px-4 py-3 text-right">
                   <Button variant="accent" size="sm" className="gap-1" onClick={() => navigate(`/orders/new?productId=${product.id}`)}>
                     Order
@@ -501,6 +513,9 @@ export default function Products() {
               Clear all filters
             </Button>
           )}
+          {isAdmin && activeTab !== "in_process" && (
+            <BulkProductsManager products={filteredProducts} onImported={fetchData} />
+          )}
         </div>
 
         {/* Content */}
@@ -536,6 +551,15 @@ export default function Products() {
           Showing {currentCount} of {totalCount} {activeTab === "in_process" ? "requests" : "products"}
         </p>
       </div>
+
+      {isAdmin && (
+        <EditProductDialog
+          product={editingProduct}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSaved={fetchData}
+        />
+      )}
     </MainLayout>
   );
 }
