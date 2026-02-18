@@ -28,6 +28,7 @@ interface Product {
   print_card: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
+  bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
 }
@@ -78,6 +79,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         print_card: product.print_card,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
+        bfx_spec_url: (product as any).bfx_spec_url || null,
         dp_sales_csr_names: product.dp_sales_csr_names,
         activa: product.activa,
       });
@@ -98,6 +100,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         print_card: product.print_card,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
+        bfx_spec_url: (product as any).bfx_spec_url || null,
         dp_sales_csr_names: product.dp_sales_csr_names,
         activa: product.activa,
       });
@@ -151,6 +154,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         print_card: form.print_card || null,
         print_card_url: form.print_card_url || null,
         customer_tech_spec_url: form.customer_tech_spec_url || null,
+        bfx_spec_url: form.bfx_spec_url || null,
         dp_sales_csr_names: form.dp_sales_csr_names || null,
         activa: form.activa,
       })
@@ -261,6 +265,31 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               }} />
               {form.customer_tech_spec_url && (
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setForm({ ...form, customer_tech_spec_url: null })}>
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* BFX Spec Sheet */}
+          <div className="space-y-2">
+            <Label>BFX Spec Sheet (PDF)</Label>
+            <div className="flex items-center gap-2">
+              {form.bfx_spec_url && (
+                <a href={form.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                  <FileText className="h-4 w-4" /> View current
+                </a>
+              )}
+              <Button type="button" variant="outline" size="sm" onClick={() => bfxSpecRef.current?.click()} disabled={uploadingBFXSpec}>
+                <Upload className="h-4 w-4 mr-1" />
+                {uploadingBFXSpec ? "Uploading..." : "Upload PDF"}
+              </Button>
+              <input ref={bfxSpecRef} type="file" accept=".pdf" className="hidden" onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFileUpload(f, "bfx-specs", "bfx_spec_url" as keyof Product, setUploadingBFXSpec);
+              }} />
+              {form.bfx_spec_url && (
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setForm({ ...form, bfx_spec_url: null })}>
                   <X className="h-3 w-3" />
                 </Button>
               )}

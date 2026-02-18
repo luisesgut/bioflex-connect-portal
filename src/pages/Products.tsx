@@ -38,6 +38,7 @@ interface Product {
   print_card: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
+  bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
 }
@@ -134,7 +135,7 @@ export default function Products() {
     const [productsRes, requestsRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, print_card, print_card_url, customer_tech_spec_url, dp_sales_csr_names, activa")
+        .select("id, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
         .order("customer_item"),
       supabase
         .from("product_requests")
