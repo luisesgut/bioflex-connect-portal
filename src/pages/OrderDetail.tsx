@@ -57,13 +57,17 @@ interface OrderDetails {
     sku: string;
     customer: string | null;
     item_type: string | null;
+    tipo_empaque: string | null;
     customer_item: string | null;
     item_description: string | null;
     dp_sales_csr_names: string | null;
     codigo_producto: string | null;
+    pt_code: string | null;
     pieces_per_pallet: number | null;
+    print_card: string | null;
     print_card_url: string | null;
     customer_tech_spec_url: string | null;
+    bfx_spec_url: string | null;
   } | null;
 }
 
@@ -138,13 +142,17 @@ export default function OrderDetail() {
           sku,
           customer,
           item_type,
+          tipo_empaque,
           customer_item,
           item_description,
           dp_sales_csr_names,
           codigo_producto,
+          pt_code,
           pieces_per_pallet,
+          print_card,
           print_card_url,
-          customer_tech_spec_url
+          customer_tech_spec_url,
+          bfx_spec_url
         )
       `)
       .eq("id", id)
@@ -302,11 +310,7 @@ export default function OrderDetail() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-muted-foreground">Product Name</label>
-                    <p className="font-medium">{order.product?.name || "—"}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Customer Item</label>
+                    <label className="text-sm text-muted-foreground">Item Code</label>
                     <p className="font-medium">{order.product?.customer_item || "—"}</p>
                   </div>
                   <div>
@@ -314,7 +318,7 @@ export default function OrderDetail() {
                     <p className="font-medium">{order.product?.item_description || "—"}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Customer</label>
+                    <label className="text-sm text-muted-foreground">Final Customer</label>
                     <p className="font-medium">{order.product?.customer || "—"}</p>
                   </div>
                   <div>
@@ -322,28 +326,48 @@ export default function OrderDetail() {
                     <p className="font-medium">{order.product?.item_type || "—"}</p>
                   </div>
                   <div>
+                    <label className="text-sm text-muted-foreground">Tipo Empaque</label>
+                    <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
+                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">PT Number</label>
+                      <p className="font-medium">{order.product?.pt_code || "—"}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm text-muted-foreground">Pieces per Pallet</label>
+                    <p className="font-medium">{order.product?.pieces_per_pallet?.toLocaleString() || "—"}</p>
+                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">PC Number</label>
+                      <p className="font-medium">{order.product?.print_card || "—"}</p>
+                    </div>
+                  )}
+                  <div>
                     <label className="text-sm text-muted-foreground">DP Sales/CSR</label>
                     <p className="font-medium">{order.product?.dp_sales_csr_names || "—"}</p>
                   </div>
                   {isAdmin && (
                     <div>
-                      <label className="text-sm text-muted-foreground">PT Code</label>
+                      <label className="text-sm text-muted-foreground">PT Code (SAP)</label>
                       <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
                     </div>
                   )}
                   {/* Tech Spec Links */}
-                  {(order.product?.print_card_url || order.product?.customer_tech_spec_url) && (
+                  {(order.product?.print_card_url || order.product?.customer_tech_spec_url || order.product?.bfx_spec_url) && (
                     <div className="md:col-span-2">
-                      <label className="text-sm text-muted-foreground">Technical Specifications</label>
-                      <div className="flex items-center gap-4 mt-1">
-                        {order.product?.print_card_url && (
+                      <label className="text-sm text-muted-foreground">Documents</label>
+                      <div className="flex items-center gap-4 mt-1 flex-wrap">
+                        {isAdmin && order.product?.print_card_url && (
                           <Button
                             variant="link"
                             className="p-0 h-auto"
                             onClick={() => window.open(order.product!.print_card_url!, "_blank")}
                           >
                             <FileText className="h-4 w-4 mr-1" />
-                            BFX Tech Spec
+                            PC PDF
                           </Button>
                         )}
                         {order.product?.customer_tech_spec_url && (
@@ -353,7 +377,17 @@ export default function OrderDetail() {
                             onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
                           >
                             <ExternalLink className="h-4 w-4 mr-1" />
-                            Customer Tech Spec
+                            Customer Spec Sheet
+                          </Button>
+                        )}
+                        {isAdmin && order.product?.bfx_spec_url && (
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto"
+                            onClick={() => window.open((order.product as any).bfx_spec_url!, "_blank")}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            BFX Spec Sheet
                           </Button>
                         )}
                       </div>
