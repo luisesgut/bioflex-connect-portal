@@ -904,6 +904,7 @@ export type Database = {
           activa: boolean | null
           alto: number | null
           ancho: number | null
+          bfx_spec_url: string | null
           category: string
           codigo_producto: string | null
           created_at: string
@@ -952,6 +953,7 @@ export type Database = {
           activa?: boolean | null
           alto?: number | null
           ancho?: number | null
+          bfx_spec_url?: string | null
           category?: string
           codigo_producto?: string | null
           created_at?: string
@@ -1000,6 +1002,7 @@ export type Database = {
           activa?: boolean | null
           alto?: number | null
           ancho?: number | null
+          bfx_spec_url?: string | null
           category?: string
           codigo_producto?: string | null
           created_at?: string

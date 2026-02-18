@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN bfx_spec_url TEXT DEFAULT NULL;
