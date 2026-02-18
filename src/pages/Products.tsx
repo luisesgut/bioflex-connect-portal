@@ -346,8 +346,8 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {product.print_card_url ? (
-                      <a href={product.print_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                    {product.bfx_spec_url ? (
+                      <a href={product.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
                         <FileText className="h-4 w-4" />
                         View
                       </a>
