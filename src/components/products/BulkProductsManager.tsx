@@ -86,7 +86,8 @@ export function BulkProductsManager({ products, onImported }: BulkProductsManage
 
       for (const row of rows) {
         const id = row["ID (do not modify)"];
-        if (!id) { errors++; continue; }
+        const itemCode = row["Item Code"];
+        if (!id && !itemCode) { errors++; continue; }
 
         const updateData: Record<string, unknown> = {};
         for (const col of EXPORT_COLUMNS) {
@@ -103,7 +104,13 @@ export function BulkProductsManager({ products, onImported }: BulkProductsManage
           }
         }
 
-        const { error } = await supabase.from("products").update(updateData).eq("id", id);
+        let query = supabase.from("products").update(updateData);
+        if (id) {
+          query = query.eq("id", id);
+        } else {
+          query = query.eq("customer_item", itemCode);
+        }
+        const { error } = await query;
         if (error) { errors++; } else { updated++; }
       }
 
