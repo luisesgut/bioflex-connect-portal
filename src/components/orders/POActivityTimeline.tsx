@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, FileText, Package, Truck, CheckCircle2, XCircle, Clock, AlertTriangle, Flame, Calendar, ArrowRightLeft, Ban, ShieldAlert, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,8 +25,8 @@ interface TimelineEvent {
 }
 
 interface POActivityTimelineProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   order: {
     id: string;
     po_number: string;
@@ -58,14 +59,15 @@ const statusColors = {
 };
 
 export function POActivityTimeline({ open, onOpenChange, order }: POActivityTimelineProps) {
+  const isInline = open === undefined;
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
 
   useEffect(() => {
-    if (open) {
+    if (isInline || open) {
       fetchActivityData();
     }
-  }, [open, order.id]);
+  }, [isInline, open, order.id]);
 
   const fetchActivityData = async () => {
     setLoading(true);
@@ -344,6 +346,99 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
     }
   };
 
+  const timelineContent = (
+    <>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <Clock className="h-12 w-12 mb-4" />
+          <p>No activity recorded yet</p>
+        </div>
+      ) : (
+        <div className="relative">
+          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+          <div className="space-y-6">
+            {events.map((event) => {
+              const Icon = iconMap[event.icon];
+              return (
+                <div key={event.id} className="relative pl-10">
+                  <div className={cn(
+                    "absolute left-0 w-8 h-8 rounded-full flex items-center justify-center border-2 bg-background",
+                    event.status === "approved" && "border-success text-success",
+                    event.status === "rejected" && "border-destructive text-destructive",
+                    event.status === "pending" && "border-warning text-warning",
+                    event.status === "info" && "border-info text-info",
+                  )}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4 border">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-medium">{event.title}</h4>
+                          {event.status && event.status !== "info" && (
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs", statusColors[event.status])}
+                            >
+                              {event.status}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {event.description}
+                        </p>
+                        {event.metadata?.reason && (
+                          <p className="text-sm text-muted-foreground mt-2 italic border-l-2 border-muted-foreground/30 pl-2">
+                            "{event.metadata.reason}"
+                          </p>
+                        )}
+                        {event.metadata?.load_number && (
+                          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                            <Package className="h-3 w-3" />
+                            Load: {event.metadata.load_number}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatTimestamp(event.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  if (isInline) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Activity Timeline
+            {order.is_hot_order && (
+              <Badge variant="destructive" className="gap-1">
+                <Flame className="h-3 w-3" />
+                Hot Order
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timelineContent}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -359,79 +454,8 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
             )}
           </DialogTitle>
         </DialogHeader>
-
         <ScrollArea className="h-[60vh] pr-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Clock className="h-12 w-12 mb-4" />
-              <p>No activity recorded yet</p>
-            </div>
-          ) : (
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-
-              <div className="space-y-6">
-                {events.map((event, index) => {
-                  const Icon = iconMap[event.icon];
-                  return (
-                    <div key={event.id} className="relative pl-10">
-                      {/* Timeline dot */}
-                      <div className={cn(
-                        "absolute left-0 w-8 h-8 rounded-full flex items-center justify-center border-2 bg-background",
-                        event.status === "approved" && "border-green-500 text-green-600",
-                        event.status === "rejected" && "border-red-500 text-red-600",
-                        event.status === "pending" && "border-yellow-500 text-yellow-600",
-                        event.status === "info" && "border-blue-500 text-blue-600",
-                      )}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-
-                      {/* Event content */}
-                      <div className="bg-muted/50 rounded-lg p-4 border">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-medium">{event.title}</h4>
-                              {event.status && event.status !== "info" && (
-                                <Badge 
-                                  variant="outline" 
-                                  className={cn("text-xs", statusColors[event.status])}
-                                >
-                                  {event.status}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {event.description}
-                            </p>
-                            {event.metadata?.reason && (
-                              <p className="text-sm text-muted-foreground mt-2 italic border-l-2 border-muted-foreground/30 pl-2">
-                                "{event.metadata.reason}"
-                              </p>
-                            )}
-                            {event.metadata?.load_number && (
-                              <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                                <Package className="h-3 w-3" />
-                                Load: {event.metadata.load_number}
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatTimestamp(event.timestamp)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {timelineContent}
         </ScrollArea>
       </DialogContent>
     </Dialog>
