@@ -332,7 +332,19 @@ export default function OrderDetail() {
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PT Number</label>
-                      <p className="font-medium">{order.product?.pt_code || "—"}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{order.product?.pt_code || "—"}</p>
+                        {order.product?.bfx_spec_url && (
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-xs"
+                            onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
+                            BFX Spec
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
                   <div>
@@ -342,35 +354,19 @@ export default function OrderDetail() {
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PC Number</label>
-                      <p className="font-medium">{order.product?.print_card || "—"}</p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="text-sm text-muted-foreground">DP Sales/CSR</label>
-                    <p className="font-medium">{order.product?.dp_sales_csr_names || "—"}</p>
-                  </div>
-                  {isAdmin && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">PT Code (SAP)</label>
-                      <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
-                    </div>
-                  )}
-                  {/* Document Links */}
-                  {isAdmin && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">PC PDF</label>
-                      {order.product?.print_card_url ? (
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto block"
-                          onClick={() => window.open(order.product!.print_card_url!, "_blank")}
-                        >
-                          <FileText className="h-4 w-4 mr-1 inline" />
-                          View PC PDF
-                        </Button>
-                      ) : (
-                        <p className="font-medium">—</p>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{order.product?.print_card || "—"}</p>
+                        {order.product?.print_card_url && (
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-xs"
+                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
+                            PC PDF
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
                   <div>
@@ -390,19 +386,8 @@ export default function OrderDetail() {
                   </div>
                   {isAdmin && (
                     <div>
-                      <label className="text-sm text-muted-foreground">BFX Spec Sheet</label>
-                      {order.product?.bfx_spec_url ? (
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto block"
-                          onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
-                        >
-                          <FileText className="h-4 w-4 mr-1 inline" />
-                          View BFX Spec
-                        </Button>
-                      ) : (
-                        <p className="font-medium">—</p>
-                      )}
+                      <label className="text-sm text-muted-foreground">PT Code (SAP)</label>
+                      <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
                     </div>
                   )}
                 </div>
