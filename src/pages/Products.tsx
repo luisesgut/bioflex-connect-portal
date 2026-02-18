@@ -355,7 +355,11 @@ export default function Products() {
                     )}
                   </td>
                 )}
-                <td className="px-4 py-3 text-muted-foreground">{product.dp_sales_csr_names || "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {product.dp_sales_csr_names
+                    ? product.dp_sales_csr_names.split(", ").map((name) => name.split(" ")[0]).join(", ")
+                    : "-"}
+                </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(product); setEditDialogOpen(true); }}>

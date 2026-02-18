@@ -10,15 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Upload, X } from "lucide-react";
+import { FileText, Upload, X, ChevronDown } from "lucide-react";
 
 interface Product {
   id: string;
@@ -271,24 +267,55 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
           </div>
 
-          {/* DP Sales/CSR Selection */}
+          {/* DP Sales/CSR Multi-Selection */}
           <div className="space-y-2">
             <Label>DP Sales/CSR</Label>
-            <Select
-              value={form.dp_sales_csr_names || ""}
-              onValueChange={(v) => setForm({ ...form, dp_sales_csr_names: v })}
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Select DP contact..." />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                {dpContacts?.map((c) => (
-                  <SelectItem key={c.id} value={c.full_name}>
-                    {c.full_name} ({c.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between bg-background font-normal">
+                  {(() => {
+                    const selected = form.dp_sales_csr_names ? form.dp_sales_csr_names.split(", ").filter(Boolean) : [];
+                    if (selected.length === 0) return <span className="text-muted-foreground">Select DP contacts...</span>;
+                    return <span className="truncate">{selected.join(", ")}</span>;
+                  })()}
+                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="start">
+                <ScrollArea className="h-60">
+                  <div className="p-2 space-y-1">
+                    {dpContacts?.map((c) => {
+                      const selected = form.dp_sales_csr_names ? form.dp_sales_csr_names.split(", ").filter(Boolean) : [];
+                      const isChecked = selected.includes(c.full_name);
+                      return (
+                        <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => {
+                              const updated = isChecked
+                                ? selected.filter((n) => n !== c.full_name)
+                                : [...selected, c.full_name];
+                              setForm({ ...form, dp_sales_csr_names: updated.join(", ") || null });
+                            }}
+                          />
+                          <span>{c.full_name} ({c.email})</span>
+                        </label>
+                      );
+                    })}
+                    {(!dpContacts || dpContacts.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No contacts available. Add them in Settings.</p>
+                    )}
+                  </div>
+                </ScrollArea>
+                {form.dp_sales_csr_names && (
+                  <div className="border-t p-2">
+                    <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setForm({ ...form, dp_sales_csr_names: null })}>
+                      Clear all
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
