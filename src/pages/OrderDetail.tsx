@@ -355,42 +355,54 @@ export default function OrderDetail() {
                       <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
                     </div>
                   )}
-                  {/* Tech Spec Links */}
-                  {(order.product?.print_card_url || order.product?.customer_tech_spec_url || order.product?.bfx_spec_url) && (
-                    <div className="md:col-span-2">
-                      <label className="text-sm text-muted-foreground">Documents</label>
-                      <div className="flex items-center gap-4 mt-1 flex-wrap">
-                        {isAdmin && order.product?.print_card_url && (
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            PC PDF
-                          </Button>
-                        )}
-                        {order.product?.customer_tech_spec_url && (
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Customer Spec Sheet
-                          </Button>
-                        )}
-                        {isAdmin && order.product?.bfx_spec_url && (
-                          <Button
-                            variant="link"
-                            className="p-0 h-auto"
-                            onClick={() => window.open((order.product as any).bfx_spec_url!, "_blank")}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            BFX Spec Sheet
-                          </Button>
-                        )}
-                      </div>
+                  {/* Document Links */}
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">PC PDF</label>
+                      {order.product?.print_card_url ? (
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto block"
+                          onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                        >
+                          <FileText className="h-4 w-4 mr-1 inline" />
+                          View PC PDF
+                        </Button>
+                      ) : (
+                        <p className="font-medium">—</p>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm text-muted-foreground">Customer Spec Sheet</label>
+                    {order.product?.customer_tech_spec_url ? (
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto block"
+                        onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1 inline" />
+                        View Spec Sheet
+                      </Button>
+                    ) : (
+                      <p className="font-medium">—</p>
+                    )}
+                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">BFX Spec Sheet</label>
+                      {order.product?.bfx_spec_url ? (
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto block"
+                          onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
+                        >
+                          <FileText className="h-4 w-4 mr-1 inline" />
+                          View BFX Spec
+                        </Button>
+                      ) : (
+                        <p className="font-medium">—</p>
+                      )}
                     </div>
                   )}
                 </div>
