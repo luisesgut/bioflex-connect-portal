@@ -416,7 +416,7 @@ export default function NewProductRequest() {
       }
 
       toast.success("Product request created successfully!");
-      navigate('/product-requests');
+      navigate('/products');
     } catch (error) {
       console.error('Error creating request:', error);
       toast.error("Failed to create product request");
