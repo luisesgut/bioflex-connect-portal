@@ -138,10 +138,11 @@ export default function CreateOrder() {
   }, [pricePerThousand, quantity]);
 
   const palletsNeeded = useMemo(() => {
-    if (!selectedProduct?.piezas_totales_por_caja || !selectedProduct?.pieces_per_pallet) {
+    if (!selectedProduct?.pieces_per_pallet) {
       return null;
     }
-    return Math.ceil(quantity / selectedProduct.pieces_per_pallet);
+    const result = quantity / selectedProduct.pieces_per_pallet;
+    return Number.isInteger(result) ? result : parseFloat(result.toFixed(2));
   }, [quantity, selectedProduct]);
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
