@@ -82,6 +82,7 @@ const statusLabels: Record<string, string> = {
   "in-production": "In Production",
   shipped: "Shipped",
   delivered: "Delivered",
+  closed: "Closed",
 };
 
 export default function OrderDetail() {
