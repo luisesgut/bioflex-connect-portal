@@ -92,6 +92,7 @@ const statusLabels: Record<string, string> = {
   "in-production": "In Production",
   shipped: "Shipped",
   delivered: "Delivered",
+  closed: "Closed",
 };
 
 const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped", "Delivered"];
