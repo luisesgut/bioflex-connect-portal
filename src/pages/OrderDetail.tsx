@@ -9,6 +9,7 @@ import {
   Truck,
   ExternalLink,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ const statusStyles: Record<string, string> = {
   "in-production": "bg-warning/10 text-warning border-warning/20",
   shipped: "bg-accent/10 text-accent border-accent/20",
   delivered: "bg-success/10 text-success border-success/20",
+  closed: "bg-muted text-muted-foreground border-muted",
 };
 
 const statusLabels: Record<string, string> = {
@@ -81,6 +83,7 @@ const statusLabels: Record<string, string> = {
   "in-production": "In Production",
   shipped: "Shipped",
   delivered: "Delivered",
+  closed: "Closed",
 };
 
 export default function OrderDetail() {
@@ -90,6 +93,7 @@ export default function OrderDetail() {
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [closing, setClosing] = useState(false);
   
 
   useEffect(() => {
@@ -170,6 +174,22 @@ export default function OrderDetail() {
   };
 
 
+  const handleCloseOrder = async () => {
+    if (!order) return;
+    setClosing(true);
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status: "closed" })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to close order");
+    } else {
+      toast.success("Order closed successfully");
+      setOrder({ ...order, status: "closed" });
+    }
+    setClosing(false);
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
     return format(new Date(dateString), "MMM d, yyyy");
@@ -241,7 +261,17 @@ export default function OrderDetail() {
               Created on {formatDateTime(order.created_at)}
             </p>
           </div>
-        
+          {isAdmin && order.status !== "closed" && (
+            <Button
+              variant="outline"
+              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              onClick={handleCloseOrder}
+              disabled={closing}
+            >
+              {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
+              Close Order
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
