@@ -1,0 +1,35 @@
+name: Deploy Bioflex Portal to IIS
+
+on:
+  push:
+    branches: [ "main" ] 
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, bfx-connect] 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to IIS folder
+        run: |
+          # 1. Definimos las rutas. 
+          # Cambia ".\dist" por ".\out" si este proyecto también es Next.js
+          $sourcePath = ".\dist" 
+          $destinationPath = "C:\inetpub\wwwroot\dstny-connect"
+
+          # 2. Robocopy con espejo y protección de web.config
+          # /MIR mantiene la carpeta del IIS limpia de archivos viejos
+          # /XF protege tu archivo de configuración de rutas
+          robocopy $sourcePath $destinationPath /MIR /V /NP /XF web.config
+
+          # 3. Traductor de códigos para GitHub
+          if ($lastexitcode -le 1) { exit 0 } else { exit $lastexitcode }
+        shell: powershell
