@@ -26,7 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <ViewModeContext.Provider value={{ viewMode, setViewMode }}>
       <div className="min-h-screen bg-background">
-        <Sidebar viewMode={viewMode} onViewModeChange={setViewMode} />
+        <Sidebar />
         <main className="pl-64">
           <div className="min-h-screen p-8">
             {children}
