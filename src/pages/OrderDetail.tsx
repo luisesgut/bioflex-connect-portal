@@ -174,6 +174,22 @@ export default function OrderDetail() {
   };
 
 
+  const handleCloseOrder = async () => {
+    if (!order) return;
+    setClosing(true);
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status: "closed" })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to close order");
+    } else {
+      toast.success("Order closed successfully");
+      setOrder({ ...order, status: "closed" });
+    }
+    setClosing(false);
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
     return format(new Date(dateString), "MMM d, yyyy");
