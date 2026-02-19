@@ -553,14 +553,14 @@ export default function Orders() {
   }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
       dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
 
-  // Split orders into active and closed (delivered)
+  // Split orders into active and closed
   const activeOrders = useMemo(() => 
-    filteredAndSortedOrders.filter(order => order.status !== "delivered"), 
+    filteredAndSortedOrders.filter(order => order.status !== "closed"), 
     [filteredAndSortedOrders]
   );
   
   const closedOrders = useMemo(() => 
-    filteredAndSortedOrders.filter(order => order.status === "delivered"), 
+    filteredAndSortedOrders.filter(order => order.status === "closed"), 
     [filteredAndSortedOrders]
   );
 
