@@ -3,22 +3,16 @@ import {
   LayoutDashboard, 
   Package, 
   FileText, 
-  
   FileWarning,
   Settings,
   LogOut,
-  ShieldAlert,
   FileEdit,
   Eye,
   EyeOff,
   Warehouse,
   Truck,
   ClipboardCheck,
-  PackageCheck,
-  FilePlus,
-  Wrench,
-  Palette,
-  List
+  PackageCheck
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -26,8 +20,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useLanguage } from "@/hooks/useLanguage";
 
 export type AdminViewMode = 'all' | 'engineering' | 'design';
 
@@ -50,17 +42,12 @@ const bottomNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-interface SidebarProps {
-  viewMode?: AdminViewMode;
-  onViewModeChange?: (mode: AdminViewMode) => void;
-}
-
-export function Sidebar({ viewMode = 'all', onViewModeChange }: SidebarProps) {
+export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin, isActualAdmin, isViewingAsCustomer, toggleViewMode } = useAdmin();
-  const { t } = useLanguage();
+  
 
   const handleSignOut = async () => {
     await signOut();
@@ -110,45 +97,6 @@ export function Sidebar({ viewMode = 'all', onViewModeChange }: SidebarProps) {
               />
             </div>
 
-            {/* Engineering/Design View Toggle */}
-            {!isViewingAsCustomer && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-sidebar-foreground/60 px-1">
-                  {t('productRequests.workQueue')}
-                </Label>
-                <ToggleGroup 
-                  type="single" 
-                  value={viewMode} 
-                  onValueChange={(value) => value && onViewModeChange?.(value as AdminViewMode)}
-                  className="w-full bg-sidebar-accent/30 p-1 rounded-lg grid grid-cols-3"
-                >
-                  <ToggleGroupItem 
-                    value="all" 
-                    aria-label="All requests" 
-                    className="text-xs px-2 py-1.5 data-[state=on]:bg-sidebar-accent data-[state=on]:text-sidebar-foreground"
-                  >
-                    <List className="h-3 w-3 mr-1" />
-                    {t('productRequests.viewAll')}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="engineering" 
-                    aria-label="Engineering view" 
-                    className="text-xs px-2 py-1.5 data-[state=on]:bg-sidebar-accent data-[state=on]:text-sidebar-foreground"
-                  >
-                    <Wrench className="h-3 w-3 mr-1" />
-                    {t('productRequests.viewEngineeringShort')}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="design" 
-                    aria-label="Design view" 
-                    className="text-xs px-2 py-1.5 data-[state=on]:bg-sidebar-accent data-[state=on]:text-sidebar-foreground"
-                  >
-                    <Palette className="h-3 w-3 mr-1" />
-                    {t('productRequests.viewDesignShort')}
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            )}
           </div>
         )}
 
