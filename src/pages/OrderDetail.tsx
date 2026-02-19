@@ -9,6 +9,7 @@ import {
   Truck,
   ExternalLink,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
