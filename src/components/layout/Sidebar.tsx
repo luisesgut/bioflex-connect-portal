@@ -3,7 +3,7 @@ import {
   LayoutDashboard, 
   Package, 
   FileText, 
-  FileWarning,
+  
   Settings,
   LogOut,
   Eye,
@@ -27,7 +27,6 @@ const navigation = [
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
-  { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
   
 ];
 

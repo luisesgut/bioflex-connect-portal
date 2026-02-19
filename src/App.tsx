@@ -13,7 +13,7 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import CreateOrder from "./pages/CreateOrder";
 
-import NonConformance from "./pages/NonConformance";
+
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -49,7 +49,7 @@ const App = () => (
                 <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
                 <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
                 
-                <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
+                
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
                 
