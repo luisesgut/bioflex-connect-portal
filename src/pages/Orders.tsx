@@ -564,6 +564,23 @@ export default function Orders() {
     [filteredAndSortedOrders]
   );
 
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
+
+  const handleReactivateOrder = async (orderId: string) => {
+    setReactivatingId(orderId);
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status: "accepted" })
+      .eq("id", orderId);
+    if (error) {
+      toast.error("Failed to reactivate order");
+    } else {
+      toast.success("Order reactivated successfully");
+      fetchOrders();
+    }
+    setReactivatingId(null);
+  };
+
   const formatCurrency = (value: number | null) => {
     if (value === null) return "—";
     return new Intl.NumberFormat("en-US", {
