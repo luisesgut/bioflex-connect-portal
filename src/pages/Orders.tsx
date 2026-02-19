@@ -82,6 +82,7 @@ const statusStyles: Record<string, string> = {
   "in-production": "bg-warning/10 text-warning border-warning/20",
   shipped: "bg-accent/10 text-accent border-accent/20",
   delivered: "bg-success/10 text-success border-success/20",
+  closed: "bg-muted text-muted-foreground border-muted",
 };
 
 const statusLabels: Record<string, string> = {
