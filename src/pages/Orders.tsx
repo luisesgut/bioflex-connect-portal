@@ -654,7 +654,7 @@ export default function Orders() {
         {/* Timeline View */}
         {!loading && viewMode === "timeline" && (
           <ProductionTimeline 
-            orders={filteredAndSortedOrders.map(o => ({
+            orders={activeOrders.map(o => ({
               id: o.id,
               po_number: o.po_number,
               product_name: o.product_name || undefined,
@@ -671,7 +671,7 @@ export default function Orders() {
 
         {/* Board View */}
         {!loading && viewMode === "board" && (
-          <OrdersKanban orders={filteredAndSortedOrders} isAdmin={isAdmin} />
+          <OrdersKanban orders={activeOrders} isAdmin={isAdmin} />
         )}
 
         {/* Active Orders Table */}
