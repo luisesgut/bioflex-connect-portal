@@ -6,7 +6,6 @@ import {
   FileWarning,
   Settings,
   LogOut,
-  FileEdit,
   Eye,
   EyeOff,
   Warehouse,
@@ -29,7 +28,7 @@ const navigation = [
   { name: "Purchase Orders", href: "/orders", icon: FileText },
   { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
   { name: "Non-Conformance", href: "/ncr", icon: FileWarning },
-  { name: "Change Requests", href: "/change-requests", icon: FileEdit },
+  
 ];
 
 const adminNavigation = [
