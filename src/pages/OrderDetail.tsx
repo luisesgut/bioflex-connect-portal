@@ -93,6 +93,7 @@ export default function OrderDetail() {
 
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [closing, setClosing] = useState(false);
   
 
   useEffect(() => {
