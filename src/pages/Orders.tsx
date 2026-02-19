@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid } from "lucide-react";
+import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid, RotateCcw } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +82,7 @@ const statusStyles: Record<string, string> = {
   "in-production": "bg-warning/10 text-warning border-warning/20",
   shipped: "bg-accent/10 text-accent border-accent/20",
   delivered: "bg-success/10 text-success border-success/20",
+  closed: "bg-muted text-muted-foreground border-muted",
 };
 
 const statusLabels: Record<string, string> = {
@@ -91,6 +92,7 @@ const statusLabels: Record<string, string> = {
   "in-production": "In Production",
   shipped: "Shipped",
   delivered: "Delivered",
+  closed: "Closed",
 };
 
 const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped", "Delivered"];
@@ -551,16 +553,33 @@ export default function Orders() {
   }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
       dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
 
-  // Split orders into active and closed (delivered)
+  // Split orders into active and closed
   const activeOrders = useMemo(() => 
-    filteredAndSortedOrders.filter(order => order.status !== "delivered"), 
+    filteredAndSortedOrders.filter(order => order.status !== "closed"), 
     [filteredAndSortedOrders]
   );
   
   const closedOrders = useMemo(() => 
-    filteredAndSortedOrders.filter(order => order.status === "delivered"), 
+    filteredAndSortedOrders.filter(order => order.status === "closed"), 
     [filteredAndSortedOrders]
   );
+
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
+
+  const handleReactivateOrder = async (orderId: string) => {
+    setReactivatingId(orderId);
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ status: "accepted" })
+      .eq("id", orderId);
+    if (error) {
+      toast.error("Failed to reactivate order");
+    } else {
+      toast.success("Order reactivated successfully");
+      fetchOrders();
+    }
+    setReactivatingId(null);
+  };
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return "—";
@@ -828,87 +847,47 @@ export default function Orders() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b bg-muted/30">
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        PO Number
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Product
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Customer
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Item Type
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        DP Sales/CSR
-                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">PO Number</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Product</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Quantity</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer Delivery</th>
                       {isAdmin && (
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          PT Code
-                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                       )}
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Quantity
-                      </th>
-                      {isAdmin && (
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Value
-                        </th>
-                      )}
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Status
-                      </th>
-                      {isAdmin && (
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Sales Order
-                        </th>
-                      )}
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Priority
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Customer Delivery
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Bioflex Delivery
-                      </th>
-                      {isAdmin && (
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Excess Stock
-                        </th>
-                      )}
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        In Floor
-                      </th>
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Shipped
-                      </th>
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Pending
-                      </th>
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        % Produced
-                      </th>
-                      <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {closedOrders.map((order) => (
-                      <EditableOrderRow
-                        key={order.id}
-                        order={order}
-                        isAdmin={isAdmin}
-                        statusStyles={statusStyles}
-                        statusLabels={statusLabels}
-                        formatDate={formatDate}
-                        formatCurrency={formatCurrency}
-                        onAcceptOrder={handleAcceptOrder}
-                        onRequestChange={handleRequestChange}
-                        onUpdated={fetchOrders}
-                      />
+                      <tr key={order.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-6 py-4">
+                          <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
+                            {order.po_number}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.product_customer_item || "—"}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.product_customer || "—"}</td>
+                        <td className="px-6 py-4 text-sm">{order.quantity.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{formatDate(order.requested_delivery_date)}</td>
+                        {isAdmin && (
+                          <td className="px-6 py-4 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              disabled={reactivatingId === order.id}
+                              onClick={() => handleReactivateOrder(order.id)}
+                            >
+                              {reactivatingId === order.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              )}
+                              Reactivate
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
                     ))}
                   </tbody>
                 </table>
