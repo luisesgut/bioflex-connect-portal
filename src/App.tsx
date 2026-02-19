@@ -23,7 +23,7 @@ import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
 import ReleaseRequests from "./pages/ReleaseRequests";
-import ShippedPallets from "./pages/ShippedPallets";
+
 import ProductRequests from "./pages/ProductRequests";
 import NewProductRequest from "./pages/NewProductRequest";
 import ProductRequestDetail from "./pages/ProductRequestDetail";
@@ -57,7 +57,7 @@ const App = () => (
                 <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
                 <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
-                <Route path="/shipped-pallets" element={<ProtectedRoute><ShippedPallets /></ProtectedRoute>} />
+                
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
                 <Route path="/product-requests/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
