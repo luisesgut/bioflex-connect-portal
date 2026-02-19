@@ -79,14 +79,8 @@ export function BulkProductsManager({ products, onImported }: BulkProductsManage
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data);
       
-      // Read all sheets and merge rows
-      const allRows: Record<string, string>[] = [];
-      for (const sheetName of wb.SheetNames) {
-        const ws = wb.Sheets[sheetName];
-        const sheetRows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
-        allRows.push(...sheetRows);
-      }
-      const rows = allRows;
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
 
       let updated = 0;
       let created = 0;

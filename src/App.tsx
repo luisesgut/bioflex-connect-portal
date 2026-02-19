@@ -13,12 +13,12 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import CreateOrder from "./pages/CreateOrder";
 
-import NonConformance from "./pages/NonConformance";
+
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminProducts from "./pages/AdminProducts";
-import ChangeRequests from "./pages/ChangeRequests";
+
 import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
@@ -49,10 +49,10 @@ const App = () => (
                 <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
                 <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
                 
-                <Route path="/ncr" element={<ProtectedRoute><NonConformance /></ProtectedRoute>} />
+                
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
-                <Route path="/change-requests" element={<ProtectedRoute><ChangeRequests /></ProtectedRoute>} />
+                
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
