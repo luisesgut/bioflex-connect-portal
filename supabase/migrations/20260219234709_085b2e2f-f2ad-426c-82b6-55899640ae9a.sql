@@ -1,0 +1,1 @@
+ALTER TABLE public.purchase_orders ALTER COLUMN pallets_needed TYPE numeric USING pallets_needed::numeric;
