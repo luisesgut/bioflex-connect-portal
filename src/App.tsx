@@ -23,7 +23,7 @@ import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
 import ReleaseRequests from "./pages/ReleaseRequests";
-import ShippedPallets from "./pages/ShippedPallets";
+
 import ProductRequests from "./pages/ProductRequests";
 import NewProductRequest from "./pages/NewProductRequest";
 import ProductRequestDetail from "./pages/ProductRequestDetail";
