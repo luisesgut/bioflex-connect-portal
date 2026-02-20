@@ -59,7 +59,7 @@ interface ProductRequest {
   customer_item_code: string | null;
 }
 
-type TabValue = "active" | "inactive" | "in_process";
+type TabValue = "active" | "in_process";
 
 interface Filters {
   customer_item: string[];
@@ -159,10 +159,8 @@ export default function Products() {
     setLoading(false);
   };
 
-  // Filtered products based on tab
-  const tabProducts = products.filter((p) =>
-    activeTab === "active" ? p.activa !== false : p.activa === false
-  );
+  // Filtered products (only active)
+  const tabProducts = products.filter((p) => p.activa !== false);
 
   // Get unique values for filters from tabProducts
   const getUniqueValues = (key: keyof Product) => {
@@ -485,12 +483,6 @@ export default function Products() {
               Active
               <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                 {products.filter((p) => p.activa !== false).length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="inactive">
-              Inactive
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                {products.filter((p) => p.activa === false).length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="in_process">
