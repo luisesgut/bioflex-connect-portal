@@ -130,12 +130,12 @@ export function ProductionWeeksChart() {
           <div key={item.item_type} className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{item.item_type}</span>
             <div className="flex items-center gap-4">
-              <span className="text-muted-foreground">{item.total_quantity.toLocaleString()} pzas</span>
+              <span className="text-muted-foreground">{item.total_quantity.toLocaleString()} pcs</span>
               <span className="text-muted-foreground">
-                {item.weekly_capacity > 0 ? `${item.weekly_capacity.toLocaleString()}/sem` : 'Sin cap.'}
+                {item.weekly_capacity > 0 ? `${item.weekly_capacity.toLocaleString()}/wk` : 'No cap.'}
               </span>
               <span className="font-semibold text-card-foreground">
-                {item.weekly_capacity > 0 ? `${item.weeks} sem` : 'N/A'}
+                {item.weekly_capacity > 0 ? `${item.weeks} wks` : 'N/A'}
               </span>
             </div>
           </div>
