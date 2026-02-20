@@ -37,7 +37,7 @@ export function ProductionWeeksChart() {
     // Aggregate volume by item_type
     const volumeByType: Record<string, number> = {};
     for (const order of orders) {
-      const itemType = (order.products as any)?.item_type || 'Sin Tipo';
+      const itemType = (order.products as any)?.item_type || 'No Type';
       volumeByType[itemType] = (volumeByType[itemType] || 0) + order.quantity;
     }
 
@@ -62,7 +62,7 @@ export function ProductionWeeksChart() {
   if (loading) {
     return (
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <div className="h-64 flex items-center justify-center text-muted-foreground">Cargando...</div>
+        <div className="h-64 flex items-center justify-center text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -70,8 +70,8 @@ export function ProductionWeeksChart() {
   if (data.length === 0) {
     return (
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <h2 className="text-lg font-semibold text-card-foreground mb-1">Semanas de Producción por Familia</h2>
-        <p className="text-sm text-muted-foreground">No hay órdenes activas o capacidad configurada.</p>
+        <h2 className="text-lg font-semibold text-card-foreground mb-1">Production Weeks by Family</h2>
+        <p className="text-sm text-muted-foreground">No active orders or capacity configured.</p>
       </div>
     );
   }
@@ -87,8 +87,8 @@ export function ProductionWeeksChart() {
   return (
     <div className="rounded-xl border bg-card p-6 shadow-card">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-card-foreground">Semanas de Producción por Familia</h2>
-        <p className="text-sm text-muted-foreground">Volumen en sistema ÷ capacidad semanal asignada</p>
+        <h2 className="text-lg font-semibold text-card-foreground">Production Weeks by Family</h2>
+        <p className="text-sm text-muted-foreground">Volume in system ÷ assigned weekly capacity</p>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
@@ -111,8 +111,8 @@ export function ProductionWeeksChart() {
             formatter={(value: number, _name: string, props: any) => {
               const item = props.payload;
               return [
-                `${value} semanas (${item.total_quantity.toLocaleString()} pzas / ${item.weekly_capacity.toLocaleString()} cap/sem)`,
-                'Producción',
+                `${value} weeks (${item.total_quantity.toLocaleString()} pcs / ${item.weekly_capacity.toLocaleString()} cap/wk)`,
+                'Production',
               ];
             }}
           />
@@ -130,12 +130,12 @@ export function ProductionWeeksChart() {
           <div key={item.item_type} className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{item.item_type}</span>
             <div className="flex items-center gap-4">
-              <span className="text-muted-foreground">{item.total_quantity.toLocaleString()} pzas</span>
+              <span className="text-muted-foreground">{item.total_quantity.toLocaleString()} pcs</span>
               <span className="text-muted-foreground">
-                {item.weekly_capacity > 0 ? `${item.weekly_capacity.toLocaleString()}/sem` : 'Sin cap.'}
+                {item.weekly_capacity > 0 ? `${item.weekly_capacity.toLocaleString()}/wk` : 'No cap.'}
               </span>
               <span className="font-semibold text-card-foreground">
-                {item.weekly_capacity > 0 ? `${item.weeks} sem` : 'N/A'}
+                {item.weekly_capacity > 0 ? `${item.weeks} wks` : 'N/A'}
               </span>
             </div>
           </div>

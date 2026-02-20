@@ -61,12 +61,12 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="animate-fade-in">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">Resumen de tu actividad de órdenes de compra.</p>
+            <p className="mt-1 text-muted-foreground">Overview of your purchase order activity.</p>
           </div>
           <Link to="/orders/new">
             <Button variant="accent" size="lg" className="gap-2">
               <FileText className="h-5 w-5" />
-              Crear Nueva PO
+              Create New PO
             </Button>
           </Link>
         </div>
@@ -75,9 +75,9 @@ export default function Dashboard() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <StatsCard
-              title="Órdenes Activas"
+              title="Active Orders"
               value={loading ? '...' : stats.activeOrders}
-              description="Con estatus Accepted"
+              description="With Accepted status"
               icon={<FileText className="h-6 w-6" />}
               variant="success"
             />
@@ -86,25 +86,25 @@ export default function Dashboard() {
             <StatsCard
               title="Hot Orders"
               value={loading ? '...' : stats.hotOrders}
-              description="Producción prioritaria"
+              description="Priority production"
               icon={<Flame className="h-6 w-6" />}
               variant="accent"
             />
           </div>
           <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
             <StatsCard
-              title="Nuevas esta Semana"
+              title="New This Week"
               value={loading ? '...' : stats.newThisWeek}
-              description="Órdenes recibidas"
+              description="Orders received"
               icon={<Package className="h-6 w-6" />}
               trend={!loading && stats.newLastMonthSameWeek > 0 ? { value: Math.abs(weekDiff), isPositive: weekDiff >= 0 } : undefined}
             />
           </div>
           <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <StatsCard
-              title="Misma Semana Mes Ant."
+              title="Same Week Last Month"
               value={loading ? '...' : stats.newLastMonthSameWeek}
-              description="Comparativo mensual"
+              description="Monthly comparison"
               icon={<TrendingUp className="h-6 w-6" />}
             />
           </div>
@@ -119,7 +119,7 @@ export default function Dashboard() {
         <div className="flex justify-end">
           <Link to="/orders">
             <Button variant="outline" className="gap-2">
-              Ver Todas las Órdenes <ArrowUpRight className="h-4 w-4" />
+              View All Orders <ArrowUpRight className="h-4 w-4" />
             </Button>
           </Link>
         </div>
