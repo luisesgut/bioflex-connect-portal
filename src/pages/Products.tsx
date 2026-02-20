@@ -59,7 +59,7 @@ interface ProductRequest {
   customer_item_code: string | null;
 }
 
-type TabValue = "active" | "inactive" | "in_process";
+type TabValue = "active" | "in_process";
 
 interface Filters {
   customer_item: string[];
