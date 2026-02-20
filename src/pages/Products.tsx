@@ -159,10 +159,8 @@ export default function Products() {
     setLoading(false);
   };
 
-  // Filtered products based on tab
-  const tabProducts = products.filter((p) =>
-    activeTab === "active" ? p.activa !== false : p.activa === false
-  );
+  // Filtered products (only active)
+  const tabProducts = products.filter((p) => p.activa !== false);
 
   // Get unique values for filters from tabProducts
   const getUniqueValues = (key: keyof Product) => {
