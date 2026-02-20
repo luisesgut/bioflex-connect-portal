@@ -86,7 +86,7 @@ export default function Dashboard() {
             <StatsCard
               title="Hot Orders"
               value={loading ? '...' : stats.hotOrders}
-              description="Producción prioritaria"
+              description="Priority production"
               icon={<Flame className="h-6 w-6" />}
               variant="accent"
             />
