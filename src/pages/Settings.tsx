@@ -81,6 +81,13 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Production Capacity Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.15s" }}>
+            <ProductionCapacityManagement />
+          </div>
+        )}
+
         {/* Profile Section */}
         <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.15s" }}>
           <div className="flex items-center gap-3 mb-6">
