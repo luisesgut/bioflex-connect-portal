@@ -3,6 +3,7 @@ import { Settings2, Plus, Trash2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -15,11 +16,12 @@ interface CapacityRow {
 
 export function ProductionCapacityManagement() {
   const [rows, setRows] = useState<CapacityRow[]>([]);
+  const [itemTypeOptions, setItemTypeOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchCapacity();
+    Promise.all([fetchCapacity(), fetchItemTypes()]).then(() => setLoading(false));
   }, []);
 
   const fetchCapacity = async () => {
@@ -33,7 +35,21 @@ export function ProductionCapacityManagement() {
     } else {
       setRows(data || []);
     }
-    setLoading(false);
+  };
+
+  const fetchItemTypes = async () => {
+    const { data, error } = await supabase
+      .from('dropdown_options')
+      .select('label')
+      .eq('category', 'item_type')
+      .eq('is_active', true)
+      .order('sort_order');
+
+    if (error) {
+      console.error('Error fetching item types:', error);
+    } else {
+      setItemTypeOptions((data || []).map(d => d.label));
+    }
   };
 
   const addRow = () => {
@@ -48,12 +64,12 @@ export function ProductionCapacityManagement() {
         .delete()
         .eq('id', row.id);
       if (error) {
-        toast.error('Error al eliminar');
+        toast.error('Error deleting capacity');
         return;
       }
     }
     setRows(prev => prev.filter((_, i) => i !== index));
-    toast.success('Capacidad eliminada');
+    toast.success('Capacity removed');
   };
 
   const updateRow = (index: number, field: keyof CapacityRow, value: string | number) => {
@@ -76,18 +92,26 @@ export function ProductionCapacityManagement() {
             .upsert({ item_type: row.item_type, weekly_capacity: row.weekly_capacity }, { onConflict: 'item_type' });
         }
       }
-      toast.success('Capacidades guardadas');
+      toast.success('Capacities saved');
       await fetchCapacity();
     } catch (err) {
-      toast.error('Error al guardar');
+      toast.error('Error saving capacities');
     }
     setSaving(false);
+  };
+
+  // Filter out item types already used in other rows
+  const getAvailableOptions = (currentIndex: number) => {
+    const usedTypes = rows
+      .filter((_, i) => i !== currentIndex)
+      .map(r => r.item_type);
+    return itemTypeOptions.filter(opt => !usedTypes.includes(opt));
   };
 
   if (loading) {
     return (
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <p className="text-muted-foreground">Cargando capacidades...</p>
+        <p className="text-muted-foreground">Loading capacities...</p>
       </div>
     );
   }
@@ -99,8 +123,8 @@ export function ProductionCapacityManagement() {
           <Settings2 className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-card-foreground">Capacidad de Producción Semanal</h2>
-          <p className="text-sm text-muted-foreground">Define la capacidad semanal (piezas) por familia de producto</p>
+          <h2 className="text-lg font-semibold text-card-foreground">Weekly Production Capacity</h2>
+          <p className="text-sm text-muted-foreground">Define weekly capacity (pieces) per product family</p>
         </div>
       </div>
 
@@ -108,15 +132,27 @@ export function ProductionCapacityManagement() {
         {rows.map((row, index) => (
           <div key={row.id || `new-${index}`} className="flex items-end gap-3">
             <div className="flex-1 space-y-1">
-              <Label className="text-xs text-muted-foreground">Familia (Item Type)</Label>
-              <Input
+              <Label className="text-xs text-muted-foreground">Family (Item Type)</Label>
+              <Select
                 value={row.item_type}
-                onChange={e => updateRow(index, 'item_type', e.target.value)}
-                placeholder="Ej: Bag Wicket"
-              />
+                onValueChange={(val) => updateRow(index, 'item_type', val)}
+              >
+                <SelectTrigger className="bg-card">
+                  <SelectValue placeholder="Select item type" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {getAvailableOptions(index).map(opt => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                  {/* Keep current value visible even if not in available options */}
+                  {row.item_type && !itemTypeOptions.includes(row.item_type) && (
+                    <SelectItem value={row.item_type}>{row.item_type}</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <div className="w-48 space-y-1">
-              <Label className="text-xs text-muted-foreground">Capacidad Semanal (pzas)</Label>
+              <Label className="text-xs text-muted-foreground">Weekly Capacity (pcs)</Label>
               <Input
                 type="number"
                 value={row.weekly_capacity || ''}
@@ -133,10 +169,10 @@ export function ProductionCapacityManagement() {
 
       <div className="mt-4 flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={addRow} className="gap-1">
-          <Plus className="h-4 w-4" /> Agregar Familia
+          <Plus className="h-4 w-4" /> Add Family
         </Button>
         <Button variant="accent" size="sm" onClick={saveAll} disabled={saving} className="gap-1">
-          <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar Todo'}
+          <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save All'}
         </Button>
       </div>
     </div>
