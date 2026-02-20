@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -142,8 +143,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
       return null;
     }
-    const { data: urlData } = supabase.storage.from("print-cards").getPublicUrl(path);
-    return urlData.publicUrl;
+    return `print-cards:${path}`;
   };
 
   const handleFileUpload = async (
@@ -275,9 +275,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>PC PDF</Label>
             <div className="flex items-center gap-2">
               {form.print_card_url && (
-                <a href={form.print_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => pcFileRef.current?.click()} disabled={uploadingPC}>
                 <Upload className="h-4 w-4 mr-1" />
@@ -300,9 +300,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>Customer Spec Sheet (PDF)</Label>
             <div className="flex items-center gap-2">
               {form.customer_tech_spec_url && (
-                <a href={form.customer_tech_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.customer_tech_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => customerSpecRef.current?.click()} disabled={uploadingCustomerSpec}>
                 <Upload className="h-4 w-4 mr-1" />
@@ -325,9 +325,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>BFX Spec Sheet (PDF)</Label>
             <div className="flex items-center gap-2">
               {form.bfx_spec_url && (
-                <a href={form.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => bfxSpecRef.current?.click()} disabled={uploadingBFXSpec}>
                 <Upload className="h-4 w-4 mr-1" />

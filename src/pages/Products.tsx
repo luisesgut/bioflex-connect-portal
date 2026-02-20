@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Package, Loader2, FileText, ChevronDown, X, ExternalLink, Pencil } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -325,10 +326,10 @@ export default function Products() {
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     {product.print_card_url ? (
-                      <a href={product.print_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         {product.print_card || "View"}
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -336,10 +337,10 @@ export default function Products() {
                 )}
                 <td className="px-4 py-3 text-center">
                   {product.customer_tech_spec_url ? (
-                    <a href={product.customer_tech_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                    <button onClick={() => openStorageFile(product.customer_tech_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                       <ExternalLink className="h-4 w-4" />
                       View
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
@@ -347,10 +348,10 @@ export default function Products() {
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     {product.bfx_spec_url ? (
-                      <a href={product.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         View
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}

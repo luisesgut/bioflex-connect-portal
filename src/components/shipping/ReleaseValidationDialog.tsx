@@ -77,7 +77,7 @@ export function ReleaseValidationDialog({
 
       const { data: urlData } = supabase.storage
         .from("release-documents")
-        .getPublicUrl(fileName);
+        .getPublicUrl(fileName);  // Public URL needed for AI validation only
 
       // Call AI to validate the PDF content
       const response = await supabase.functions.invoke("extract-po-data", {
@@ -151,16 +151,14 @@ export function ReleaseValidationDialog({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("release-documents")
-        .getPublicUrl(fileName);
+      const storagePath = `release-documents:${fileName}`;
 
       // Update all selected pallets
       const palletIds = selectedPallets.map((p) => p.id);
       const { error: updateError } = await supabase
         .from("load_pallets")
         .update({
-          release_pdf_url: urlData.publicUrl,
+          release_pdf_url: storagePath,
           release_number: manualReleaseNumber.trim(),
           is_on_hold: false,
         })

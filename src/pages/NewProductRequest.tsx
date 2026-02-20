@@ -253,10 +253,7 @@ export default function NewProductRequest() {
         .upload(fileName, techSpecFile);
       
       if (!error) {
-        const { data: urlData } = supabase.storage
-          .from('product-request-files')
-          .getPublicUrl(fileName);
-        techSpecUrl = urlData.publicUrl;
+        techSpecUrl = `product-request-files:${fileName}`;
       }
     }
     
@@ -270,10 +267,7 @@ export default function NewProductRequest() {
         .upload(fileName, file);
       
       if (!error) {
-        const { data: urlData } = supabase.storage
-          .from('product-request-files')
-          .getPublicUrl(fileName);
-        artworkUrls.push(urlData.publicUrl);
+        artworkUrls.push(`product-request-files:${fileName}`);
       }
     }
     

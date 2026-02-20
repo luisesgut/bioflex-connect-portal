@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -309,9 +310,7 @@ export default function ProductRequestDetail() {
       
       if (uploadError) throw uploadError;
       
-      const { data: urlData } = supabase.storage
-        .from('product-request-files')
-        .getPublicUrl(fileName);
+      const fileStoragePath = `product-request-files:${fileName}`;
 
       // Mark previous versions as superseded
       if (pcVersions.length > 0) {
@@ -327,7 +326,7 @@ export default function ProductRequestDetail() {
         .insert({
           product_request_id: id,
           version_number: nextVersion,
-          file_url: urlData.publicUrl,
+          file_url: fileStoragePath,
           file_name: pcFile.name,
           uploaded_by: user.id,
           status: 'pending',
@@ -709,16 +708,14 @@ export default function ProductRequestDetail() {
                   <CardTitle>Technical Specification</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <a
-                    href={request.tech_spec_pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
+                  <button
+                    onClick={() => openStorageFile(request.tech_spec_pdf_url, 'product-request-files')}
+                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors w-full text-left cursor-pointer bg-transparent"
                   >
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <span className="flex-1 truncate">{request.tech_spec_filename || 'Tech Spec PDF'}</span>
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  </a>
+                  </button>
                 </CardContent>
               </Card>
             )}
@@ -732,17 +729,15 @@ export default function ProductRequestDetail() {
                 <CardContent>
                   <div className="grid gap-2">
                     {request.artwork_files.map((url, index) => (
-                      <a
+                      <button
                         key={index}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
+                        onClick={() => openStorageFile(url, 'product-request-files')}
+                        className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors w-full text-left cursor-pointer bg-transparent"
                       >
                         <FileText className="h-5 w-5 text-muted-foreground" />
                         <span className="flex-1 truncate">Artwork {index + 1}</span>
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </CardContent>
@@ -869,12 +864,10 @@ export default function ProductRequestDetail() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <a href={version.file_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => openStorageFile(version.file_url, 'product-request-files')}>
                               <ExternalLink className="h-4 w-4 mr-1" />
                               View
-                            </Button>
-                          </a>
+                          </Button>
                           {version.status === 'pending' && !isAdmin && (
                             <>
                               <Button

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,11 +262,7 @@ export default function NonConformance() {
         throw new Error(`Failed to upload ${file.name}`);
       }
 
-      const { data: urlData } = supabase.storage
-        .from("ncr-attachments")
-        .getPublicUrl(filePath);
-
-      uploadedUrls.push(urlData.publicUrl);
+      uploadedUrls.push(`ncr-attachments:${filePath}`);
     }
 
     return uploadedUrls;
@@ -529,14 +526,12 @@ export default function NonConformance() {
                           className="flex items-center gap-3 rounded-lg border bg-muted/30 p-2"
                         >
                           <FileImage className="h-5 w-5 text-muted-foreground" />
-                          <a 
-                            href={url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex-1 truncate text-sm text-primary hover:underline"
+                          <button 
+                            onClick={() => openStorageFile(url, 'ncr-attachments')}
+                            className="flex-1 truncate text-sm text-primary hover:underline text-left cursor-pointer bg-transparent border-none p-0"
                           >
                             Attachment {index + 1}
-                          </a>
+                          </button>
                         </div>
                       ))}
                     </div>

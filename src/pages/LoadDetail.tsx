@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { cn } from "@/lib/utils";
@@ -1450,15 +1451,13 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
                               {pallet.release_pdf_url ? (
-                                <a
-                                  href={pallet.release_pdf_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline flex items-center gap-1"
+                                <button
+                                  onClick={() => openStorageFile(pallet.release_pdf_url, 'release-documents')}
+                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
                                 >
                                   <FileText className="h-4 w-4" />
                                   View
-                                </a>
+                                </button>
                               ) : (
                                 "-"
                               )}

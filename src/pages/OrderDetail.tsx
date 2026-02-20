@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -390,7 +391,7 @@ export default function OrderDetail() {
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             BFX Spec
@@ -412,7 +413,7 @@ export default function OrderDetail() {
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             PC PDF
@@ -427,7 +428,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
+                        onClick={() => openStorageFile(order.product!.customer_tech_spec_url!, 'print-cards')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1 inline" />
                         View Spec Sheet
@@ -499,7 +500,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto"
-                        onClick={() => window.open(order.pdf_url!, "_blank")}
+                        onClick={() => openStorageFile(order.pdf_url!, 'ncr-attachments')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         View PDF

@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { Link, useNavigate } from "react-router-dom";
 import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
 import { POActivityTimeline } from "./POActivityTimeline";
@@ -204,10 +205,7 @@ export function EditableOrderRow({
           setUploadingPdf(false);
           return;
         }
-        const { data: urlData } = supabase.storage
-          .from('ncr-attachments')
-          .getPublicUrl(fileName);
-        pdfUrl = urlData.publicUrl;
+        pdfUrl = `ncr-attachments:${fileName}`;
         setUploadingPdf(false);
       }
 
@@ -415,10 +413,10 @@ export function EditableOrderRow({
     po_number: (
       <div className="flex flex-col gap-2">
         {order.pdf_url ? (
-          <a href={order.pdf_url} target="_blank" rel="noopener noreferrer"
-            className="font-mono text-sm font-medium text-primary hover:underline">
+          <button onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')} type="button"
+            className="font-mono text-sm font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-left">
             {order.po_number}
-          </a>
+          </button>
         ) : (
           <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
         )}
@@ -528,10 +526,10 @@ export function EditableOrderRow({
           {order.po_number}
         </Link>
         {order.pdf_url && (
-          <a href={order.pdf_url} target="_blank" rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-primary" onClick={(e) => e.stopPropagation()} title="View PDF">
+          <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
+            className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
             <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </button>
         )}
       </div>
     ),
@@ -601,10 +599,8 @@ export function EditableOrderRow({
               <Eye className="h-4 w-4" /> View Details
             </DropdownMenuItem>
             {order.pdf_url && (
-              <DropdownMenuItem className="gap-2" asChild>
-                <a href={order.pdf_url} target="_blank" rel="noopener noreferrer">
+              <DropdownMenuItem className="gap-2" onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')}>
                   <Download className="h-4 w-4" /> Download PO PDF
-                </a>
               </DropdownMenuItem>
             )}
             {isAdmin && (order.status === "pending" || order.status === "submitted") && (
