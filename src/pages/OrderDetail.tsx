@@ -428,7 +428,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
+                        onClick={() => openStorageFile(order.product!.customer_tech_spec_url!, 'print-cards')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1 inline" />
                         View Spec Sheet
