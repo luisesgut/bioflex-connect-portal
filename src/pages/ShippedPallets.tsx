@@ -181,7 +181,7 @@ export default function ShippedPallets() {
       "PT Code",
       "Description",
       "Customer PO",
-      "BFX Order",
+      "Sales Order",
       "Quantity",
       "Unit",
       "Destination",
