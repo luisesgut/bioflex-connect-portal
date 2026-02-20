@@ -158,7 +158,7 @@ export function ReleaseValidationDialog({
       const { error: updateError } = await supabase
         .from("load_pallets")
         .update({
-          release_pdf_url: urlData.publicUrl,
+          release_pdf_url: storagePath,
           release_number: manualReleaseNumber.trim(),
           is_on_hold: false,
         })
