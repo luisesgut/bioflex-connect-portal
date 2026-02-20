@@ -726,6 +726,16 @@ export default function OrderDetail() {
             }}
           />
         </div>
+
+        {/* Edit Order Dialog */}
+        {isAdmin && order && (
+          <EditOrderDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            order={order}
+            onSaved={fetchOrderDetails}
+          />
+        )}
       </div>
     </MainLayout>
   );
