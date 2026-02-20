@@ -325,7 +325,7 @@ export default function ProductRequestDetail() {
         .insert({
           product_request_id: id,
           version_number: nextVersion,
-          file_url: urlData.publicUrl,
+          file_url: fileStoragePath,
           file_name: pcFile.name,
           uploaded_by: user.id,
           status: 'pending',

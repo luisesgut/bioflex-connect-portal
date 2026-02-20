@@ -261,11 +261,7 @@ export default function NonConformance() {
         throw new Error(`Failed to upload ${file.name}`);
       }
 
-      const { data: urlData } = supabase.storage
-        .from("ncr-attachments")
-        .getPublicUrl(filePath);
-
-      uploadedUrls.push(urlData.publicUrl);
+      uploadedUrls.push(`ncr-attachments:${filePath}`);
     }
 
     return uploadedUrls;

@@ -267,10 +267,7 @@ export default function NewProductRequest() {
         .upload(fileName, file);
       
       if (!error) {
-        const { data: urlData } = supabase.storage
-          .from('product-request-files')
-          .getPublicUrl(fileName);
-        artworkUrls.push(urlData.publicUrl);
+        artworkUrls.push(`product-request-files:${fileName}`);
       }
     }
     

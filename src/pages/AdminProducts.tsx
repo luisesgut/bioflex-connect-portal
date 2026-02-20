@@ -482,14 +482,10 @@ export default function AdminProducts() {
       uploadedCount++;
 
       // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('print-cards')
-        .getPublicUrl(filePath);
-
-      // Update product with file URL
+      // Update product with file path (signed URLs generated on display)
       const { error: updateError } = await supabase
         .from('products')
-        .update({ print_card_url: urlData.publicUrl })
+        .update({ print_card_url: `print-cards:${filePath}` })
         .eq('id', matchingProduct.id);
 
       if (updateError) {

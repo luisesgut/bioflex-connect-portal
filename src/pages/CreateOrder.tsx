@@ -319,10 +319,7 @@ export default function CreateOrder() {
           return;
         }
 
-        const { data: urlData } = supabase.storage
-          .from('ncr-attachments')
-          .getPublicUrl(fileName);
-        pdfUrl = urlData.publicUrl;
+        pdfUrl = `ncr-attachments:${fileName}`;
       }
 
       // Insert purchase order

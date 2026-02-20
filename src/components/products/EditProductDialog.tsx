@@ -142,8 +142,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
       return null;
     }
-    const { data: urlData } = supabase.storage.from("print-cards").getPublicUrl(path);
-    return urlData.publicUrl;
+    return `print-cards:${path}`;
   };
 
   const handleFileUpload = async (

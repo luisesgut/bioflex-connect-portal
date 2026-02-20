@@ -204,10 +204,7 @@ export function EditableOrderRow({
           setUploadingPdf(false);
           return;
         }
-        const { data: urlData } = supabase.storage
-          .from('ncr-attachments')
-          .getPublicUrl(fileName);
-        pdfUrl = urlData.publicUrl;
+        pdfUrl = `ncr-attachments:${fileName}`;
         setUploadingPdf(false);
       }
 
