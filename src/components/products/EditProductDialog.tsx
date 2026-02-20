@@ -325,9 +325,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>BFX Spec Sheet (PDF)</Label>
             <div className="flex items-center gap-2">
               {form.bfx_spec_url && (
-                <a href={form.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => bfxSpecRef.current?.click()} disabled={uploadingBFXSpec}>
                 <Upload className="h-4 w-4 mr-1" />
