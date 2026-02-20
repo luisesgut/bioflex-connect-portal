@@ -526,10 +526,10 @@ export function EditableOrderRow({
           {order.po_number}
         </Link>
         {order.pdf_url && (
-          <a href={order.pdf_url} target="_blank" rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-primary" onClick={(e) => e.stopPropagation()} title="View PDF">
+          <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
+            className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
             <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          </button>
         )}
       </div>
     ),
