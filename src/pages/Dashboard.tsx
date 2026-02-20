@@ -75,9 +75,9 @@ export default function Dashboard() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <StatsCard
-              title="Órdenes Activas"
+              title="Active Orders"
               value={loading ? '...' : stats.activeOrders}
-              description="Con estatus Accepted"
+              description="With Accepted status"
               icon={<FileText className="h-6 w-6" />}
               variant="success"
             />
