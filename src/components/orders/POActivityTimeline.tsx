@@ -20,7 +20,7 @@ interface TimelineEvent {
   description: string;
   timestamp: string;
   status?: "pending" | "approved" | "rejected" | "info";
-  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield" | "status";
+  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield" | "status" | "edit";
   metadata?: Record<string, string | number | null>;
 }
 
