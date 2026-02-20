@@ -70,8 +70,8 @@ export function ProductionWeeksChart() {
   if (data.length === 0) {
     return (
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <h2 className="text-lg font-semibold text-card-foreground mb-1">Semanas de Producción por Familia</h2>
-        <p className="text-sm text-muted-foreground">No hay órdenes activas o capacidad configurada.</p>
+        <h2 className="text-lg font-semibold text-card-foreground mb-1">Production Weeks by Family</h2>
+        <p className="text-sm text-muted-foreground">No active orders or capacity configured.</p>
       </div>
     );
   }
