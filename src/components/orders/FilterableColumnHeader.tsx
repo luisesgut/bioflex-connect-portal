@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Filter, ArrowUpDown, ArrowUp, ArrowDown, Check } from "lucide-react";
+import { Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
