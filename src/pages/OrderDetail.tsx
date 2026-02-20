@@ -391,7 +391,7 @@ export default function OrderDetail() {
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             BFX Spec
