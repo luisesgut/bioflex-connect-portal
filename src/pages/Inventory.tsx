@@ -497,7 +497,7 @@ export default function Inventory() {
                   <DialogTitle>Upload Inventory File</DialogTitle>
                   <DialogDescription>
                     Upload an Excel file (.xlsx) with your daily inventory data.
-                    Expected columns: Production Date, Codigo, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Sales Order, Customer PO Number, Piezas, Pallet
+                    Expected columns: Production Date, PT, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Orden BFX, Customer PO Number, Piezas, Pallet
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
