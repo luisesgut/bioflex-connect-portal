@@ -66,7 +66,7 @@ export default function Dashboard() {
           <Link to="/orders/new">
             <Button variant="accent" size="lg" className="gap-2">
               <FileText className="h-5 w-5" />
-              Crear Nueva PO
+              Create New PO
             </Button>
           </Link>
         </div>
