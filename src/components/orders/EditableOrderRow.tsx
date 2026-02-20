@@ -413,10 +413,10 @@ export function EditableOrderRow({
     po_number: (
       <div className="flex flex-col gap-2">
         {order.pdf_url ? (
-          <a href={order.pdf_url} target="_blank" rel="noopener noreferrer"
-            className="font-mono text-sm font-medium text-primary hover:underline">
+          <button onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')} type="button"
+            className="font-mono text-sm font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-left">
             {order.po_number}
-          </a>
+          </button>
         ) : (
           <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
         )}
