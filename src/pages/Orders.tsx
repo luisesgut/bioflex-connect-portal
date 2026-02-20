@@ -731,7 +731,7 @@ export default function Orders() {
             {activeOrders.length > 0 ? (
               <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
                 <div className="overflow-x-auto">
-                  <table className="w-full" style={{ tableLayout: "fixed" }}>
+                  <table className="w-max min-w-full">
                     <thead>
                       <tr className="border-b bg-muted/30">
                         {orderedColumns.map(renderColumnHeader)}
