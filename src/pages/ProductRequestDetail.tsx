@@ -309,9 +309,7 @@ export default function ProductRequestDetail() {
       
       if (uploadError) throw uploadError;
       
-      const { data: urlData } = supabase.storage
-        .from('product-request-files')
-        .getPublicUrl(fileName);
+      const fileStoragePath = `product-request-files:${fileName}`;
 
       // Mark previous versions as superseded
       if (pcVersions.length > 0) {
