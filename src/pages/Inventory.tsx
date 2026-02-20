@@ -170,7 +170,7 @@ export default function Inventory() {
           gross_weight: parseFloat(row["Peso bruto"]) || null,
           net_weight: parseFloat(row["Peso neto"]) || null,
           traceability: row["Trazabilidad"] || "",
-          bfx_order: row["Sales Order"] || null,
+          bfx_order: row["Orden BFX"] || row["Sales Order"] || null,
           customer_lot: row["Customer PO Number"] || null,
           pieces: parseInt(row["Piezas"]) || null,
           pallet_type: palletType,
