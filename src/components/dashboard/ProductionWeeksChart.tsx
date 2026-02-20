@@ -62,7 +62,7 @@ export function ProductionWeeksChart() {
   if (loading) {
     return (
       <div className="rounded-xl border bg-card p-6 shadow-card">
-        <div className="h-64 flex items-center justify-center text-muted-foreground">Cargando...</div>
+        <div className="h-64 flex items-center justify-center text-muted-foreground">Loading...</div>
       </div>
     );
   }
