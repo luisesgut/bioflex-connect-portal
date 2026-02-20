@@ -122,6 +122,7 @@ export default function OrderDetail() {
   const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
 
   useEffect(() => {
