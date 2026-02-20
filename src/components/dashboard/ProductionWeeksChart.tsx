@@ -111,8 +111,8 @@ export function ProductionWeeksChart() {
             formatter={(value: number, _name: string, props: any) => {
               const item = props.payload;
               return [
-                `${value} semanas (${item.total_quantity.toLocaleString()} pzas / ${item.weekly_capacity.toLocaleString()} cap/sem)`,
-                'Producción',
+                `${value} weeks (${item.total_quantity.toLocaleString()} pcs / ${item.weekly_capacity.toLocaleString()} cap/wk)`,
+                'Production',
               ];
             }}
           />
