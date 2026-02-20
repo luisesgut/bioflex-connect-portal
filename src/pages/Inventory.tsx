@@ -603,7 +603,7 @@ export default function Inventory() {
                   <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                   <TableHead className="text-right">Stock</TableHead>
                   <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
-                  <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
+                  <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                   <TableHead className="text-right">Pieces</TableHead>
                   <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-[50px]"></TableHead>}
