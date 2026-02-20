@@ -708,16 +708,14 @@ export default function ProductRequestDetail() {
                   <CardTitle>Technical Specification</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <a
-                    href={request.tech_spec_pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
+                  <button
+                    onClick={() => openStorageFile(request.tech_spec_pdf_url, 'product-request-files')}
+                    className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors w-full text-left cursor-pointer bg-transparent"
                   >
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <span className="flex-1 truncate">{request.tech_spec_filename || 'Tech Spec PDF'}</span>
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  </a>
+                  </button>
                 </CardContent>
               </Card>
             )}
