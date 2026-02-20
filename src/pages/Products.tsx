@@ -485,12 +485,6 @@ export default function Products() {
                 {products.filter((p) => p.activa !== false).length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="inactive">
-              Inactive
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                {products.filter((p) => p.activa === false).length}
-              </Badge>
-            </TabsTrigger>
             <TabsTrigger value="in_process">
               In Process
               <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
