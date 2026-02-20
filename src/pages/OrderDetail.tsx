@@ -413,7 +413,7 @@ export default function OrderDetail() {
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             PC PDF
