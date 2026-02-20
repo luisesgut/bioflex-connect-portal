@@ -864,12 +864,10 @@ export default function ProductRequestDetail() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <a href={version.file_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => openStorageFile(version.file_url, 'product-request-files')}>
                               <ExternalLink className="h-4 w-4 mr-1" />
                               View
-                            </Button>
-                          </a>
+                          </Button>
                           {version.status === 'pending' && !isAdmin && (
                             <>
                               <Button
