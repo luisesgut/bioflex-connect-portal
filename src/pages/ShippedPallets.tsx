@@ -181,7 +181,7 @@ export default function ShippedPallets() {
       "PT Code",
       "Description",
       "Customer PO",
-      "BFX Order",
+      "Sales Order",
       "Quantity",
       "Unit",
       "Destination",
@@ -426,7 +426,7 @@ export default function ShippedPallets() {
                           </PopoverContent>
                         </Popover>
                       </TableHead>
-                      <TableHead>BFX Order</TableHead>
+                      <TableHead>Sales Order</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                       <TableHead>
                         <Popover

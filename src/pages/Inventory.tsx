@@ -163,14 +163,14 @@ export default function Inventory() {
         
         return {
           fecha: parseExcelDate(row["Production Date"]),
-          pt_code: row["Codigo"] || "",
+          pt_code: row["PT"] || row["Codigo"] || "",
           description: row["Descripción"] || "",
           stock: stockValue * 1000, // Multiply by 1000 as values are in thousands
           unit: getUnitFromPalletType(palletType),
           gross_weight: parseFloat(row["Peso bruto"]) || null,
           net_weight: parseFloat(row["Peso neto"]) || null,
           traceability: row["Trazabilidad"] || "",
-          bfx_order: row["Sales Order"] || null,
+          bfx_order: row["Orden BFX"] || row["Sales Order"] || null,
           customer_lot: row["Customer PO Number"] || null,
           pieces: parseInt(row["Piezas"]) || null,
           pallet_type: palletType,
@@ -497,7 +497,7 @@ export default function Inventory() {
                   <DialogTitle>Upload Inventory File</DialogTitle>
                   <DialogDescription>
                     Upload an Excel file (.xlsx) with your daily inventory data.
-                    Expected columns: Production Date, Codigo, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Sales Order, Customer PO Number, Piezas, Pallet
+                    Expected columns: Production Date, PT, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Orden BFX, Customer PO Number, Piezas, Pallet
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -603,7 +603,7 @@ export default function Inventory() {
                   <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                   <TableHead className="text-right">Stock</TableHead>
                   <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
-                  <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
+                  <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                   <TableHead className="text-right">Pieces</TableHead>
                   <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-[50px]"></TableHead>}
