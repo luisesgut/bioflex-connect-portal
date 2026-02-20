@@ -37,7 +37,7 @@ export function ProductionWeeksChart() {
     // Aggregate volume by item_type
     const volumeByType: Record<string, number> = {};
     for (const order of orders) {
-      const itemType = (order.products as any)?.item_type || 'Sin Tipo';
+      const itemType = (order.products as any)?.item_type || 'No Type';
       volumeByType[itemType] = (volumeByType[itemType] || 0) + order.quantity;
     }
 
