@@ -10,6 +10,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { TeamManagement } from "@/components/settings/TeamManagement";
 import { DPContactsManagement } from "@/components/settings/DPContactsManagement";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
+import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -77,6 +78,13 @@ export default function Settings() {
         {isActualAdmin && (
           <div style={{ animationDelay: "0.14s" }}>
             <DropdownOptionsManagement />
+          </div>
+        )}
+
+        {/* Production Capacity Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.15s" }}>
+            <ProductionCapacityManagement />
           </div>
         )}
 
