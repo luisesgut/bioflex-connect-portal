@@ -61,7 +61,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="animate-fade-in">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">Resumen de tu actividad de órdenes de compra.</p>
+            <p className="mt-1 text-muted-foreground">Overview of your purchase order activity.</p>
           </div>
           <Link to="/orders/new">
             <Button variant="accent" size="lg" className="gap-2">
