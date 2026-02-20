@@ -317,25 +317,21 @@ export default function LoadDetail() {
       });
       setProductsMap(prodMap);
 
-      // Match POs with available inventory by PT code
+      // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
-        if (!po.product?.codigo_producto) return;
+        const ptCode = po.product?.codigo_producto || "";
+        const matchingPallets = ptCode ? filteredPallets.filter(p => p.pt_code === ptCode) : [];
         
-        const ptCode = po.product.codigo_producto;
-        const matchingPallets = filteredPallets.filter(p => p.pt_code === ptCode);
-        
-        if (matchingPallets.length > 0) {
-          poInventoryData.push({
-            po_number: po.po_number,
-            product_pt_code: ptCode,
-            product_description: po.product.name || "",
-            total_quantity: po.quantity,
-            pieces_per_pallet: po.product.pieces_per_pallet,
-            inventory_pallets: matchingPallets.length,
-            inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
-          });
-        }
+        poInventoryData.push({
+          po_number: po.po_number,
+          product_pt_code: ptCode,
+          product_description: po.product?.name || "",
+          total_quantity: po.quantity,
+          pieces_per_pallet: po.product?.pieces_per_pallet || null,
+          inventory_pallets: matchingPallets.length,
+          inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
+        });
       });
       setActivePOsWithInventory(poInventoryData);
 
