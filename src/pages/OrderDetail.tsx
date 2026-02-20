@@ -10,6 +10,8 @@ import {
   ExternalLink,
   Loader2,
   XCircle,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -65,6 +67,27 @@ interface OrderDetails {
   } | null;
 }
 
+interface StockWarehouseDetail {
+  lote: string;
+  cantidad: number;
+  pesoBruto: number;
+  pesoNeto: number;
+  cajas: number;
+}
+
+interface StockVerificationItem {
+  claveProducto: string;
+  producto: string;
+  cantidadSolicitada: number;
+  unidadSolicitada: string;
+  cantidadEnviada: number;
+  cantidadPendiente: number;
+  porcentajeEnviado: number;
+  puedeCompletarOrden: boolean;
+  detallesAlmacen: StockWarehouseDetail[];
+  totalStockDisponible: number;
+}
+
 
 const statusStyles: Record<string, string> = {
   pending: "bg-info/10 text-info border-info/20",
@@ -94,6 +117,9 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
+  const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
   
 
   useEffect(() => {
@@ -101,6 +127,54 @@ export default function OrderDetail() {
       fetchOrderDetails();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!order?.sales_order_number || !order?.po_number) {
+      setStockVerification([]);
+      setStockError(null);
+      setStockLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchStockVerification = async () => {
+      setStockLoading(true);
+      setStockError(null);
+
+      try {
+        const response = await fetch(
+          `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number)}/${encodeURIComponent(order.po_number)}`,
+          {
+            method: "GET",
+            headers: { accept: "*/*" },
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = await response.json();
+        setStockVerification(Array.isArray(payload) ? payload : []);
+      } catch (error) {
+        if ((error as Error).name === "AbortError") {
+          return;
+        }
+        console.error("Error verifying stock:", error);
+        setStockError("Unable to verify stock for this order right now.");
+      } finally {
+        setStockLoading(false);
+      }
+    };
+
+    fetchStockVerification();
+
+    return () => {
+      controller.abort();
+    };
+  }, [order?.sales_order_number, order?.po_number]);
 
   const fetchOrderDetails = async () => {
     if (!id) return;
@@ -463,6 +537,139 @@ export default function OrderDetail() {
                     <label className="text-sm text-muted-foreground">Bioflex Delivery (Estimated)</label>
                     <p className="font-medium">{formatDate(order.estimated_delivery_date)}</p>
                   </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Stock Verification</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="rounded-full border px-2 py-1 text-muted-foreground">
+                        Sales Order: <span className="font-semibold text-foreground">{order.sales_order_number || "—"}</span>
+                      </span>
+                      <span className="rounded-full border px-2 py-1 text-muted-foreground">
+                        PO Number: <span className="font-semibold text-foreground">{order.po_number || "—"}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {stockLoading && (
+                    <div className="rounded-lg border bg-muted/30 p-4 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Checking warehouse availability...
+                    </div>
+                  )}
+
+                  {!stockLoading && stockError && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {stockError}
+                    </div>
+                  )}
+
+                  {!stockLoading && !stockError && stockVerification.length === 0 && (
+                    <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                      No stock verification data returned for this Sales Order / PO combination.
+                    </div>
+                  )}
+
+                  {!stockLoading && !stockError && stockVerification.length > 0 && (
+                    <div className="space-y-4">
+                      {stockVerification.map((item, index) => (
+                        <div
+                          key={`${item.claveProducto}-${index}`}
+                          className="rounded-xl border bg-gradient-to-br from-emerald-50/60 via-background to-sky-50/60 p-4 space-y-4"
+                        >
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                              <p className="text-sm text-muted-foreground">{item.claveProducto}</p>
+                              <p className="font-semibold">{item.producto}</p>
+                            </div>
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium",
+                                item.puedeCompletarOrden
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                              )}
+                            >
+                              {item.puedeCompletarOrden ? (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              ) : (
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                              )}
+                              {item.puedeCompletarOrden ? "Can complete order" : "Insufficient stock"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="rounded-lg border bg-background/70 p-3">
+                              <p className="text-xs text-muted-foreground">Requested</p>
+                              <p className="text-lg font-semibold">
+                                {item.cantidadSolicitada.toLocaleString()} {item.unidadSolicitada}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border bg-background/70 p-3">
+                              <p className="text-xs text-muted-foreground">Shipped</p>
+                              <p className="text-lg font-semibold">{item.cantidadEnviada.toLocaleString()}</p>
+                            </div>
+                            <div className="rounded-lg border bg-background/70 p-3">
+                              <p className="text-xs text-muted-foreground">Pending</p>
+                              <p className="text-lg font-semibold">{item.cantidadPendiente.toLocaleString()}</p>
+                            </div>
+                            <div className="rounded-lg border bg-background/70 p-3">
+                              <p className="text-xs text-muted-foreground">Stock Available</p>
+                              <p className="text-lg font-semibold">{item.totalStockDisponible.toLocaleString()}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Fulfillment progress</span>
+                              <span>{item.porcentajeEnviado.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  item.puedeCompletarOrden ? "bg-emerald-500" : "bg-amber-500"
+                                )}
+                                style={{ width: `${Math.min(100, Math.max(0, item.porcentajeEnviado))}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Warehouse Lots</p>
+                            {item.detallesAlmacen.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No warehouse lot details reported.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {item.detallesAlmacen.map((detalle, detailIndex) => (
+                                  <div
+                                    key={`${detalle.lote}-${detailIndex}`}
+                                    className="rounded-lg border bg-background/80 p-3 space-y-1"
+                                  >
+                                    <p className="text-xs text-muted-foreground">Lot</p>
+                                    <p className="font-medium">{detalle.lote}</p>
+                                    <div className="grid grid-cols-2 gap-2 text-sm pt-1">
+                                      <p className="text-muted-foreground">Qty: <span className="text-foreground font-medium">{detalle.cantidad.toLocaleString()}</span></p>
+                                      <p className="text-muted-foreground">Boxes: <span className="text-foreground font-medium">{detalle.cajas.toLocaleString()}</span></p>
+                                      <p className="text-muted-foreground">Gross: <span className="text-foreground font-medium">{detalle.pesoBruto.toLocaleString()}</span></p>
+                                      <p className="text-muted-foreground">Net: <span className="text-foreground font-medium">{detalle.pesoNeto.toLocaleString()}</span></p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
