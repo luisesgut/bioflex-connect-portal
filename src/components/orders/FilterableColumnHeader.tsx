@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Filter, ArrowUpDown, ArrowUp, ArrowDown, Check } from "lucide-react";
+import { Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -78,9 +78,9 @@ export function FilterableColumnHeader({
   const hasActiveFilters = selectedValues.length > 0;
 
   return (
-    <th
+    <div
       className={cn(
-        "px-6 py-4 text-xs font-medium uppercase tracking-wider text-muted-foreground",
+        "text-xs font-medium uppercase tracking-wider text-muted-foreground",
         align === "right" ? "text-right" : "text-left"
       )}
     >
@@ -176,6 +176,6 @@ export function FilterableColumnHeader({
           </Button>
         )}
       </div>
-    </th>
+    </div>
   );
 }

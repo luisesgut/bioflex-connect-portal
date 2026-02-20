@@ -14,10 +14,13 @@ import { BulkOrdersManager } from "@/components/orders/BulkOrdersManager";
 import { ChangeRequestDialog } from "@/components/orders/ChangeRequestDialog";
 import { EditableOrderRow } from "@/components/orders/EditableOrderRow";
 import { FilterableColumnHeader } from "@/components/orders/FilterableColumnHeader";
+import { ResizableTableHeader } from "@/components/orders/ResizableTableHeader";
 import { differenceInHours } from "date-fns";
 import { ProductionTimeline } from "@/components/orders/ProductionTimeline";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useColumnConfig } from "@/hooks/useColumnConfig";
 
 interface LoadDetail {
   load_number: string;
@@ -108,6 +111,9 @@ export default function Orders() {
   const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  // Column config
+  const { getOrderedColumns, getColumnWidth, setColumnWidth, reorderColumns, resetColumns } = useColumnConfig();
+
   // Column filters
   const [productFilter, setProductFilter] = useState<string[]>([]);
   const [customerFilter, setCustomerFilter] = useState<string[]>([]);
@@ -128,7 +134,6 @@ export default function Orders() {
 
     setLoading(true);
     
-    // Fetch orders
     const { data: ordersData, error: ordersError } = await supabase
       .from("purchase_orders")
       .select(`
@@ -157,7 +162,6 @@ export default function Orders() {
       return;
     }
 
-    // Get all sales order numbers and PO numbers for inventory lookup
     const salesOrderNumbers = (ordersData || [])
       .map((o: any) => o.sales_order_number)
       .filter((son: string | null): son is string => son !== null && son !== "");
@@ -166,17 +170,11 @@ export default function Orders() {
       .map((o: any) => o.po_number)
       .filter((po: string | null): po is string => po !== null && po !== "");
 
-    // Create maps for inventory stats - keyed by PO number
-    // Track pallet IDs to avoid double-counting when bfx_order and customer_lot both match
     let inventoryByPO: Record<string, { inFloor: number; shipped: number; palletIds: Set<string> }> = {};
-    // Load details map - keyed by po_number
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
-    // Shipped load details map - keyed by po_number
     let shippedLoadDetailsByPO: Record<string, ShippedLoadDetail[]> = {};
-    // Track shipped pallet IDs to avoid double-counting
     let shippedPalletIds: Record<string, Set<string>> = {};
 
-    // Build a map from sales_order_number to po_number for each order
     const salesOrderToPO: Record<string, string> = {};
     (ordersData || []).forEach((order: any) => {
       if (order.sales_order_number && order.po_number) {
@@ -184,7 +182,6 @@ export default function Orders() {
       }
     });
     
-    // Fetch current inventory by bfx_order (matches sales_order_number)
     if (salesOrderNumbers.length > 0) {
       const { data: inventoryData, error: inventoryError } = await supabase
         .from("inventory_pallets")
@@ -195,16 +192,11 @@ export default function Orders() {
         inventoryData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
-          
-          // Map to PO number
           const poNum = salesOrderToPO[salesOrder];
           if (!poNum) return;
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          
-          // Only count if not already counted
           if (!inventoryByPO[poNum].palletIds.has(pallet.id)) {
             inventoryByPO[poNum].palletIds.add(pallet.id);
             inventoryByPO[poNum].inFloor += pallet.stock || 0;
@@ -212,7 +204,6 @@ export default function Orders() {
         });
       }
 
-      // Fetch shipped pallets by bfx_order
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
         .select("id, bfx_order, quantity")
@@ -222,19 +213,14 @@ export default function Orders() {
         shippedData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
-          
-          // Map to PO number
           const poNum = salesOrderToPO[salesOrder];
           if (!poNum) return;
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
           if (!shippedPalletIds[poNum]) {
             shippedPalletIds[poNum] = new Set();
           }
-          
-          // Only count if not already counted
           if (!shippedPalletIds[poNum].has(pallet.id)) {
             shippedPalletIds[poNum].add(pallet.id);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
@@ -243,7 +229,6 @@ export default function Orders() {
       }
     }
 
-    // Also fetch inventory by customer_lot (matches po_number) with load details
     if (poNumbers.length > 0) {
       const { data: inventoryByLotData, error: inventoryByLotError } = await supabase
         .from("inventory_pallets")
@@ -268,29 +253,20 @@ export default function Orders() {
         inventoryByLotData.forEach((pallet: any) => {
           const poNum = pallet.customer_lot;
           if (!poNum) return;
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          
-          // Only count if not already counted (avoids double-counting when bfx_order and customer_lot both match)
           if (!inventoryByPO[poNum].palletIds.has(pallet.id)) {
             inventoryByPO[poNum].palletIds.add(pallet.id);
             inventoryByPO[poNum].inFloor += pallet.stock || 0;
           }
-
-          // Track load details for this PO
           if (pallet.load_pallets && pallet.load_pallets.length > 0) {
             const loadPallet = pallet.load_pallets[0];
             const loadInfo = loadPallet?.shipping_loads;
-            
-            // Only include loads that are not in_transit or delivered (those are "in floor")
             if (loadInfo && loadInfo.status !== "in_transit" && loadInfo.status !== "delivered") {
               if (!loadDetailsByPO[poNum]) {
                 loadDetailsByPO[poNum] = [];
               }
-              
-              // Check if this load is already tracked
               const existingLoad = loadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
               if (existingLoad) {
                 existingLoad.pallet_count += 1;
@@ -308,7 +284,6 @@ export default function Orders() {
         });
       }
 
-      // Fetch shipped pallets by customer_lot with load details
       const { data: shippedByLotData, error: shippedByLotError } = await supabase
         .from("shipped_pallets")
         .select(`
@@ -329,27 +304,21 @@ export default function Orders() {
         shippedByLotData.forEach((pallet: any) => {
           const poNum = pallet.customer_lot;
           if (!poNum) return;
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
           if (!shippedPalletIds[poNum]) {
             shippedPalletIds[poNum] = new Set();
           }
-          
-          // Only count if not already counted
           if (!shippedPalletIds[poNum].has(pallet.id)) {
             shippedPalletIds[poNum].add(pallet.id);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
           }
-
-          // Track shipped load details
           const loadInfo = pallet.shipping_loads;
           if (loadInfo) {
             if (!shippedLoadDetailsByPO[poNum]) {
               shippedLoadDetailsByPO[poNum] = [];
             }
-            
             const existingLoad = shippedLoadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
             if (existingLoad) {
               existingLoad.pallet_count += 1;
@@ -369,7 +338,6 @@ export default function Orders() {
       }
     }
 
-    // Fetch excess stock by PT code (sku field contains PT code)
     const ptCodes = (ordersData || [])
       .map((o: any) => o.products?.sku)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
@@ -386,7 +354,6 @@ export default function Orders() {
         excessData.forEach((pallet: any) => {
           const ptCode = pallet.pt_code;
           if (!ptCode) return;
-          
           if (!excessStockByPT[ptCode]) {
             excessStockByPT[ptCode] = { pallet_count: 0, total_quantity: 0 };
           }
@@ -397,22 +364,14 @@ export default function Orders() {
     }
 
     const formattedOrders = (ordersData || []).map((order: any) => {
-      // Get stats from combined inventory map (already de-duplicated by pallet ID)
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
-      
       const produced = stats.inFloor + stats.shipped;
       const pending = Math.max(0, order.quantity - produced);
       const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
-      
-      // Get load details for this PO
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
-      
-      // Get excess stock by PT code (sku field contains PT code for inventory lookup)
       const productSkuForInventory = order.products?.sku || null;
       const excessStock = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
-      
-      // Use codigo_producto as the PT code for display
       const productPtCode = (order.products as any)?.codigo_producto || null;
 
       return {
@@ -467,7 +426,7 @@ export default function Orders() {
 
   const getAcceptanceDeadline = (createdAt: string) => {
     const created = new Date(createdAt);
-    const deadline = new Date(created.getTime() + 24 * 60 * 60 * 1000); // 1 day
+    const deadline = new Date(created.getTime() + 24 * 60 * 60 * 1000);
     const hoursLeft = differenceInHours(deadline, new Date());
     return hoursLeft;
   };
@@ -491,7 +450,6 @@ export default function Orders() {
     });
   };
 
-  // Get unique values for filter options
   const filterOptions = useMemo(() => ({
     products: orders.map((o) => o.product_name).filter(Boolean) as string[],
     customers: orders.map((o) => o.product_customer).filter(Boolean) as string[],
@@ -515,8 +473,6 @@ export default function Orders() {
                            (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       const matchesStatus = selectedStatus === "All" || 
                            getStatusFilter(order.status) === selectedStatus;
-      
-      // Column filters
       const matchesProduct = productFilter.length === 0 || 
                             (order.product_name && productFilter.includes(order.product_name));
       const matchesCustomer = customerFilter.length === 0 || 
@@ -534,7 +490,6 @@ export default function Orders() {
              matchesItemType && matchesDpSales && matchesStatusFilter && matchesPriority;
     });
 
-    // Apply date sorting
     if (customerDeliverySort) {
       result = [...result].sort((a, b) => {
         const dateA = a.requested_delivery_date ? new Date(a.requested_delivery_date).getTime() : 0;
@@ -553,7 +508,6 @@ export default function Orders() {
   }, [orders, searchQuery, selectedStatus, productFilter, customerFilter, itemTypeFilter, 
       dpSalesFilter, statusFilter, priorityFilter, customerDeliverySort, bioflexDeliverySort]);
 
-  // Split orders into active and closed
   const activeOrders = useMemo(() => 
     filteredAndSortedOrders.filter(order => order.status !== "closed"), 
     [filteredAndSortedOrders]
@@ -587,6 +541,83 @@ export default function Orders() {
       style: "currency",
       currency: "USD",
     }).format(value);
+  };
+
+  // Column filter/sort config maps
+  const columnFilterConfig: Record<string, {
+    options: string[];
+    selectedValues: string[];
+    onFilterChange: (values: string[]) => void;
+    showSort?: boolean;
+    sortDirection?: "asc" | "desc" | null;
+    onSortChange?: (dir: "asc" | "desc" | null) => void;
+  }> = {
+    product: { options: filterOptions.products, selectedValues: productFilter, onFilterChange: setProductFilter },
+    customer: { options: filterOptions.customers, selectedValues: customerFilter, onFilterChange: setCustomerFilter },
+    item_type: { options: filterOptions.itemTypes, selectedValues: itemTypeFilter, onFilterChange: setItemTypeFilter },
+    dp_sales_csr: { options: filterOptions.dpSales, selectedValues: dpSalesFilter, onFilterChange: setDpSalesFilter },
+    status: { options: filterOptions.statuses, selectedValues: statusFilter, onFilterChange: setStatusFilter },
+    priority: { options: filterOptions.priorities, selectedValues: priorityFilter, onFilterChange: setPriorityFilter },
+    customer_delivery: {
+      options: filterOptions.customerDeliveryDates,
+      selectedValues: [],
+      onFilterChange: () => {},
+      showSort: true,
+      sortDirection: customerDeliverySort,
+      onSortChange: (dir) => { setCustomerDeliverySort(dir); setBioflexDeliverySort(null); },
+    },
+    bioflex_delivery: {
+      options: filterOptions.bioflexDeliveryDates,
+      selectedValues: [],
+      onFilterChange: () => {},
+      showSort: true,
+      sortDirection: bioflexDeliverySort,
+      onSortChange: (dir) => { setBioflexDeliverySort(dir); setCustomerDeliverySort(null); },
+    },
+  };
+
+  const orderedColumns = getOrderedColumns(isAdmin);
+
+  const renderColumnHeader = (col: typeof orderedColumns[0]) => {
+    const filterCfg = columnFilterConfig[col.id];
+    if (filterCfg) {
+      return (
+        <ResizableTableHeader
+          key={col.id}
+          column={col}
+          width={getColumnWidth(col.id)}
+          onResize={setColumnWidth}
+          onReorder={reorderColumns}
+        >
+          <FilterableColumnHeader
+            title={col.label}
+            options={filterCfg.options}
+            selectedValues={filterCfg.selectedValues}
+            onFilterChange={filterCfg.onFilterChange}
+            showSort={filterCfg.showSort}
+            sortDirection={filterCfg.sortDirection}
+            onSortChange={filterCfg.onSortChange}
+            align={col.align}
+          />
+        </ResizableTableHeader>
+      );
+    }
+    return (
+      <ResizableTableHeader
+        key={col.id}
+        column={col}
+        width={getColumnWidth(col.id)}
+        onResize={setColumnWidth}
+        onReorder={reorderColumns}
+      >
+        <span className={cn(
+          "px-6 py-4 text-xs font-medium uppercase tracking-wider text-muted-foreground block",
+          col.align === "right" ? "text-right" : "text-left"
+        )}>
+          {col.label}
+        </span>
+      </ResizableTableHeader>
+    );
   };
 
   return (
@@ -625,23 +656,37 @@ export default function Orders() {
             />
           </div>
           
-          {/* View Mode Toggle */}
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board")} className="w-auto">
-            <TabsList>
-              <TabsTrigger value="list" className="gap-2">
-                <List className="h-4 w-4" />
-                List
-              </TabsTrigger>
-              <TabsTrigger value="timeline" className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Timeline
-              </TabsTrigger>
-              <TabsTrigger value="board" className="gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                Board
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            {viewMode === "list" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={resetColumns} className="gap-1.5">
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset Columns
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reset column order and widths</TooltipContent>
+              </Tooltip>
+            )}
+            
+            {/* View Mode Toggle */}
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board")} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="list" className="gap-2">
+                  <List className="h-4 w-4" />
+                  List
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger value="board" className="gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Board
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -686,110 +731,10 @@ export default function Orders() {
             {activeOrders.length > 0 ? (
               <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.2s" }}>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full" style={{ tableLayout: "fixed" }}>
                     <thead>
                       <tr className="border-b bg-muted/30">
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          PO Number
-                        </th>
-                        <FilterableColumnHeader
-                          title="Product"
-                          options={filterOptions.products}
-                          selectedValues={productFilter}
-                          onFilterChange={setProductFilter}
-                        />
-                        <FilterableColumnHeader
-                          title="Customer"
-                          options={filterOptions.customers}
-                          selectedValues={customerFilter}
-                          onFilterChange={setCustomerFilter}
-                        />
-                        <FilterableColumnHeader
-                          title="Item Type"
-                          options={filterOptions.itemTypes}
-                          selectedValues={itemTypeFilter}
-                          onFilterChange={setItemTypeFilter}
-                        />
-                        <FilterableColumnHeader
-                          title="DP Sales/CSR"
-                          options={filterOptions.dpSales}
-                          selectedValues={dpSalesFilter}
-                          onFilterChange={setDpSalesFilter}
-                        />
-                        {isAdmin && (
-                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                            PT Code
-                          </th>
-                        )}
-                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Quantity
-                        </th>
-                        {isAdmin && (
-                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                            Value
-                          </th>
-                        )}
-                        <FilterableColumnHeader
-                          title="Status"
-                          options={filterOptions.statuses}
-                          selectedValues={statusFilter}
-                          onFilterChange={setStatusFilter}
-                        />
-                        {isAdmin && (
-                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                            Sales Order
-                          </th>
-                        )}
-                        <FilterableColumnHeader
-                          title="Priority"
-                          options={filterOptions.priorities}
-                          selectedValues={priorityFilter}
-                          onFilterChange={setPriorityFilter}
-                        />
-                        <FilterableColumnHeader
-                          title="Customer Delivery"
-                          options={filterOptions.customerDeliveryDates}
-                          selectedValues={[]}
-                          onFilterChange={() => {}}
-                          showSort
-                          sortDirection={customerDeliverySort}
-                          onSortChange={(dir) => {
-                            setCustomerDeliverySort(dir);
-                            setBioflexDeliverySort(null);
-                          }}
-                        />
-                        <FilterableColumnHeader
-                          title="Bioflex Delivery"
-                          options={filterOptions.bioflexDeliveryDates}
-                          selectedValues={[]}
-                          onFilterChange={() => {}}
-                          showSort
-                          sortDirection={bioflexDeliverySort}
-                          onSortChange={(dir) => {
-                            setBioflexDeliverySort(dir);
-                            setCustomerDeliverySort(null);
-                          }}
-                        />
-                        {isAdmin && (
-                          <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                            Excess Stock
-                          </th>
-                        )}
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          In Floor
-                        </th>
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Shipped
-                        </th>
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Pending
-                        </th>
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          % Produced
-                        </th>
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Actions
-                        </th>
+                        {orderedColumns.map(renderColumnHeader)}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -805,6 +750,8 @@ export default function Orders() {
                           onAcceptOrder={handleAcceptOrder}
                           onRequestChange={handleRequestChange}
                           onUpdated={fetchOrders}
+                          columnOrder={orderedColumns.map(c => c.id)}
+                          columnWidths={Object.fromEntries(orderedColumns.map(c => [c.id, getColumnWidth(c.id)]))}
                         />
                       ))}
                     </tbody>
@@ -860,30 +807,47 @@ export default function Orders() {
                   <tbody className="divide-y">
                     {closedOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-6 py-4">
-                          <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:underline">
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <Link 
+                            to={`/orders/${order.id}`}
+                            className="font-mono text-sm font-medium text-primary hover:underline"
+                          >
                             {order.po_number}
                           </Link>
                         </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.product_customer_item || "—"}</td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{order.product_customer || "—"}</td>
-                        <td className="px-6 py-4 text-sm">{order.quantity.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{formatDate(order.requested_delivery_date)}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-muted-foreground">
+                            {[order.product_customer_item, order.product_item_description].filter(Boolean).join(' - ') || order.product_name || "—"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-muted-foreground">
+                            {order.product_customer || "—"}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                          {order.quantity.toLocaleString()} units
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                          {formatDate(order.requested_delivery_date)}
+                        </td>
                         {isAdmin && (
-                          <td className="px-6 py-4 text-right">
+                          <td className="whitespace-nowrap px-6 py-4 text-right">
                             <Button
-                              variant="outline"
                               size="sm"
+                              variant="outline"
                               className="gap-1"
-                              disabled={reactivatingId === order.id}
                               onClick={() => handleReactivateOrder(order.id)}
+                              disabled={reactivatingId === order.id}
                             >
                               {reactivatingId === order.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <RotateCcw className="h-3.5 w-3.5" />
+                                <>
+                                  <RotateCcw className="h-4 w-4" />
+                                  Reactivate
+                                </>
                               )}
-                              Reactivate
                             </Button>
                           </td>
                         )}
@@ -896,21 +860,23 @@ export default function Orders() {
           </div>
         )}
 
-        {/* Accept Order Dialog */}
-        <AcceptOrderDialog
-          open={acceptDialogOpen}
-          onOpenChange={setAcceptDialogOpen}
-          order={selectedOrder}
-          onAccepted={fetchOrders}
-        />
-
-        {/* Change Request Dialog */}
-        <ChangeRequestDialog
-          open={changeRequestDialogOpen}
-          onOpenChange={setChangeRequestDialogOpen}
-          order={selectedOrder}
-          onSubmitted={fetchOrders}
-        />
+        {/* Dialogs */}
+        {selectedOrder && (
+          <>
+            <AcceptOrderDialog
+              open={acceptDialogOpen}
+              onOpenChange={setAcceptDialogOpen}
+              order={selectedOrder}
+              onAccepted={fetchOrders}
+            />
+            <ChangeRequestDialog
+              open={changeRequestDialogOpen}
+              onOpenChange={setChangeRequestDialogOpen}
+              order={selectedOrder}
+              onSubmitted={fetchOrders}
+            />
+          </>
+        )}
       </div>
     </MainLayout>
   );
