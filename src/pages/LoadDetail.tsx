@@ -304,7 +304,7 @@ export default function LoadDetail() {
           quantity,
           product:products(codigo_producto, name, pieces_per_pallet)
         `)
-        .in("status", ["pending", "confirmed", "in_production"]);
+        .in("status", ["pending", "confirmed", "accepted", "in_production"]);
 
       // Build products map for pieces_per_pallet validation
       const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
