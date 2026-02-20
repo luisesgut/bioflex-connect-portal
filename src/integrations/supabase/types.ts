@@ -929,6 +929,30 @@ export type Database = {
           },
         ]
       }
+      production_capacity: {
+        Row: {
+          created_at: string
+          id: string
+          item_type: string
+          updated_at: string
+          weekly_capacity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_type: string
+          updated_at?: string
+          weekly_capacity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_type?: string
+          updated_at?: string
+          weekly_capacity?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           activa: boolean | null
