@@ -729,17 +729,15 @@ export default function ProductRequestDetail() {
                 <CardContent>
                   <div className="grid gap-2">
                     {request.artwork_files.map((url, index) => (
-                      <a
+                      <button
                         key={index}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors"
+                        onClick={() => openStorageFile(url, 'product-request-files')}
+                        className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted transition-colors w-full text-left cursor-pointer bg-transparent"
                       >
                         <FileText className="h-5 w-5 text-muted-foreground" />
                         <span className="flex-1 truncate">Artwork {index + 1}</span>
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </CardContent>
