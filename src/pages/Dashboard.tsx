@@ -119,7 +119,7 @@ export default function Dashboard() {
         <div className="flex justify-end">
           <Link to="/orders">
             <Button variant="outline" className="gap-2">
-              Ver Todas las Órdenes <ArrowUpRight className="h-4 w-4" />
+              View All Orders <ArrowUpRight className="h-4 w-4" />
             </Button>
           </Link>
         </div>
