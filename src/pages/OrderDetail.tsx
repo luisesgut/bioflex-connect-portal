@@ -13,6 +13,7 @@ import {
   XCircle,
   CheckCircle2,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { cn } from "@/lib/utils";
 
 
@@ -121,6 +123,7 @@ export default function OrderDetail() {
   const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
 
   useEffect(() => {
@@ -336,16 +339,29 @@ export default function OrderDetail() {
               Created on {formatDateTime(order.created_at)}
             </p>
           </div>
-          {isAdmin && order.status !== "closed" && (
-            <Button
-              variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={handleCloseOrder}
-              disabled={closing}
-            >
-              {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
-              Close Order
-            </Button>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit PO
+                </Button>
+              )}
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={handleCloseOrder}
+                  disabled={closing}
+                >
+                  {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
+                  Close Order
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -710,6 +726,16 @@ export default function OrderDetail() {
             }}
           />
         </div>
+
+        {/* Edit Order Dialog */}
+        {isAdmin && order && (
+          <EditOrderDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            order={order}
+            onSaved={fetchOrderDetails}
+          />
+        )}
       </div>
     </MainLayout>
   );
