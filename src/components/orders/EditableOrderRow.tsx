@@ -691,15 +691,9 @@ export function EditableOrderRow({
           <td
             key={colId}
             className={cn(
-              "whitespace-nowrap px-6 py-4 text-sm",
+              "px-6 py-4 text-sm overflow-hidden text-ellipsis",
               rightAlignedColumns.has(colId) && "text-right",
-              colId === "quantity" && isEditing && "py-2",
-              colId === "value" && isEditing && "py-2",
-              colId === "status" && isEditing && "py-2",
-              colId === "sales_order" && isEditing && "py-2",
-              colId === "priority" && isEditing && "py-2",
-              colId === "customer_delivery" && isEditing && "py-2",
-              colId === "bioflex_delivery" && isEditing && "py-2",
+              isEditing && "py-2",
             )}
             style={columnWidths?.[colId] ? { width: `${columnWidths[colId]}px` } : undefined}
           >
