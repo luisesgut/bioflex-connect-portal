@@ -24,6 +24,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { cn } from "@/lib/utils";
 
 
