@@ -77,7 +77,7 @@ export function ReleaseValidationDialog({
 
       const { data: urlData } = supabase.storage
         .from("release-documents")
-        .getPublicUrl(fileName);
+        .getPublicUrl(fileName);  // Public URL needed for AI validation only
 
       // Call AI to validate the PDF content
       const response = await supabase.functions.invoke("extract-po-data", {
