@@ -599,10 +599,8 @@ export function EditableOrderRow({
               <Eye className="h-4 w-4" /> View Details
             </DropdownMenuItem>
             {order.pdf_url && (
-              <DropdownMenuItem className="gap-2" asChild>
-                <a href={order.pdf_url} target="_blank" rel="noopener noreferrer">
+              <DropdownMenuItem className="gap-2" onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')}>
                   <Download className="h-4 w-4" /> Download PO PDF
-                </a>
               </DropdownMenuItem>
             )}
             {isAdmin && (order.status === "pending" || order.status === "submitted") && (

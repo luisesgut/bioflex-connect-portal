@@ -347,10 +347,10 @@ export default function Products() {
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     {product.bfx_spec_url ? (
-                      <a href={product.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         View
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}

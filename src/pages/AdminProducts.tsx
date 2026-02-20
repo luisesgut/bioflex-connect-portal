@@ -863,11 +863,9 @@ export default function AdminProducts() {
                         </TableCell>
                         <TableCell className="bg-green-500/5">
                           {product.print_card_url ? (
-                            <a 
-                              href={product.print_card_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            <button
+                              onClick={() => openStorageFile(product.print_card_url, 'print-cards')}
+                              className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
                             >
                               <FileText className="h-4 w-4" />
                               View

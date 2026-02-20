@@ -500,7 +500,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto"
-                        onClick={() => window.open(order.pdf_url!, "_blank")}
+                        onClick={() => openStorageFile(order.pdf_url!, 'ncr-attachments')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         View PDF
