@@ -102,9 +102,9 @@ export default function Dashboard() {
           </div>
           <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
             <StatsCard
-              title="Misma Semana Mes Ant."
+              title="Same Week Last Month"
               value={loading ? '...' : stats.newLastMonthSameWeek}
-              description="Comparativo mensual"
+              description="Monthly comparison"
               icon={<TrendingUp className="h-6 w-6" />}
             />
           </div>
