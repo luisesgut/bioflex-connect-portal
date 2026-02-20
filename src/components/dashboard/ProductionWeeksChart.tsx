@@ -87,8 +87,8 @@ export function ProductionWeeksChart() {
   return (
     <div className="rounded-xl border bg-card p-6 shadow-card">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-card-foreground">Semanas de Producción por Familia</h2>
-        <p className="text-sm text-muted-foreground">Volumen en sistema ÷ capacidad semanal asignada</p>
+        <h2 className="text-lg font-semibold text-card-foreground">Production Weeks by Family</h2>
+        <p className="text-sm text-muted-foreground">Volume in system ÷ assigned weekly capacity</p>
       </div>
 
       <ResponsiveContainer width="100%" height={300}>
