@@ -151,9 +151,7 @@ export function ReleaseValidationDialog({
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("release-documents")
-        .getPublicUrl(fileName);
+      const storagePath = `release-documents:${fileName}`;
 
       // Update all selected pallets
       const palletIds = selectedPallets.map((p) => p.id);
