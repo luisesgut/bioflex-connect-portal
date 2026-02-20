@@ -338,16 +338,29 @@ export default function OrderDetail() {
               Created on {formatDateTime(order.created_at)}
             </p>
           </div>
-          {isAdmin && order.status !== "closed" && (
-            <Button
-              variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={handleCloseOrder}
-              disabled={closing}
-            >
-              {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
-              Close Order
-            </Button>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit PO
+                </Button>
+              )}
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={handleCloseOrder}
+                  disabled={closing}
+                >
+                  {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
+                  Close Order
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
