@@ -1747,8 +1747,8 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Active POs with Available Inventory */}
-        {activePOsWithInventory.length > 0 && (
+        {/* Active POs with Available Inventory - Always show during assembling */}
+        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -1756,7 +1756,7 @@ export default function LoadDetail() {
                 <CardTitle className="text-lg">Active POs with Available Inventory</CardTitle>
               </div>
               <CardDescription>
-                Purchase Orders with matching materials available in inventory
+                Active Purchase Orders and their matching materials in inventory
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1765,7 +1765,7 @@ export default function LoadDetail() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>PO #</TableHead>
-                      {isAdmin && <TableHead>PT Code</TableHead>}
+                      <TableHead>PT Code</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead className="text-right">PO Qty</TableHead>
                       <TableHead className="text-center">Pallets Available</TableHead>
@@ -1773,20 +1773,27 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activePOsWithInventory.map((po) => (
-                      <TableRow key={po.po_number}>
-                        <TableCell className="font-medium">{po.po_number}</TableCell>
-                        {isAdmin && <TableCell className="font-mono text-sm">{po.product_pt_code}</TableCell>}
-                        <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
-                        <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary">{po.inventory_pallets}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-primary">
-                          {po.inventory_volume.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {activePOsWithInventory.map((po) => {
+                      const hasInventory = po.inventory_pallets > 0;
+                      return (
+                        <TableRow key={po.po_number} className={!hasInventory ? "opacity-50" : ""}>
+                          <TableCell className="font-medium">{po.po_number}</TableCell>
+                          <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                          <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-center">
+                            {hasInventory ? (
+                              <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">0</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={`text-right font-medium ${hasInventory ? "text-primary" : "text-muted-foreground"}`}>
+                            {po.inventory_volume.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
