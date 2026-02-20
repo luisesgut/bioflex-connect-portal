@@ -127,15 +127,20 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
           const oldLabel = statusLabels[change.old_status || ""] || change.old_status || "Unknown";
           const newLabel = statusLabels[change.new_status] || change.new_status;
           
+          // Detect if this is an edit event (same status, notes starting with "PO edited:")
+          const isEditEvent = change.old_status === change.new_status && change.notes?.startsWith("PO edited:");
+
           timelineEvents.push({
             id: `status-change-${change.id}`,
             type: "status_change",
-            title: "Status Changed",
-            description: `Status updated from "${oldLabel}" to "${newLabel}"`,
+            title: isEditEvent ? "PO Edited" : "Status Changed",
+            description: isEditEvent
+              ? (change.notes?.replace("PO edited: ", "") || "Order details were modified")
+              : `Status updated from "${oldLabel}" to "${newLabel}"`,
             timestamp: change.changed_at,
             status: "info",
-            icon: "status",
-            metadata: change.notes ? { reason: change.notes } : undefined,
+            icon: isEditEvent ? "edit" : "status",
+            metadata: !isEditEvent && change.notes ? { reason: change.notes } : undefined,
           });
         }
       }
