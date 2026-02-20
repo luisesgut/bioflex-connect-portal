@@ -869,7 +869,7 @@ export default function AdminProducts() {
                             >
                               <FileText className="h-4 w-4" />
                               View
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}

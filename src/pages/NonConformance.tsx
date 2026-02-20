@@ -530,7 +530,7 @@ export default function NonConformance() {
                             className="flex-1 truncate text-sm text-primary hover:underline text-left cursor-pointer bg-transparent border-none p-0"
                           >
                             Attachment {index + 1}
-                          </a>
+                          </button>
                         </div>
                       ))}
                     </div>
