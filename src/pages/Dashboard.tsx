@@ -93,9 +93,9 @@ export default function Dashboard() {
           </div>
           <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
             <StatsCard
-              title="Nuevas esta Semana"
+              title="New This Week"
               value={loading ? '...' : stats.newThisWeek}
-              description="Órdenes recibidas"
+              description="Orders received"
               icon={<Package className="h-6 w-6" />}
               trend={!loading && stats.newLastMonthSameWeek > 0 ? { value: Math.abs(weekDiff), isPositive: weekDiff >= 0 } : undefined}
             />
