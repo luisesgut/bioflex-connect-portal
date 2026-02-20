@@ -49,6 +49,7 @@ const iconMap = {
   cancel: Ban,
   shield: ShieldAlert,
   status: RefreshCw,
+  edit: Pencil,
 };
 
 const statusColors = {
