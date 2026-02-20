@@ -163,7 +163,7 @@ export default function Inventory() {
         
         return {
           fecha: parseExcelDate(row["Production Date"]),
-          pt_code: row["Codigo"] || "",
+          pt_code: row["PT"] || row["Codigo"] || "",
           description: row["Descripción"] || "",
           stock: stockValue * 1000, // Multiply by 1000 as values are in thousands
           unit: getUnitFromPalletType(palletType),
