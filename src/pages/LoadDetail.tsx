@@ -1870,7 +1870,7 @@ export default function LoadDetail() {
                           <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                           <TableHead className="text-right">Stock</TableHead>
                           <TableHead className="text-center">Vol. OK</TableHead>
-                          <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
+                          <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
                         </TableRow>
                       </TableHeader>
