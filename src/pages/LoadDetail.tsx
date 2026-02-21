@@ -1044,6 +1044,7 @@ export default function LoadDetail() {
     } finally {
       setDeletingPallets(false);
     }
+  };
 
   // Get unique destinations from pallets for delivery date dialog
   const uniqueDestinations = useMemo(() => {
