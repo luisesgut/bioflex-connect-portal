@@ -1236,36 +1236,21 @@ export default function LoadDetail() {
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
-            {isAdmin && load.status !== "assembling" && load.status !== "delivered" && (
+            {isAdmin && load.status !== "delivered" && (
               <Select
                 value={load.status}
                 onValueChange={handleStatusChange}
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Change status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {load.status === "pending_release" && (
-                    <SelectItem value="approved">Released</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved") && (
-                    <SelectItem value="in_transit">In Transit</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved" || load.status === "in_transit") && (
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                  )}
+                  <SelectItem value="assembling">Assembling</SelectItem>
+                  <SelectItem value="pending_release">Pending Release</SelectItem>
+                  <SelectItem value="in_transit">In Transit</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-            {isAdmin && load.status === "assembling" && pallets.length > 0 && (
-              <Button onClick={handleSendReleaseRequest} disabled={sendingRelease}>
-                {sendingRelease ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Send for Release
-              </Button>
             )}
             {isAdmin && (load.status === "in_transit" || load.status === "delivered") && pallets.length > 0 && (
               <Button variant="outline" onClick={handleGenerateCustomsDocument}>
