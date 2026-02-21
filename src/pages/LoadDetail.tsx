@@ -62,6 +62,7 @@ import {
   Info,
   Pause,
   Scale,
+  Undo2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -233,6 +234,9 @@ export default function LoadDetail() {
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
+  const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
+  const [revertingPallets, setRevertingPallets] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -949,6 +953,99 @@ export default function LoadDetail() {
     }
   };
 
+  // Toggle selection for released pallets (revert)
+  const toggleReleasedPallet = (palletId: string) => {
+    setSelectedReleasedPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllReleasedPallets = () => {
+    if (selectedReleasedPallets.size === releasedPallets.length) {
+      setSelectedReleasedPallets(new Set());
+    } else {
+      setSelectedReleasedPallets(new Set(releasedPallets.map((p) => p.id)));
+    }
+  };
+
+  // Toggle selection for on-hold pallets
+  const toggleOnHoldPallet = (palletId: string) => {
+    setSelectedOnHoldPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllOnHoldPallets = () => {
+    if (selectedOnHoldPallets.size === onHoldPallets.length) {
+      setSelectedOnHoldPallets(new Set());
+    } else {
+      setSelectedOnHoldPallets(new Set(onHoldPallets.map((p) => p.id)));
+    }
+  };
+
+  // Revert released pallets back to pending
+  const handleRevertToPending = async () => {
+    if (selectedReleasedPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedReleasedPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ release_number: null, release_pdf_url: null, destination: "tbd", is_on_hold: false })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) reverted to pending`);
+      setSelectedReleasedPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
+  // Delete pallets from pending or on-hold during release phase
+  const handleDeleteReleasePhasePallets = async (palletIds: Set<string>) => {
+    if (palletIds.size === 0) return;
+    setDeletingPallets(true);
+    try {
+      const palletsToRemove = pallets.filter((p) => palletIds.has(p.id));
+      const loadPalletIds = palletsToRemove.map((p) => p.id);
+      const inventoryPalletIds = palletsToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      const newTotal = Math.max(0, (load?.total_pallets || 0) - palletsToRemove.length);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`${palletsToRemove.length} pallet(s) removed from load`);
+      setSelectedPalletsForRelease(new Set());
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting pallets:", error);
+      toast.error("Failed to remove pallets");
+    } finally {
+      setDeletingPallets(false);
+    }
+  };
+
   // Get unique destinations from pallets for delivery date dialog
   const uniqueDestinations = useMemo(() => {
     const dests = pallets
@@ -1416,14 +1513,44 @@ export default function LoadDetail() {
           <>
             {/* Released Pallets */}
             <Card className="border-green-200 dark:border-green-900">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Pallets that have been approved for shipping
+                  </CardDescription>
                 </div>
-                <CardDescription>
-                  Pallets that have been approved for shipping
-                </CardDescription>
+                {isAdmin && selectedReleasedPallets.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={revertingPallets}>
+                        {revertingPallets ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Undo2 className="mr-2 h-4 w-4" />
+                        )}
+                        Revert to Pending ({selectedReleasedPallets.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will clear the release number, PDF and destination for {selectedReleasedPallets.size} pallet(s) and move them back to pending.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRevertToPending}>
+                          Revert
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </CardHeader>
               <CardContent>
                 {releasedPallets.length === 0 ? (
@@ -1436,6 +1563,14 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
+                                onCheckedChange={toggleAllReleasedPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
@@ -1448,6 +1583,14 @@ export default function LoadDetail() {
                       <TableBody>
                         {releasedPallets.map((pallet) => (
                           <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedReleasedPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleReleasedPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
@@ -1494,6 +1637,30 @@ export default function LoadDetail() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isAdmin && selectedPalletsForRelease.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove ({selectedPalletsForRelease.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedPalletsForRelease.size} pallet(s) from this load and return them to inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedPalletsForRelease)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   {selectedPalletsForRelease.size > 0 && (
                     <Button 
                       onClick={() => setReleaseDialogOpen(true)}
@@ -1556,20 +1723,54 @@ export default function LoadDetail() {
             {/* On Hold Pallets */}
             {onHoldPallets.length > 0 && (
               <Card className="border-red-200 dark:border-red-900">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Pause className="h-5 w-5 text-red-600" />
-                    <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Pause className="h-5 w-5 text-red-600" />
+                      <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Pallets that have been placed on hold
+                    </CardDescription>
                   </div>
-                  <CardDescription>
-                    Pallets that have been placed on hold
-                  </CardDescription>
+                  {isAdmin && selectedOnHoldPallets.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove ({selectedOnHoldPallets.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedOnHoldPallets.size} pallet(s) from this load and return them to inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedOnHoldPallets)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={onHoldPallets.length > 0 && selectedOnHoldPallets.size === onHoldPallets.length}
+                                onCheckedChange={toggleAllOnHoldPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
@@ -1579,6 +1780,14 @@ export default function LoadDetail() {
                       <TableBody>
                         {onHoldPallets.map((pallet) => (
                           <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedOnHoldPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleOnHoldPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
