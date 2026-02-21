@@ -405,6 +405,7 @@ export default function Orders() {
           loadDetails,
           shippedLoadDetails,
           excessStock,
+          sapStockAvailable: null,
         },
       };
     });
