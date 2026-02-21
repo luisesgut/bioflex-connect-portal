@@ -369,21 +369,41 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
+  // Sort pallets by Customer PO (grouped), then by quantity descending within each group
+  const sortByPOAndQuantity = useCallback((palletList: LoadPallet[]): LoadPallet[] => {
+    return [...palletList].sort((a, b) => {
+      const poA = resolveCustomerPO(a);
+      const poB = resolveCustomerPO(b);
+      if (poA !== poB) return poA.localeCompare(poB);
+      return b.quantity - a.quantity;
+    });
+  }, [ptCodeToPOMap]);
+
+  // Check if a pallet is the first of a new PO group
+  const isFirstOfGroup = useCallback((sortedList: LoadPallet[], index: number): boolean => {
+    if (index === 0) return false;
+    const currentPO = resolveCustomerPO(sortedList[index]);
+    const prevPO = resolveCustomerPO(sortedList[index - 1]);
+    return currentPO !== prevPO;
+  }, [ptCodeToPOMap]);
+
   // Computed values for pallet categories
   const releasedPallets = useMemo(() => 
-    pallets.filter((p) => p.release_number || p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.release_number || p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const onHoldPallets = useMemo(() => 
-    pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const pendingReleasePallets = useMemo(() => 
-    pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold)), 
+    [pallets, sortByPOAndQuantity]
   );
+
+  const sortedAllPallets = useMemo(() => sortByPOAndQuantity(pallets), [pallets, sortByPOAndQuantity]);
 
   // Calculate total gross weight
   const totalGrossWeight = useMemo(() => {
