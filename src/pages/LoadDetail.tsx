@@ -237,6 +237,11 @@ export default function LoadDetail() {
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [revertingPallets, setRevertingPallets] = useState(false);
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [palletsToReplace, setPalletsToReplace] = useState<Set<string>>(new Set());
+  const [replaceSelectedPalletIds, setReplaceSelectedPalletIds] = useState<Set<string>>(new Set());
+  const [replacingPallets, setReplacingPallets] = useState(false);
+  const [replaceInventorySearch, setReplaceInventorySearch] = useState("");
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -1030,6 +1035,29 @@ export default function LoadDetail() {
     }
   };
 
+  // Revert on-hold pallets back to pending
+  const handleRevertOnHoldToPending = async () => {
+    if (selectedOnHoldPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedOnHoldPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ is_on_hold: false })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) moved back to pending`);
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting on-hold pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
   // Delete pallets from pending or on-hold during release phase
   const handleDeleteReleasePhasePallets = async (palletIds: Set<string>) => {
     if (palletIds.size === 0) return;
@@ -1063,6 +1091,103 @@ export default function LoadDetail() {
       toast.error("Failed to remove pallets");
     } finally {
       setDeletingPallets(false);
+    }
+  };
+
+  // Handle opening replace dialog (without deleting on-hold pallets first)
+  const handleOpenReplaceDialog = () => {
+    setPalletsToReplace(new Set(selectedOnHoldPallets));
+    setReplaceSelectedPalletIds(new Set());
+    setReplaceInventorySearch("");
+    setReplaceDialogOpen(true);
+  };
+
+  // Filter available pallets for replace dialog
+  const replaceFilteredPallets = useMemo(() => {
+    let result = availablePallets;
+    if (replaceInventorySearch.trim()) {
+      const search = replaceInventorySearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.pt_code.toLowerCase().includes(search) ||
+          p.description.toLowerCase().includes(search) ||
+          p.traceability.toLowerCase().includes(search) ||
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+      );
+    }
+    return result;
+  }, [availablePallets, replaceInventorySearch]);
+
+  // Active POs with stock for replace dialog
+  const replacePOSummary = useMemo(() => {
+    return activePOsWithInventory
+      .filter((po) => po.inventory_pallets > 0)
+      .sort((a, b) => b.inventory_pallets - a.inventory_pallets);
+  }, [activePOsWithInventory]);
+
+  // Confirm replacement: add new pallets, then remove on-hold ones
+  const handleConfirmReplace = async () => {
+    if (replaceSelectedPalletIds.size === 0 || !id) {
+      toast.error("Please select at least one replacement pallet");
+      return;
+    }
+
+    setReplacingPallets(true);
+    try {
+      // 1. Add replacement pallets
+      const palletsToAdd = availablePallets.filter((p) => replaceSelectedPalletIds.has(p.id));
+      const insertData = palletsToAdd.map((p) => ({
+        load_id: id,
+        pallet_id: p.id,
+        quantity: p.stock,
+        destination: "tbd" as const,
+      }));
+
+      const { error: insertError } = await supabase.from("load_pallets").insert(insertData);
+      if (insertError) throw insertError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "assigned" })
+        .in("id", palletsToAdd.map((p) => p.id));
+
+      // 2. Now remove on-hold pallets
+      const onHoldToRemove = pallets.filter((p) => palletsToReplace.has(p.id));
+      const loadPalletIds = onHoldToRemove.map((p) => p.id);
+      const inventoryPalletIds = onHoldToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      // 3. Update total pallets count (added - removed)
+      const netChange = palletsToAdd.length - onHoldToRemove.length;
+      const newTotal = Math.max(0, (load?.total_pallets || 0) + netChange);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`Replaced ${onHoldToRemove.length} pallet(s) with ${palletsToAdd.length} new pallet(s)`);
+      setReplaceDialogOpen(false);
+      setSelectedOnHoldPallets(new Set());
+      setPalletsToReplace(new Set());
+      setReplaceSelectedPalletIds(new Set());
+      fetchLoadData();
+    } catch (error: any) {
+      console.error("Error replacing pallets:", error);
+      if (error.code === "23505") {
+        toast.error("Some pallets are already in the load");
+      } else {
+        toast.error("Failed to replace pallets");
+      }
+    } finally {
+      setReplacingPallets(false);
     }
   };
 
@@ -1763,29 +1888,34 @@ export default function LoadDetail() {
                     <div className="flex items-center gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" disabled={deletingPallets}>
-                            <ArrowUpDown className="mr-2 h-4 w-4" />
-                            Replace ({selectedOnHoldPallets.size})
+                          <Button variant="outline" size="sm" disabled={revertingPallets}>
+                            {revertingPallets ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Undo2 className="mr-2 h-4 w-4" />
+                            )}
+                            To Pending ({selectedOnHoldPallets.size})
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Replace On-Hold Pallets?</AlertDialogTitle>
+                            <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will remove {selectedOnHoldPallets.size} on-hold pallet(s) from this load, return them to inventory, and open the dialog to add replacements.
+                              This will move {selectedOnHoldPallets.size} pallet(s) back to the Pending Release section.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => {
-                              await handleDeleteReleasePhasePallets(selectedOnHoldPallets);
-                              setAddPalletDialogOpen(true);
-                            }}>
-                              Replace
+                            <AlertDialogAction onClick={handleRevertOnHoldToPending}>
+                              Revert
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                      <Button variant="outline" size="sm" onClick={handleOpenReplaceDialog}>
+                        <ArrowUpDown className="mr-2 h-4 w-4" />
+                        Replace ({selectedOnHoldPallets.size})
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="sm" disabled={deletingPallets}>
@@ -2164,47 +2294,149 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Add Pallet Dialog - kept as fallback */}
-        <Dialog open={addPalletDialogOpen} onOpenChange={setAddPalletDialogOpen}>
-          <DialogContent>
+        {/* Replace Pallets Dialog - full inventory view */}
+        <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>Add Pallet to Load</DialogTitle>
+              <DialogTitle>Replace On-Hold Pallets</DialogTitle>
               <DialogDescription>
-                Select an available pallet from inventory to add to this load.
+                Replacing {palletsToReplace.size} on-hold pallet(s). Select replacement pallets from available inventory below. On-hold pallets will only be removed after replacements are confirmed.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Pallet</Label>
-                <Select value={selectedPalletId} onValueChange={setSelectedPalletId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a pallet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePallets.map((pallet) => (
-                      <SelectItem key={pallet.id} value={pallet.id}>
-                        {pallet.pt_code} - {pallet.description.slice(0, 30)}... ({pallet.stock} {pallet.traceability})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={palletQuantity}
-                  onChange={(e) => setPalletQuantity(e.target.value)}
-                  placeholder="Enter quantity"
-                />
+            <div className="flex-1 overflow-auto space-y-4">
+              {/* Active POs Summary */}
+              {replacePOSummary.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    Active POs with Available Stock
+                  </h4>
+                  <div className="rounded-md border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>PO #</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-center">Pallets</TableHead>
+                          <TableHead className="text-right">Volume</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replacePOSummary.map((po) => (
+                          <TableRow key={po.po_number}>
+                            <TableCell className="font-medium">{po.po_number}</TableCell>
+                            <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-primary">
+                              {po.inventory_volume.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Available Pallets List */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Available Pallets ({availablePallets.length})</h4>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pallets..."
+                      value={replaceInventorySearch}
+                      onChange={(e) => setReplaceInventorySearch(e.target.value)}
+                      className="pl-8 w-[220px] h-8"
+                    />
+                  </div>
+                </div>
+                <div className="rounded-md border">
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={replaceFilteredPallets.length > 0 && replaceSelectedPalletIds.size === replaceFilteredPallets.length}
+                              onCheckedChange={() => {
+                                if (replaceSelectedPalletIds.size === replaceFilteredPallets.length) {
+                                  setReplaceSelectedPalletIds(new Set());
+                                } else {
+                                  setReplaceSelectedPalletIds(new Set(replaceFilteredPallets.map((p) => p.id)));
+                                }
+                              }}
+                            />
+                          </TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Stock</TableHead>
+                          <TableHead>Sales Order</TableHead>
+                          <TableHead>Unit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replaceFilteredPallets.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                              No available pallets found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          replaceFilteredPallets.map((pallet) => (
+                            <TableRow
+                              key={pallet.id}
+                              className={replaceSelectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  checked={replaceSelectedPalletIds.has(pallet.id)}
+                                  onCheckedChange={() => {
+                                    setReplaceSelectedPalletIds((prev) => {
+                                      const newSet = new Set(prev);
+                                      if (newSet.has(pallet.id)) {
+                                        newSet.delete(pallet.id);
+                                      } else {
+                                        newSet.add(pallet.id);
+                                      }
+                                      return newSet;
+                                    });
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell className="text-sm">{format(new Date(pallet.fecha), "MM/dd/yyyy")}</TableCell>
+                              <TableCell className="font-mono">{pallet.pt_code}</TableCell>
+                              <TableCell className="max-w-[200px] truncate">{pallet.description}</TableCell>
+                              <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
+                              <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddPalletDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setReplaceDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddPallet}>Add Pallet</Button>
+              <Button onClick={handleConfirmReplace} disabled={replaceSelectedPalletIds.size === 0 || replacingPallets}>
+                {replacingPallets ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                )}
+                Replace with {replaceSelectedPalletIds.size} Pallet(s)
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
