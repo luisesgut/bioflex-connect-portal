@@ -369,21 +369,41 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
+  // Sort pallets by Customer PO (grouped), then by quantity descending within each group
+  const sortByPOAndQuantity = useCallback((palletList: LoadPallet[]): LoadPallet[] => {
+    return [...palletList].sort((a, b) => {
+      const poA = resolveCustomerPO(a);
+      const poB = resolveCustomerPO(b);
+      if (poA !== poB) return poA.localeCompare(poB);
+      return b.quantity - a.quantity;
+    });
+  }, [ptCodeToPOMap]);
+
+  // Check if a pallet is the first of a new PO group
+  const isFirstOfGroup = useCallback((sortedList: LoadPallet[], index: number): boolean => {
+    if (index === 0) return false;
+    const currentPO = resolveCustomerPO(sortedList[index]);
+    const prevPO = resolveCustomerPO(sortedList[index - 1]);
+    return currentPO !== prevPO;
+  }, [ptCodeToPOMap]);
+
   // Computed values for pallet categories
   const releasedPallets = useMemo(() => 
-    pallets.filter((p) => p.release_number || p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.release_number || p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const onHoldPallets = useMemo(() => 
-    pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const pendingReleasePallets = useMemo(() => 
-    pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold)), 
+    [pallets, sortByPOAndQuantity]
   );
+
+  const sortedAllPallets = useMemo(() => sortByPOAndQuantity(pallets), [pallets, sortByPOAndQuantity]);
 
   // Calculate total gross weight
   const totalGrossWeight = useMemo(() => {
@@ -1581,8 +1601,11 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {releasedPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                        {releasedPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-green-50/50 dark:bg-green-950/20",
+                            isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
+                          )}>
                             {isAdmin && (
                               <TableCell>
                                 <Checkbox
@@ -1696,10 +1719,13 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingReleasePallets.map((pallet) => (
+                        {pendingReleasePallets.map((pallet, index) => (
                           <TableRow 
                             key={pallet.id} 
-                            className={selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}
+                            className={cn(
+                              selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : "",
+                              isFirstOfGroup(pendingReleasePallets, index) && "border-t-2 border-t-border"
+                            )}
                           >
                             <TableCell>
                               <Checkbox
@@ -1778,8 +1804,11 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {onHoldPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
+                        {onHoldPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-red-50/50 dark:bg-red-950/20",
+                            isFirstOfGroup(onHoldPallets, index) && "border-t-2 border-t-border"
+                          )}>
                             {isAdmin && (
                               <TableCell>
                                 <Checkbox
@@ -1865,8 +1894,10 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && (
                           <TableCell>
                             <Checkbox
@@ -1911,8 +1942,10 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
