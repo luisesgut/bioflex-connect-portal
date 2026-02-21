@@ -1035,6 +1035,29 @@ export default function LoadDetail() {
     }
   };
 
+  // Revert on-hold pallets back to pending
+  const handleRevertOnHoldToPending = async () => {
+    if (selectedOnHoldPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedOnHoldPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ is_on_hold: false })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) moved back to pending`);
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting on-hold pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
   // Delete pallets from pending or on-hold during release phase
   const handleDeleteReleasePhasePallets = async (palletIds: Set<string>) => {
     if (palletIds.size === 0) return;
@@ -1068,6 +1091,103 @@ export default function LoadDetail() {
       toast.error("Failed to remove pallets");
     } finally {
       setDeletingPallets(false);
+    }
+  };
+
+  // Handle opening replace dialog (without deleting on-hold pallets first)
+  const handleOpenReplaceDialog = () => {
+    setPalletsToReplace(new Set(selectedOnHoldPallets));
+    setReplaceSelectedPalletIds(new Set());
+    setReplaceInventorySearch("");
+    setReplaceDialogOpen(true);
+  };
+
+  // Filter available pallets for replace dialog
+  const replaceFilteredPallets = useMemo(() => {
+    let result = availablePallets;
+    if (replaceInventorySearch.trim()) {
+      const search = replaceInventorySearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.pt_code.toLowerCase().includes(search) ||
+          p.description.toLowerCase().includes(search) ||
+          p.traceability.toLowerCase().includes(search) ||
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+      );
+    }
+    return result;
+  }, [availablePallets, replaceInventorySearch]);
+
+  // Active POs with stock for replace dialog
+  const replacePOSummary = useMemo(() => {
+    return activePOsWithInventory
+      .filter((po) => po.inventory_pallets > 0)
+      .sort((a, b) => b.inventory_pallets - a.inventory_pallets);
+  }, [activePOsWithInventory]);
+
+  // Confirm replacement: add new pallets, then remove on-hold ones
+  const handleConfirmReplace = async () => {
+    if (replaceSelectedPalletIds.size === 0 || !id) {
+      toast.error("Please select at least one replacement pallet");
+      return;
+    }
+
+    setReplacingPallets(true);
+    try {
+      // 1. Add replacement pallets
+      const palletsToAdd = availablePallets.filter((p) => replaceSelectedPalletIds.has(p.id));
+      const insertData = palletsToAdd.map((p) => ({
+        load_id: id,
+        pallet_id: p.id,
+        quantity: p.stock,
+        destination: "tbd" as const,
+      }));
+
+      const { error: insertError } = await supabase.from("load_pallets").insert(insertData);
+      if (insertError) throw insertError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "assigned" })
+        .in("id", palletsToAdd.map((p) => p.id));
+
+      // 2. Now remove on-hold pallets
+      const onHoldToRemove = pallets.filter((p) => palletsToReplace.has(p.id));
+      const loadPalletIds = onHoldToRemove.map((p) => p.id);
+      const inventoryPalletIds = onHoldToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      // 3. Update total pallets count (added - removed)
+      const netChange = palletsToAdd.length - onHoldToRemove.length;
+      const newTotal = Math.max(0, (load?.total_pallets || 0) + netChange);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`Replaced ${onHoldToRemove.length} pallet(s) with ${palletsToAdd.length} new pallet(s)`);
+      setReplaceDialogOpen(false);
+      setSelectedOnHoldPallets(new Set());
+      setPalletsToReplace(new Set());
+      setReplaceSelectedPalletIds(new Set());
+      fetchLoadData();
+    } catch (error: any) {
+      console.error("Error replacing pallets:", error);
+      if (error.code === "23505") {
+        toast.error("Some pallets are already in the load");
+      } else {
+        toast.error("Failed to replace pallets");
+      }
+    } finally {
+      setReplacingPallets(false);
     }
   };
 
