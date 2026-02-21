@@ -1541,7 +1541,6 @@ export default function LoadDetail() {
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          <TableHead>Destination</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1560,27 +1559,6 @@ export default function LoadDetail() {
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            <TableCell>
-                              {canEditPallets ? (
-                                <Select
-                                  value={pallet.destination || "tbd"}
-                                  onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                                >
-                                  <SelectTrigger className="w-[130px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {destinations.map((dest) => (
-                                      <SelectItem key={dest.value} value={dest.value}>
-                                        {dest.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                destinations.find((d) => d.value === pallet.destination)?.label || "TBD"
-                              )}
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1690,7 +1668,6 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
-                      <TableHead>Destination</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1708,23 +1685,6 @@ export default function LoadDetail() {
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={pallet.destination || "tbd"}
-                            onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                          >
-                            <SelectTrigger className="w-[130px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {destinations.map((dest) => (
-                                <SelectItem key={dest.value} value={dest.value}>
-                                  {dest.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
