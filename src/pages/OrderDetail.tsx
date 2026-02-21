@@ -402,7 +402,7 @@ export default function OrderDetail() {
                     <div>
                       <label className="text-sm text-muted-foreground">PT Code</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.pt_code || "—"}</p>
+                        <p className="font-medium">{order.product?.codigo_producto || order.product?.pt_code || "—"}</p>
                         {order.product?.bfx_spec_url && (
                           <Button
                             variant="link"
@@ -453,12 +453,6 @@ export default function OrderDetail() {
                       <p className="font-medium">—</p>
                     )}
                   </div>
-                  {isAdmin && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">PT Code (SAP)</label>
-                      <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
