@@ -372,7 +372,7 @@ export default function Orders() {
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       const productSkuForInventory = order.products?.sku || null;
       const excessStock = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
-      const productPtCode = (order.products as any)?.codigo_producto || null;
+      const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
 
       return {
         id: order.id,
