@@ -62,6 +62,7 @@ import {
   Info,
   Pause,
   Scale,
+  Undo2,
 } from "lucide-react";
 import {
   AlertDialog,
