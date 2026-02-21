@@ -151,7 +151,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto)
+        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `)
       .order("created_at", { ascending: false });
 
