@@ -69,6 +69,7 @@ interface InventoryStats {
   loadDetails: LoadDetail[];
   shippedLoadDetails: ShippedLoadDetail[];
   excessStock: ExcessStockDetail | null;
+  sapStockAvailable: number | null;
 }
 
 interface Order {
@@ -504,6 +505,9 @@ export function EditableOrderRow({
     in_floor: renderInFloor(),
     shipped: renderShipped(),
     pending: order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapStockAvailable !== null
+      ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
+      : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">
@@ -575,6 +579,9 @@ export function EditableOrderRow({
     in_floor: renderInFloor(),
     shipped: renderShipped(),
     pending: order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapStockAvailable !== null
+      ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
+      : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">
@@ -670,7 +677,7 @@ export function EditableOrderRow({
   const cellMap = isAdmin && isEditing ? buildEditCells() : buildViewCells();
 
   // Align config for right-aligned columns
-  const rightAlignedColumns = new Set(["excess_stock", "in_floor", "shipped", "pending", "percent_produced", "actions"]);
+  const rightAlignedColumns = new Set(["excess_stock", "in_floor", "shipped", "pending", "stock_available", "percent_produced", "actions"]);
 
   // If columnOrder is provided, render cells in that order
   if (columnOrder) {
