@@ -1760,28 +1760,55 @@ export default function LoadDetail() {
                     </CardDescription>
                   </div>
                   {isAdmin && selectedOnHoldPallets.size > 0 && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Remove ({selectedOnHoldPallets.size})
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will remove {selectedOnHoldPallets.size} pallet(s) from this load and return them to inventory.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedOnHoldPallets)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Remove
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <div className="flex items-center gap-2">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" disabled={deletingPallets}>
+                            <ArrowUpDown className="mr-2 h-4 w-4" />
+                            Replace ({selectedOnHoldPallets.size})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Replace On-Hold Pallets?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove {selectedOnHoldPallets.size} on-hold pallet(s) from this load, return them to inventory, and open the dialog to add replacements.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={async () => {
+                              await handleDeleteReleasePhasePallets(selectedOnHoldPallets);
+                              setAddPalletDialogOpen(true);
+                            }}>
+                              Replace
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove ({selectedOnHoldPallets.size})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove {selectedOnHoldPallets.size} pallet(s) from this load and return them to inventory.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedOnHoldPallets)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   )}
                 </CardHeader>
                 <CardContent>
