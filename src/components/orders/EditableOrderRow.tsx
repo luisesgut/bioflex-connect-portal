@@ -505,6 +505,9 @@ export function EditableOrderRow({
     in_floor: renderInFloor(),
     shipped: renderShipped(),
     pending: order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapStockAvailable !== null
+      ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
+      : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">
@@ -576,6 +579,9 @@ export function EditableOrderRow({
     in_floor: renderInFloor(),
     shipped: renderShipped(),
     pending: order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapStockAvailable !== null
+      ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
+      : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">

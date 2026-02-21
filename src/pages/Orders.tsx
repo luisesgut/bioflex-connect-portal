@@ -411,6 +411,53 @@ export default function Orders() {
     });
     setOrders(formattedOrders);
     setLoading(false);
+
+    // Fetch SAP stock verification data for all orders with sales_order_number
+    const ordersWithSO = formattedOrders.filter(
+      (o) => o.sales_order_number && o.sales_order_number.trim() !== ""
+    );
+
+    if (ordersWithSO.length > 0) {
+      const sapResults = await Promise.allSettled(
+        ordersWithSO.map(async (order) => {
+          try {
+            const response = await fetch(
+              `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number!)}/${encodeURIComponent(order.po_number)}`,
+              { method: "GET", headers: { accept: "*/*" } }
+            );
+            if (!response.ok) return { poNumber: order.po_number, stockAvailable: null };
+            const payload = await response.json();
+            const items = Array.isArray(payload) ? payload : [];
+            const totalStock = items.reduce((sum: number, item: any) => sum + (item.totalStockDisponible || 0), 0);
+            return { poNumber: order.po_number, stockAvailable: totalStock };
+          } catch {
+            return { poNumber: order.po_number, stockAvailable: null };
+          }
+        })
+      );
+
+      const sapMap = new Map<string, number | null>();
+      sapResults.forEach((result) => {
+        if (result.status === "fulfilled" && result.value) {
+          sapMap.set(result.value.poNumber, result.value.stockAvailable);
+        }
+      });
+
+      if (sapMap.size > 0) {
+        setOrders((prev) =>
+          prev.map((o) => {
+            const sapStock = sapMap.get(o.po_number);
+            if (sapStock !== undefined) {
+              return {
+                ...o,
+                inventoryStats: { ...o.inventoryStats, sapStockAvailable: sapStock },
+              };
+            }
+            return o;
+          })
+        );
+      }
+    }
   };
 
   useEffect(() => {
