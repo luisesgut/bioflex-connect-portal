@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,14 +31,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Truck, Plus, Search, Loader2, CalendarIcon, Eye, Send } from "lucide-react";
+import {
+  Truck,
+  Plus,
+  Search,
+  Loader2,
+  CalendarIcon,
+  Eye,
+  Send,
+  Clock,
+  Package,
+  MapPin,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ShippingLoad {
   id: string;
@@ -49,6 +61,21 @@ interface ShippingLoad {
   release_number: string | null;
   notes: string | null;
   created_at: string;
+  eta_cross_border: string | null;
+  documents_sent: boolean | null;
+  border_crossed: boolean | null;
+  last_reported_city: string | null;
+  transit_notes: string | null;
+}
+
+interface ReleaseRequest {
+  id: string;
+  load_id: string;
+  requested_at: string;
+  status: "pending" | "approved" | "on_hold" | "shipped";
+  response_at: string | null;
+  release_number: string | null;
+  is_hot_order: boolean;
 }
 
 const statusStyles: Record<string, string> = {
@@ -74,7 +101,6 @@ const statusLabels: Record<string, string> = {
 const loadStatusOptions = [
   { value: "assembling", label: "Assembling" },
   { value: "pending_release", label: "Pending Release" },
-  { value: "approved", label: "Released" },
   { value: "in_transit", label: "In Transit" },
   { value: "delivered", label: "Delivered" },
 ];
@@ -83,6 +109,7 @@ export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
+  const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -90,26 +117,35 @@ export default function ShippingLoads() {
   const [shippingDate, setShippingDate] = useState<Date>();
   const [creating, setCreating] = useState(false);
 
-  const fetchLoads = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("shipping_loads")
-        .select("*")
-        .order("shipping_date", { ascending: false });
+      const [loadsRes, requestsRes] = await Promise.all([
+        supabase
+          .from("shipping_loads")
+          .select("*")
+          .order("shipping_date", { ascending: false }),
+        supabase
+          .from("release_requests")
+          .select("id, load_id, requested_at, status, response_at, release_number, is_hot_order")
+          .order("requested_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setLoads(data || []);
+      if (loadsRes.error) throw loadsRes.error;
+      if (requestsRes.error) throw requestsRes.error;
+
+      setLoads(loadsRes.data || []);
+      setReleaseRequests(requestsRes.data || []);
     } catch (error) {
-      console.error("Error fetching loads:", error);
-      toast.error("Failed to load shipping loads");
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load shipping data");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchLoads();
-  }, [fetchLoads]);
+    fetchData();
+  }, [fetchData]);
 
   const handleCreateLoad = async () => {
     if (!newLoadNumber.trim() || !shippingDate || !user) {
@@ -133,7 +169,7 @@ export default function ShippingLoads() {
       setCreateDialogOpen(false);
       setNewLoadNumber("");
       setShippingDate(undefined);
-      fetchLoads();
+      fetchData();
     } catch (error: any) {
       console.error("Error creating load:", error);
       if (error.code === "23505") {
@@ -150,7 +186,6 @@ export default function ShippingLoads() {
     if (!user) return;
 
     try {
-      // Update load status
       const { error: loadError } = await supabase
         .from("shipping_loads")
         .update({ status: "pending_release" })
@@ -158,7 +193,6 @@ export default function ShippingLoads() {
 
       if (loadError) throw loadError;
 
-      // Create release request
       const { error: requestError } = await supabase
         .from("release_requests")
         .insert({
@@ -170,7 +204,7 @@ export default function ShippingLoads() {
       if (requestError) throw requestError;
 
       toast.success("Release request sent to customer");
-      fetchLoads();
+      fetchData();
     } catch (error) {
       console.error("Error sending release request:", error);
       toast.error("Failed to send release request");
@@ -182,7 +216,6 @@ export default function ShippingLoads() {
       type LoadStatus = "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
       type ReleaseStatus = "pending" | "approved" | "on_hold" | "shipped";
 
-      // Update load status
       const { error: loadError } = await supabase
         .from("shipping_loads")
         .update({ status: newStatus as LoadStatus })
@@ -190,7 +223,7 @@ export default function ShippingLoads() {
 
       if (loadError) throw loadError;
 
-      // If the load has a release request, update its status too
+      // Update associated release request status
       const releaseStatusMap: Record<string, ReleaseStatus> = {
         pending_release: "pending",
         approved: "approved",
@@ -201,9 +234,9 @@ export default function ShippingLoads() {
       if (releaseStatusMap[newStatus]) {
         const { error: requestError } = await supabase
           .from("release_requests")
-          .update({ 
+          .update({
             status: releaseStatusMap[newStatus],
-            response_at: releaseStatusMap[newStatus] !== "pending" ? new Date().toISOString() : null
+            response_at: releaseStatusMap[newStatus] !== "pending" ? new Date().toISOString() : null,
           })
           .eq("load_id", load.id);
 
@@ -213,7 +246,7 @@ export default function ShippingLoads() {
       }
 
       toast.success(`Status updated to ${statusLabels[newStatus]}`);
-      fetchLoads();
+      fetchData();
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Failed to update status");
@@ -230,22 +263,206 @@ export default function ShippingLoads() {
       if (error) throw error;
 
       toast.success("Date updated successfully");
-      fetchLoads();
+      fetchData();
     } catch (error) {
       console.error("Error updating date:", error);
       toast.error("Failed to update date");
     }
   };
 
+  // Get release request info for a load
+  const getReleaseForLoad = (loadId: string) => {
+    return releaseRequests.find((r) => r.load_id === loadId);
+  };
+
+  // Filter loads by search
   const filteredLoads = loads.filter(
     (load) =>
       load.load_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       load.release_number?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Split loads by status sections
+  const assemblingLoads = filteredLoads.filter((l) => l.status === "assembling");
+  const pendingLoads = filteredLoads.filter(
+    (l) => l.status === "pending_release" || l.status === "approved" || l.status === "on_hold"
+  );
+  const inTransitLoads = filteredLoads.filter((l) => l.status === "in_transit");
+  const deliveredLoads = filteredLoads.filter((l) => l.status === "delivered");
+
+  // Build transit data for TransitTrackingTable
+  const transitTrackingData = inTransitLoads.map((load) => {
+    const release = getReleaseForLoad(load.id);
+    return {
+      id: release?.id || load.id,
+      load_id: load.id,
+      requested_at: release?.requested_at || load.created_at,
+      status: release?.status || ("shipped" as const),
+      is_hot_order: release?.is_hot_order || false,
+      load: {
+        id: load.id,
+        load_number: load.load_number,
+        shipping_date: load.shipping_date,
+        estimated_delivery_date: load.estimated_delivery_date,
+        total_pallets: load.total_pallets,
+        status: load.status,
+        eta_cross_border: load.eta_cross_border,
+        documents_sent: load.documents_sent || false,
+        border_crossed: load.border_crossed || false,
+        last_reported_city: load.last_reported_city,
+        transit_notes: load.transit_notes,
+      },
+    };
+  });
+
+  // Counts for stats
   const assemblingCount = loads.filter((l) => l.status === "assembling").length;
-  const pendingCount = loads.filter((l) => l.status === "pending_release").length;
-  const approvedCount = loads.filter((l) => l.status === "approved").length;
+  const pendingCount = loads.filter(
+    (l) => l.status === "pending_release" || l.status === "approved" || l.status === "on_hold"
+  ).length;
+  const inTransitCount = loads.filter((l) => l.status === "in_transit").length;
+  const deliveredCount = loads.filter((l) => l.status === "delivered").length;
+
+  const renderLoadTable = (items: ShippingLoad[], emptyMessage: string) => {
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <Truck className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="rounded-md border overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Load #</TableHead>
+              <TableHead>Ship Date</TableHead>
+              <TableHead>Delivery Date</TableHead>
+              <TableHead className="text-center">Pallets</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((load) => {
+              const release = getReleaseForLoad(load.id);
+              return (
+                <TableRow key={load.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {load.load_number}
+                      {release?.is_hot_order && (
+                        <Badge variant="destructive" className="text-xs">
+                          HOT
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {isAdmin ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                            <CalendarIcon className="mr-1 h-3 w-3" />
+                            {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={new Date(load.shipping_date)}
+                            onSelect={(date) => date && handleDateChange(load.id, 'shipping_date', date)}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      format(new Date(load.shipping_date), "MMM d, yyyy")
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isAdmin ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
+                            <CalendarIcon className="mr-1 h-3 w-3" />
+                            {load.estimated_delivery_date
+                              ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                              : "Set date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                            onSelect={(date) => date && handleDateChange(load.id, 'estimated_delivery_date', date)}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      load.estimated_delivery_date
+                        ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                        : "-"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">{load.total_pallets}</TableCell>
+                  <TableCell>
+                    {isAdmin ? (
+                      <Select
+                        value={load.status}
+                        onValueChange={(value) => handleStatusChange(load, value)}
+                      >
+                        <SelectTrigger className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {loadStatusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge className={statusStyles[load.status]} variant="secondary">
+                        {statusLabels[load.status]}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/shipping-loads/${load.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {isAdmin && load.status === "assembling" && load.total_pallets > 0 && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleSendReleaseRequest(load.id)}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   return (
     <MainLayout>
@@ -255,7 +472,7 @@ export default function ShippingLoads() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Shipping Loads</h1>
             <p className="text-muted-foreground">
-              Manage truck loads and release requests
+              Manage truck loads, releases, and shipment tracking
             </p>
           </div>
           {isAdmin && (
@@ -267,35 +484,47 @@ export default function ShippingLoads() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Assembling</CardTitle>
-              <Truck className="h-4 w-4 text-gray-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{assemblingCount}</div>
-              <p className="text-xs text-muted-foreground">loads being assembled</p>
-            </CardContent>
-          </Card>
+        <div className={cn("grid gap-4", isAdmin ? "md:grid-cols-4" : "md:grid-cols-3")}>
+          {isAdmin && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Assembling</CardTitle>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{assemblingCount}</div>
+                <p className="text-xs text-muted-foreground">loads being assembled</p>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending Release</CardTitle>
-              <Truck className="h-4 w-4 text-yellow-600" />
+              <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{pendingCount}</div>
-              <p className="text-xs text-muted-foreground">awaiting customer approval</p>
+              <p className="text-xs text-muted-foreground">awaiting approval</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ready to Ship</CardTitle>
-              <Truck className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium">In Transit</CardTitle>
+              <Package className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{approvedCount}</div>
-              <p className="text-xs text-muted-foreground">approved for shipping</p>
+              <div className="text-2xl font-bold">{inTransitCount}</div>
+              <p className="text-xs text-muted-foreground">on the road</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+              <MapPin className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{deliveredCount}</div>
+              <p className="text-xs text-muted-foreground">completed</p>
             </CardContent>
           </Card>
         </div>
@@ -311,136 +540,58 @@ export default function ShippingLoads() {
           />
         </div>
 
-        {/* Table */}
+        {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : filteredLoads.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Truck className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">No loads found</h3>
-              <p className="text-muted-foreground text-center max-w-sm mt-1">
-                {searchQuery
-                  ? "No loads match your search criteria"
-                  : "Create a new load to get started"}
-              </p>
-            </CardContent>
-          </Card>
         ) : (
-          <div className="rounded-md border overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Load #</TableHead>
-                  <TableHead>Ship Date</TableHead>
-                  <TableHead>Delivery Date</TableHead>
-                  <TableHead className="text-center">Pallets</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLoads.map((load) => (
-                  <TableRow key={load.id}>
-                    <TableCell className="font-medium">{load.load_number}</TableCell>
-                    <TableCell>
-                      {isAdmin ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {format(new Date(load.shipping_date), "MMM d, yyyy")}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={new Date(load.shipping_date)}
-                              onSelect={(date) => date && handleDateChange(load.id, 'shipping_date', date)}
-                              initialFocus
-                              className={cn("p-3 pointer-events-auto")}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        format(new Date(load.shipping_date), "MMM d, yyyy")
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {isAdmin ? (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-auto p-1 font-normal">
-                              <CalendarIcon className="mr-1 h-3 w-3" />
-                              {load.estimated_delivery_date 
-                                ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
-                                : "Set date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
-                              onSelect={(date) => date && handleDateChange(load.id, 'estimated_delivery_date', date)}
-                              initialFocus
-                              className={cn("p-3 pointer-events-auto")}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      ) : (
-                        load.estimated_delivery_date 
-                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
-                          : "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">{load.total_pallets}</TableCell>
-                    <TableCell>
-                      {isAdmin ? (
-                        <Select
-                          value={load.status}
-                          onValueChange={(value) => handleStatusChange(load, value)}
-                        >
-                          <SelectTrigger className="w-[160px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {loadStatusOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge className={statusStyles[load.status]} variant="secondary">
-                          {statusLabels[load.status]}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to={`/shipping-loads/${load.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        {isAdmin && load.status === "assembling" && load.total_pallets > 0 && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => handleSendReleaseRequest(load.id)}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-8">
+            {/* Assembling Section - Admin Only */}
+            {isAdmin && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Assembling</h2>
+                  <span className="text-sm text-muted-foreground">({assemblingLoads.length})</span>
+                </div>
+                {renderLoadTable(assemblingLoads, "No loads being assembled")}
+              </div>
+            )}
+
+            {/* Pending Release Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-yellow-600" />
+                <h2 className="text-lg font-semibold">Pending Release</h2>
+                <span className="text-sm text-muted-foreground">({pendingLoads.length})</span>
+              </div>
+              {renderLoadTable(pendingLoads, "No pending loads")}
+            </div>
+
+            {/* In Transit Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-purple-600" />
+                <h2 className="text-lg font-semibold">In Transit</h2>
+                <span className="text-sm text-muted-foreground">({inTransitLoads.length})</span>
+              </div>
+              <TransitTrackingTable
+                loads={transitTrackingData}
+                isAdmin={isAdmin}
+                onRefresh={fetchData}
+              />
+            </div>
+
+            {/* Delivered Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-emerald-600" />
+                <h2 className="text-lg font-semibold">Delivered</h2>
+                <span className="text-sm text-muted-foreground">({deliveredLoads.length})</span>
+              </div>
+              {renderLoadTable(deliveredLoads, "No delivered loads")}
+            </div>
           </div>
         )}
 
