@@ -51,6 +51,7 @@ interface InventoryStats {
   loadDetails: LoadDetail[];
   shippedLoadDetails: ShippedLoadDetail[];
   excessStock: ExcessStockDetail | null;
+  sapStockAvailable: number | null;
 }
 
 interface Order {
