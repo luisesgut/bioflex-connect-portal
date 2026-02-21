@@ -983,7 +983,12 @@ export default function LoadDetail() {
     return { valid: true, message: "" };
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === "pending_release" && pallets.length === 0) {
+      toast.error("Please add pallets to the load before changing to Pending Release");
+      return;
+    }
+
     if (newStatus === "delivered") {
       const initialDates = uniqueDestinations.map((dest) => ({
         destination: dest,
@@ -999,6 +1004,27 @@ export default function LoadDetail() {
         return;
       }
       setInTransitConfirmOpen(true);
+    } else if (newStatus === "pending_release" && user) {
+      // Create release request if transitioning to pending_release and none exists
+      try {
+        const { data: existing } = await supabase
+          .from("release_requests")
+          .select("id")
+          .eq("load_id", id!)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("release_requests").insert({
+            load_id: id!,
+            requested_by: user.id,
+            status: "pending",
+          });
+        }
+      } catch (error) {
+        console.error("Error creating release request:", error);
+      }
+      handleUpdateLoadStatus(newStatus);
     } else {
       handleUpdateLoadStatus(newStatus);
     }
