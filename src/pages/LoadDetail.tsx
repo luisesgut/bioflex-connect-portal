@@ -232,6 +232,13 @@ export default function LoadDetail() {
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+
+  // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
+  const resolveCustomerPO = (pallet: LoadPallet): string => {
+    if (pallet.pallet.customer_lot) return pallet.pallet.customer_lot;
+    return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
+  };
 
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
@@ -335,6 +342,16 @@ export default function LoadDetail() {
         });
       });
       setActivePOsWithInventory(poInventoryData);
+
+      // Build pt_code -> po_number map for Customer PO fallback
+      const ptToPO = new Map<string, string>();
+      (activePOs || []).forEach((po: any) => {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode && !ptToPO.has(ptCode)) {
+          ptToPO.set(ptCode, po.po_number);
+        }
+      });
+      setPtCodeToPOMap(ptToPO);
 
     } catch (error) {
       console.error("Error fetching load data:", error);
