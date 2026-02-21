@@ -1397,7 +1397,7 @@ export default function LoadDetail() {
 
         {/* PO Summary for pallets in load */}
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} />
+          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
