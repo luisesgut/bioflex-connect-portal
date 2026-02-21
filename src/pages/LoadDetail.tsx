@@ -1601,8 +1601,11 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {releasedPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                        {releasedPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-green-50/50 dark:bg-green-950/20",
+                            isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
+                          )}>
                             {isAdmin && (
                               <TableCell>
                                 <Checkbox
@@ -1716,10 +1719,13 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingReleasePallets.map((pallet) => (
+                        {pendingReleasePallets.map((pallet, index) => (
                           <TableRow 
                             key={pallet.id} 
-                            className={selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}
+                            className={cn(
+                              selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : "",
+                              isFirstOfGroup(pendingReleasePallets, index) && "border-t-2 border-t-border"
+                            )}
                           >
                             <TableCell>
                               <Checkbox
@@ -1798,8 +1804,11 @@ export default function LoadDetail() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {onHoldPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
+                        {onHoldPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-red-50/50 dark:bg-red-950/20",
+                            isFirstOfGroup(onHoldPallets, index) && "border-t-2 border-t-border"
+                          )}>
                             {isAdmin && (
                               <TableCell>
                                 <Checkbox
@@ -1885,8 +1894,10 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && (
                           <TableCell>
                             <Checkbox
@@ -1931,8 +1942,10 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
