@@ -400,7 +400,7 @@ export default function OrderDetail() {
                   </div>
                   {isAdmin && (
                     <div>
-                      <label className="text-sm text-muted-foreground">PT Number</label>
+                      <label className="text-sm text-muted-foreground">PT Code</label>
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{order.product?.pt_code || "—"}</p>
                         {order.product?.bfx_spec_url && (
