@@ -302,7 +302,7 @@ export default function LoadDetail() {
         .select(`
           po_number,
           quantity,
-          product:products(codigo_producto, name, pieces_per_pallet)
+          product:products(codigo_producto, pt_code, name, pieces_per_pallet)
         `)
         .in("status", ["pending", "confirmed", "accepted", "in_production"]);
 
