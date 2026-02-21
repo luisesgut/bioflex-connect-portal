@@ -677,7 +677,7 @@ export function EditableOrderRow({
   const cellMap = isAdmin && isEditing ? buildEditCells() : buildViewCells();
 
   // Align config for right-aligned columns
-  const rightAlignedColumns = new Set(["excess_stock", "in_floor", "shipped", "pending", "percent_produced", "actions"]);
+  const rightAlignedColumns = new Set(["excess_stock", "in_floor", "shipped", "pending", "stock_available", "percent_produced", "actions"]);
 
   // If columnOrder is provided, render cells in that order
   if (columnOrder) {
