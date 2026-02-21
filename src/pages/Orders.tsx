@@ -151,7 +151,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto)
+        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `)
       .order("created_at", { ascending: false });
 
@@ -372,7 +372,7 @@ export default function Orders() {
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       const productSkuForInventory = order.products?.sku || null;
       const excessStock = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
-      const productPtCode = (order.products as any)?.codigo_producto || null;
+      const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
 
       return {
         id: order.id,

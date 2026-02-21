@@ -302,15 +302,16 @@ export default function LoadDetail() {
         .select(`
           po_number,
           quantity,
-          product:products(codigo_producto, name, pieces_per_pallet)
+          product:products(codigo_producto, pt_code, name, pieces_per_pallet)
         `)
         .in("status", ["pending", "confirmed", "accepted", "in_production"]);
 
       // Build products map for pieces_per_pallet validation
       const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
       (activePOs || []).forEach((po: any) => {
-        if (po.product?.codigo_producto) {
-          prodMap.set(po.product.codigo_producto, {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode) {
+          prodMap.set(ptCode, {
             pieces_per_pallet: po.product.pieces_per_pallet || null
           });
         }
@@ -320,7 +321,7 @@ export default function LoadDetail() {
       // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
-        const ptCode = po.product?.codigo_producto || "";
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code || "";
         const matchingPallets = ptCode ? filteredPallets.filter(p => p.pt_code === ptCode) : [];
         
         poInventoryData.push({
