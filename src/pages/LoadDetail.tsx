@@ -1773,27 +1773,23 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activePOsWithInventory.map((po) => {
-                      const hasInventory = po.inventory_pallets > 0;
-                      return (
-                        <TableRow key={po.po_number} className={!hasInventory ? "opacity-50" : ""}>
+                    {activePOsWithInventory
+                      .filter((po) => po.inventory_pallets > 0)
+                      .sort((a, b) => b.inventory_pallets - a.inventory_pallets)
+                      .map((po) => (
+                        <TableRow key={po.po_number}>
                           <TableCell className="font-medium">{po.po_number}</TableCell>
                           <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                           <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
                           <TableCell className="text-center">
-                            {hasInventory ? (
-                              <Badge variant="secondary">{po.inventory_pallets}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">0</span>
-                            )}
+                            <Badge variant="secondary">{po.inventory_pallets}</Badge>
                           </TableCell>
-                          <TableCell className={`text-right font-medium ${hasInventory ? "text-primary" : "text-muted-foreground"}`}>
+                          <TableCell className="text-right font-medium text-primary">
                             {po.inventory_volume.toLocaleString()}
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
+                      ))}
                   </TableBody>
                 </Table>
               </div>

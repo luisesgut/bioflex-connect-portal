@@ -257,7 +257,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>PT Number</Label>
+              <Label>PT Code</Label>
               <Input value={form.pt_code || ""} onChange={(e) => setForm({ ...form, pt_code: e.target.value })} />
             </div>
             <div className="space-y-2">

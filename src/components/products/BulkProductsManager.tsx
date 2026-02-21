@@ -33,7 +33,7 @@ const EXPORT_COLUMNS = [
   { key: "customer", label: "Final Customer" },
   { key: "item_type", label: "Item Type" },
   { key: "tipo_empaque", label: "Tipo Empaque" },
-  { key: "pt_code", label: "PT Number" },
+  { key: "pt_code", label: "PT Code" },
   { key: "pieces_per_pallet", label: "Pieces/Pallet" },
   { key: "print_card", label: "PC Number" },
   { key: "print_card_url", label: "PC PDF URL" },
