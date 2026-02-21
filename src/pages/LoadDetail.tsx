@@ -1453,25 +1453,10 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
-                              {canEditPallets ? (
-                                <Select
-                                  value={pallet.destination || "tbd"}
-                                  onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                                >
-                                  <SelectTrigger className="w-[130px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {destinations.map((dest) => (
-                                      <SelectItem key={dest.value} value={dest.value}>
-                                        {dest.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                destinations.find((d) => d.value === pallet.destination)?.label || "TBD"
-                              )}
+                              {(() => {
+                                const dest = destinations.find((d) => d.value === pallet.destination);
+                                return dest ? dest.label : (pallet.destination || "TBD");
+                              })()}
                             </TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
