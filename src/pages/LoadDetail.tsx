@@ -321,7 +321,7 @@ export default function LoadDetail() {
       // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
-        const ptCode = po.product?.codigo_producto || "";
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code || "";
         const matchingPallets = ptCode ? filteredPallets.filter(p => p.pt_code === ptCode) : [];
         
         poInventoryData.push({
