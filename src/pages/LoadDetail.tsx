@@ -309,8 +309,9 @@ export default function LoadDetail() {
       // Build products map for pieces_per_pallet validation
       const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
       (activePOs || []).forEach((po: any) => {
-        if (po.product?.codigo_producto) {
-          prodMap.set(po.product.codigo_producto, {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode) {
+          prodMap.set(ptCode, {
             pieces_per_pallet: po.product.pieces_per_pallet || null
           });
         }
