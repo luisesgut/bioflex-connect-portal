@@ -1637,6 +1637,30 @@ export default function LoadDetail() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isAdmin && selectedPalletsForRelease.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove ({selectedPalletsForRelease.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedPalletsForRelease.size} pallet(s) from this load and return them to inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedPalletsForRelease)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   {selectedPalletsForRelease.size > 0 && (
                     <Button 
                       onClick={() => setReleaseDialogOpen(true)}
