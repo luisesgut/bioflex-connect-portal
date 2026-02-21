@@ -1888,29 +1888,34 @@ export default function LoadDetail() {
                     <div className="flex items-center gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" disabled={deletingPallets}>
-                            <ArrowUpDown className="mr-2 h-4 w-4" />
-                            Replace ({selectedOnHoldPallets.size})
+                          <Button variant="outline" size="sm" disabled={revertingPallets}>
+                            {revertingPallets ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Undo2 className="mr-2 h-4 w-4" />
+                            )}
+                            To Pending ({selectedOnHoldPallets.size})
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Replace On-Hold Pallets?</AlertDialogTitle>
+                            <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will remove {selectedOnHoldPallets.size} on-hold pallet(s) from this load, return them to inventory, and open the dialog to add replacements.
+                              This will move {selectedOnHoldPallets.size} pallet(s) back to the Pending Release section.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => {
-                              await handleDeleteReleasePhasePallets(selectedOnHoldPallets);
-                              setAddPalletDialogOpen(true);
-                            }}>
-                              Replace
+                            <AlertDialogAction onClick={handleRevertOnHoldToPending}>
+                              Revert
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                      <Button variant="outline" size="sm" onClick={handleOpenReplaceDialog}>
+                        <ArrowUpDown className="mr-2 h-4 w-4" />
+                        Replace ({selectedOnHoldPallets.size})
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="destructive" size="sm" disabled={deletingPallets}>
