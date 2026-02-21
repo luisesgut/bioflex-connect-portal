@@ -3,14 +3,12 @@ import {
   LayoutDashboard, 
   Package, 
   FileText, 
-  
   Settings,
   LogOut,
   Eye,
   EyeOff,
   Warehouse,
   Truck,
-  ClipboardCheck,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
