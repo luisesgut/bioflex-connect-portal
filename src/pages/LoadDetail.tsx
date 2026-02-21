@@ -953,6 +953,98 @@ export default function LoadDetail() {
     }
   };
 
+  // Toggle selection for released pallets (revert)
+  const toggleReleasedPallet = (palletId: string) => {
+    setSelectedReleasedPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllReleasedPallets = () => {
+    if (selectedReleasedPallets.size === releasedPallets.length) {
+      setSelectedReleasedPallets(new Set());
+    } else {
+      setSelectedReleasedPallets(new Set(releasedPallets.map((p) => p.id)));
+    }
+  };
+
+  // Toggle selection for on-hold pallets
+  const toggleOnHoldPallet = (palletId: string) => {
+    setSelectedOnHoldPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllOnHoldPallets = () => {
+    if (selectedOnHoldPallets.size === onHoldPallets.length) {
+      setSelectedOnHoldPallets(new Set());
+    } else {
+      setSelectedOnHoldPallets(new Set(onHoldPallets.map((p) => p.id)));
+    }
+  };
+
+  // Revert released pallets back to pending
+  const handleRevertToPending = async () => {
+    if (selectedReleasedPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedReleasedPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ release_number: null, release_pdf_url: null, destination: "tbd", is_on_hold: false })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) reverted to pending`);
+      setSelectedReleasedPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
+  // Delete pallets from pending or on-hold during release phase
+  const handleDeleteReleasePhasePallets = async (palletIds: Set<string>) => {
+    if (palletIds.size === 0) return;
+    setDeletingPallets(true);
+    try {
+      const palletsToRemove = pallets.filter((p) => palletIds.has(p.id));
+      const loadPalletIds = palletsToRemove.map((p) => p.id);
+      const inventoryPalletIds = palletsToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      const newTotal = Math.max(0, (load?.total_pallets || 0) - palletsToRemove.length);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`${palletsToRemove.length} pallet(s) removed from load`);
+      setSelectedPalletsForRelease(new Set());
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting pallets:", error);
+      toast.error("Failed to remove pallets");
+    } finally {
+      setDeletingPallets(false);
+    }
+
   // Get unique destinations from pallets for delivery date dialog
   const uniqueDestinations = useMemo(() => {
     const dests = pallets
