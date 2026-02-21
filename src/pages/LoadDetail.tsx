@@ -983,7 +983,12 @@ export default function LoadDetail() {
     return { valid: true, message: "" };
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === "pending_release" && pallets.length === 0) {
+      toast.error("Please add pallets to the load before changing to Pending Release");
+      return;
+    }
+
     if (newStatus === "delivered") {
       const initialDates = uniqueDestinations.map((dest) => ({
         destination: dest,
@@ -999,6 +1004,27 @@ export default function LoadDetail() {
         return;
       }
       setInTransitConfirmOpen(true);
+    } else if (newStatus === "pending_release" && user) {
+      // Create release request if transitioning to pending_release and none exists
+      try {
+        const { data: existing } = await supabase
+          .from("release_requests")
+          .select("id")
+          .eq("load_id", id!)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("release_requests").insert({
+            load_id: id!,
+            requested_by: user.id,
+            status: "pending",
+          });
+        }
+      } catch (error) {
+        console.error("Error creating release request:", error);
+      }
+      handleUpdateLoadStatus(newStatus);
     } else {
       handleUpdateLoadStatus(newStatus);
     }
@@ -1236,36 +1262,21 @@ export default function LoadDetail() {
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
-            {isAdmin && load.status !== "assembling" && load.status !== "delivered" && (
+            {isAdmin && load.status !== "delivered" && (
               <Select
                 value={load.status}
                 onValueChange={handleStatusChange}
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Change status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {load.status === "pending_release" && (
-                    <SelectItem value="approved">Released</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved") && (
-                    <SelectItem value="in_transit">In Transit</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved" || load.status === "in_transit") && (
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                  )}
+                  <SelectItem value="assembling">Assembling</SelectItem>
+                  <SelectItem value="pending_release">Pending Release</SelectItem>
+                  <SelectItem value="in_transit">In Transit</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-            {isAdmin && load.status === "assembling" && pallets.length > 0 && (
-              <Button onClick={handleSendReleaseRequest} disabled={sendingRelease}>
-                {sendingRelease ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Send for Release
-              </Button>
             )}
             {isAdmin && (load.status === "in_transit" || load.status === "delivered") && pallets.length > 0 && (
               <Button variant="outline" onClick={handleGenerateCustomsDocument}>
