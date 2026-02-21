@@ -2294,47 +2294,149 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Add Pallet Dialog - kept as fallback */}
-        <Dialog open={addPalletDialogOpen} onOpenChange={setAddPalletDialogOpen}>
-          <DialogContent>
+        {/* Replace Pallets Dialog - full inventory view */}
+        <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>Add Pallet to Load</DialogTitle>
+              <DialogTitle>Replace On-Hold Pallets</DialogTitle>
               <DialogDescription>
-                Select an available pallet from inventory to add to this load.
+                Replacing {palletsToReplace.size} on-hold pallet(s). Select replacement pallets from available inventory below. On-hold pallets will only be removed after replacements are confirmed.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Pallet</Label>
-                <Select value={selectedPalletId} onValueChange={setSelectedPalletId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a pallet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePallets.map((pallet) => (
-                      <SelectItem key={pallet.id} value={pallet.id}>
-                        {pallet.pt_code} - {pallet.description.slice(0, 30)}... ({pallet.stock} {pallet.traceability})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={palletQuantity}
-                  onChange={(e) => setPalletQuantity(e.target.value)}
-                  placeholder="Enter quantity"
-                />
+            <div className="flex-1 overflow-auto space-y-4">
+              {/* Active POs Summary */}
+              {replacePOSummary.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    Active POs with Available Stock
+                  </h4>
+                  <div className="rounded-md border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>PO #</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-center">Pallets</TableHead>
+                          <TableHead className="text-right">Volume</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replacePOSummary.map((po) => (
+                          <TableRow key={po.po_number}>
+                            <TableCell className="font-medium">{po.po_number}</TableCell>
+                            <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-primary">
+                              {po.inventory_volume.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Available Pallets List */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Available Pallets ({availablePallets.length})</h4>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pallets..."
+                      value={replaceInventorySearch}
+                      onChange={(e) => setReplaceInventorySearch(e.target.value)}
+                      className="pl-8 w-[220px] h-8"
+                    />
+                  </div>
+                </div>
+                <div className="rounded-md border">
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={replaceFilteredPallets.length > 0 && replaceSelectedPalletIds.size === replaceFilteredPallets.length}
+                              onCheckedChange={() => {
+                                if (replaceSelectedPalletIds.size === replaceFilteredPallets.length) {
+                                  setReplaceSelectedPalletIds(new Set());
+                                } else {
+                                  setReplaceSelectedPalletIds(new Set(replaceFilteredPallets.map((p) => p.id)));
+                                }
+                              }}
+                            />
+                          </TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Stock</TableHead>
+                          <TableHead>Sales Order</TableHead>
+                          <TableHead>Unit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replaceFilteredPallets.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                              No available pallets found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          replaceFilteredPallets.map((pallet) => (
+                            <TableRow
+                              key={pallet.id}
+                              className={replaceSelectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  checked={replaceSelectedPalletIds.has(pallet.id)}
+                                  onCheckedChange={() => {
+                                    setReplaceSelectedPalletIds((prev) => {
+                                      const newSet = new Set(prev);
+                                      if (newSet.has(pallet.id)) {
+                                        newSet.delete(pallet.id);
+                                      } else {
+                                        newSet.add(pallet.id);
+                                      }
+                                      return newSet;
+                                    });
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell className="text-sm">{format(new Date(pallet.fecha), "MM/dd/yyyy")}</TableCell>
+                              <TableCell className="font-mono">{pallet.pt_code}</TableCell>
+                              <TableCell className="max-w-[200px] truncate">{pallet.description}</TableCell>
+                              <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
+                              <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddPalletDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setReplaceDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddPallet}>Add Pallet</Button>
+              <Button onClick={handleConfirmReplace} disabled={replaceSelectedPalletIds.size === 0 || replacingPallets}>
+                {replacingPallets ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                )}
+                Replace with {replaceSelectedPalletIds.size} Pallet(s)
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
