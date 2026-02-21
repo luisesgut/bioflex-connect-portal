@@ -1723,20 +1723,54 @@ export default function LoadDetail() {
             {/* On Hold Pallets */}
             {onHoldPallets.length > 0 && (
               <Card className="border-red-200 dark:border-red-900">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Pause className="h-5 w-5 text-red-600" />
-                    <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Pause className="h-5 w-5 text-red-600" />
+                      <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Pallets that have been placed on hold
+                    </CardDescription>
                   </div>
-                  <CardDescription>
-                    Pallets that have been placed on hold
-                  </CardDescription>
+                  {isAdmin && selectedOnHoldPallets.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove ({selectedOnHoldPallets.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedOnHoldPallets.size} pallet(s) from this load and return them to inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedOnHoldPallets)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={onHoldPallets.length > 0 && selectedOnHoldPallets.size === onHoldPallets.length}
+                                onCheckedChange={toggleAllOnHoldPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
@@ -1746,6 +1780,14 @@ export default function LoadDetail() {
                       <TableBody>
                         {onHoldPallets.map((pallet) => (
                           <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedOnHoldPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleOnHoldPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
