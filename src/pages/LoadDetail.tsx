@@ -232,6 +232,13 @@ export default function LoadDetail() {
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+
+  // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
+  const resolveCustomerPO = (pallet: LoadPallet): string => {
+    if (pallet.pallet.customer_lot) return pallet.pallet.customer_lot;
+    return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
+  };
 
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
@@ -335,6 +342,16 @@ export default function LoadDetail() {
         });
       });
       setActivePOsWithInventory(poInventoryData);
+
+      // Build pt_code -> po_number map for Customer PO fallback
+      const ptToPO = new Map<string, string>();
+      (activePOs || []).forEach((po: any) => {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode && !ptToPO.has(ptCode)) {
+          ptToPO.set(ptCode, po.po_number);
+        }
+      });
+      setPtCodeToPOMap(ptToPO);
 
     } catch (error) {
       console.error("Error fetching load data:", error);
@@ -1422,7 +1439,7 @@ export default function LoadDetail() {
                           <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
                               {canEditPallets ? (
@@ -1530,7 +1547,7 @@ export default function LoadDetail() {
                             </TableCell>
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
                               {canEditPallets ? (
@@ -1590,7 +1607,7 @@ export default function LoadDetail() {
                           <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
@@ -1678,7 +1695,7 @@ export default function LoadDetail() {
                         )}
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                        <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           <Select
@@ -1733,7 +1750,7 @@ export default function LoadDetail() {
                       <TableRow key={pallet.id}>
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                        <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           {destinations.find((d) => d.value === pallet.destination)?.label || "TBD"}
