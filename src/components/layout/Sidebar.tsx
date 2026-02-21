@@ -25,13 +25,11 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Purchase Orders", href: "/orders", icon: FileText },
-  { name: "Release Requests", href: "/release-requests", icon: ClipboardCheck },
-  
+  { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
 ];
 
 const adminNavigation = [
   { name: "Inventory", href: "/inventory", icon: Warehouse },
-  { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
 ];
 
 const bottomNavigation = [
