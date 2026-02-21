@@ -13,7 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Upload, CheckCircle, XCircle, AlertTriangle, Pause } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Upload, CheckCircle, XCircle, AlertTriangle, Pause, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -47,6 +54,13 @@ interface ValidationResult {
   message: string;
 }
 
+const predefinedDestinations = [
+  { value: "yuma", label: "Yuma, AZ" },
+  { value: "salinas", label: "Salinas, CA" },
+  { value: "bakersfield", label: "Bakersfield, CA" },
+  { value: "coachella", label: "Coachella, CA" },
+];
+
 export function ReleaseValidationDialog({
   open,
   onOpenChange,
@@ -60,6 +74,9 @@ export function ReleaseValidationDialog({
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [manualReleaseNumber, setManualReleaseNumber] = useState("");
+  const [selectedDestination, setSelectedDestination] = useState("");
+  const [customDestination, setCustomDestination] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -67,7 +84,6 @@ export function ReleaseValidationDialog({
     setValidationResult(null);
 
     try {
-      // Upload PDF temporarily to extract content
       const fileName = `temp-validation/${loadId}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("release-documents")
@@ -77,9 +93,8 @@ export function ReleaseValidationDialog({
 
       const { data: urlData } = supabase.storage
         .from("release-documents")
-        .getPublicUrl(fileName);  // Public URL needed for AI validation only
+        .getPublicUrl(fileName);
 
-      // Call AI to validate the PDF content
       const response = await supabase.functions.invoke("extract-po-data", {
         body: {
           pdfUrl: urlData.publicUrl,
@@ -94,7 +109,6 @@ export function ReleaseValidationDialog({
 
       if (response.error) {
         console.error("AI validation error:", response.error);
-        // Fallback - just allow manual entry
         setValidationResult({
           valid: true,
           releaseNumber: null,
@@ -130,43 +144,59 @@ export function ReleaseValidationDialog({
     }
   };
 
-  const handleRelease = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a release PDF");
-      return;
+  const getDestinationValue = (): string => {
+    if (showCustomInput && customDestination.trim()) {
+      return customDestination.trim();
     }
+    return selectedDestination;
+  };
 
+  const handleRelease = async () => {
     if (!manualReleaseNumber.trim()) {
       toast.error("Please enter a release number");
       return;
     }
 
+    const destinationValue = getDestinationValue();
+    if (!destinationValue) {
+      toast.error("Please select a destination");
+      return;
+    }
+
     setProcessing(true);
     try {
-      // Upload the final PDF
-      const fileName = `batch-releases/${loadId}/${Date.now()}_${selectedFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("release-documents")
-        .upload(fileName, selectedFile, { upsert: true });
+      let storagePath: string | null = null;
 
-      if (uploadError) throw uploadError;
+      // Upload PDF if provided (optional)
+      if (selectedFile) {
+        const fileName = `batch-releases/${loadId}/${Date.now()}_${selectedFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("release-documents")
+          .upload(fileName, selectedFile, { upsert: true });
 
-      const storagePath = `release-documents:${fileName}`;
+        if (uploadError) throw uploadError;
+        storagePath = `release-documents:${fileName}`;
+      }
 
-      // Update all selected pallets
+      // Update all selected pallets with release info and destination
       const palletIds = selectedPallets.map((p) => p.id);
+      const updateData: Record<string, any> = {
+        release_number: manualReleaseNumber.trim(),
+        destination: destinationValue,
+        is_on_hold: false,
+      };
+      if (storagePath) {
+        updateData.release_pdf_url = storagePath;
+      }
+
       const { error: updateError } = await supabase
         .from("load_pallets")
-        .update({
-          release_pdf_url: storagePath,
-          release_number: manualReleaseNumber.trim(),
-          is_on_hold: false,
-        })
+        .update(updateData)
         .in("id", palletIds);
 
       if (updateError) throw updateError;
 
-      toast.success(`${palletIds.length} pallet(s) released successfully`);
+      toast.success(`${palletIds.length} pallet(s) released to ${destinationValue}`);
       resetAndClose();
       onComplete();
     } catch (error) {
@@ -203,9 +233,25 @@ export function ReleaseValidationDialog({
     setSelectedFile(null);
     setValidationResult(null);
     setManualReleaseNumber("");
+    setSelectedDestination("");
+    setCustomDestination("");
+    setShowCustomInput(false);
     setActiveTab("release");
     onOpenChange(false);
   };
+
+  const handleDestinationChange = (value: string) => {
+    if (value === "__custom__") {
+      setShowCustomInput(true);
+      setSelectedDestination("");
+    } else {
+      setShowCustomInput(false);
+      setCustomDestination("");
+      setSelectedDestination(value);
+    }
+  };
+
+  const isReleaseValid = manualReleaseNumber.trim() && (selectedDestination || (showCustomInput && customDestination.trim()));
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
@@ -245,9 +291,55 @@ export function ReleaseValidationDialog({
               </ScrollArea>
             </div>
 
-            {/* PDF Upload */}
+            {/* Release Number (required) */}
             <div className="space-y-2">
-              <Label htmlFor="release-pdf">Release Authorization PDF</Label>
+              <Label htmlFor="release-number">Release Number <span className="text-destructive">*</span></Label>
+              <Input
+                id="release-number"
+                value={manualReleaseNumber}
+                onChange={(e) => setManualReleaseNumber(e.target.value)}
+                placeholder="Enter release number"
+                disabled={processing}
+              />
+            </div>
+
+            {/* Destination (required) */}
+            <div className="space-y-2">
+              <Label>Destination <span className="text-destructive">*</span></Label>
+              <Select
+                value={showCustomInput ? "__custom__" : selectedDestination}
+                onValueChange={handleDestinationChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination" />
+                </SelectTrigger>
+                <SelectContent>
+                  {predefinedDestinations.map((dest) => (
+                    <SelectItem key={dest.value} value={dest.value}>
+                      {dest.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__custom__">
+                    <span className="flex items-center gap-1">
+                      <Plus className="h-3 w-3" />
+                      Add new destination
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {showCustomInput && (
+                <Input
+                  placeholder="Enter custom destination (e.g., Phoenix, AZ)"
+                  value={customDestination}
+                  onChange={(e) => setCustomDestination(e.target.value)}
+                  autoFocus
+                />
+              )}
+            </div>
+
+            {/* PDF Upload (optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="release-pdf">Release Authorization PDF <span className="text-xs text-muted-foreground">(optional)</span></Label>
               <Input
                 id="release-pdf"
                 type="file"
@@ -293,18 +385,6 @@ export function ReleaseValidationDialog({
                 </div>
               </div>
             )}
-
-            {/* Release Number */}
-            <div className="space-y-2">
-              <Label htmlFor="release-number">Release Number</Label>
-              <Input
-                id="release-number"
-                value={manualReleaseNumber}
-                onChange={(e) => setManualReleaseNumber(e.target.value)}
-                placeholder="Enter release number"
-                disabled={processing}
-              />
-            </div>
           </TabsContent>
 
           <TabsContent value="hold" className="space-y-4 mt-4">
@@ -339,7 +419,7 @@ export function ReleaseValidationDialog({
           {activeTab === "release" ? (
             <Button
               onClick={handleRelease}
-              disabled={!selectedFile || !manualReleaseNumber.trim() || processing}
+              disabled={!isReleaseValid || processing}
               className="bg-green-600 hover:bg-green-700"
             >
               {processing ? (
