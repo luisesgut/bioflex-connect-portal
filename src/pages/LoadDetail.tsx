@@ -233,6 +233,9 @@ export default function LoadDetail() {
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
+  const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
+  const [revertingPallets, setRevertingPallets] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
