@@ -1513,14 +1513,44 @@ export default function LoadDetail() {
           <>
             {/* Released Pallets */}
             <Card className="border-green-200 dark:border-green-900">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Pallets that have been approved for shipping
+                  </CardDescription>
                 </div>
-                <CardDescription>
-                  Pallets that have been approved for shipping
-                </CardDescription>
+                {isAdmin && selectedReleasedPallets.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={revertingPallets}>
+                        {revertingPallets ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Undo2 className="mr-2 h-4 w-4" />
+                        )}
+                        Revert to Pending ({selectedReleasedPallets.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will clear the release number, PDF and destination for {selectedReleasedPallets.size} pallet(s) and move them back to pending.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRevertToPending}>
+                          Revert
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </CardHeader>
               <CardContent>
                 {releasedPallets.length === 0 ? (
@@ -1533,6 +1563,14 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
+                                onCheckedChange={toggleAllReleasedPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
@@ -1545,6 +1583,14 @@ export default function LoadDetail() {
                       <TableBody>
                         {releasedPallets.map((pallet) => (
                           <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedReleasedPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleReleasedPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
