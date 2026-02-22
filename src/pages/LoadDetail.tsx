@@ -2259,7 +2259,7 @@ export default function LoadDetail() {
                         label: getDestinationLabel(p.destination),
                         estimated_date: destDateEntry?.estimated_date || null,
                         actual_date: destDateEntry?.actual_date || null,
-                        pod_pdf_url: (destDateEntry as any)?.pod_pdf_url || null,
+                        pod_pdf_url: destDateEntry?.pod_pdf_url || null,
                       }] as const;
                     })
                 ).values()];
