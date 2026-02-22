@@ -206,6 +206,8 @@ export default function LoadDetail() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
+  const { destinationOptions, getDestinationLabel } = useCustomerLocations();
+  const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
   const [pallets, setPallets] = useState<LoadPallet[]>([]);
   const [releaseRequest, setReleaseRequest] = useState<ReleaseRequest | null>(null);
