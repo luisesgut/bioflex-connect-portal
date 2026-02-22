@@ -59,7 +59,7 @@ export async function generatePackingList({
   clientCode = "CL0000103",
   clientName = "DESTINY PACKAGING, LLC",
   salesPerson = "",
-}: PackingListParams): void {
+}: PackingListParams): Promise<void> {
   // Group pallets by PO + description
   const groups = new Map<string, ProductRow>();
 
