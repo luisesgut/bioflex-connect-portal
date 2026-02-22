@@ -74,7 +74,8 @@ export function UsersTable({ userType }: UsersTableProps) {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
-    phone: "",
+    phone_prefix: "+1",
+    phone_number: "",
     company: "",
     access_profile_id: "",
   });
@@ -197,7 +198,7 @@ export function UsersTable({ userType }: UsersTableProps) {
   });
 
   const resetForm = () => {
-    setFormData({ full_name: "", email: "", phone: "", company: "", access_profile_id: "" });
+    setFormData({ full_name: "", email: "", phone_prefix: "+1", phone_number: "", company: "", access_profile_id: "" });
     setEditingUser(null);
     setIsCreating(false);
     setIsDialogOpen(false);
@@ -206,10 +207,13 @@ export function UsersTable({ userType }: UsersTableProps) {
   const handleEdit = (user: UserProfile) => {
     setEditingUser(user);
     setIsCreating(false);
+    const phone = user.phone || "";
+    const prefixMatch = phone.match(/^(\+\d{1,3})\s?(.*)$/);
     setFormData({
       full_name: user.full_name || "",
       email: user.email || "",
-      phone: user.phone || "",
+      phone_prefix: prefixMatch ? prefixMatch[1] : "+1",
+      phone_number: prefixMatch ? prefixMatch[2] : phone,
       company: user.company || "",
       access_profile_id: user.access_profile_id || "",
     });
@@ -219,17 +223,18 @@ export function UsersTable({ userType }: UsersTableProps) {
   const handleCreate = () => {
     setEditingUser(null);
     setIsCreating(true);
-    setFormData({ full_name: "", email: "", phone: "", company: "", access_profile_id: "" });
+    setFormData({ full_name: "", email: "", phone_prefix: "+1", phone_number: "", company: "", access_profile_id: "" });
     setIsDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const fullPhone = formData.phone_number ? `${formData.phone_prefix} ${formData.phone_number}` : "";
     if (isCreating) {
       createMutation.mutate({
         email: formData.email,
         full_name: formData.full_name,
-        phone: formData.phone,
+        phone: fullPhone,
         company: formData.company,
         user_type: userType,
         access_profile_id: formData.access_profile_id,
@@ -239,7 +244,7 @@ export function UsersTable({ userType }: UsersTableProps) {
         id: editingUser.id,
         data: {
           full_name: formData.full_name,
-          phone: formData.phone || null,
+          phone: fullPhone || null,
           company: formData.company || null,
           access_profile_id: formData.access_profile_id || null,
         },
