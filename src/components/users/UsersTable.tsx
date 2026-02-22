@@ -347,11 +347,44 @@ export function UsersTable({ userType }: UsersTableProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user_phone">Teléfono</Label>
-                <Input
-                  id="user_phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.phone_prefix}
+                    onValueChange={(value) => setFormData({ ...formData, phone_prefix: value })}
+                  >
+                    <SelectTrigger className="w-[120px] bg-background">
+                      <SelectValue placeholder="+1" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="+1">🇺🇸 +1</SelectItem>
+                      <SelectItem value="+52">🇲🇽 +52</SelectItem>
+                      <SelectItem value="+44">🇬🇧 +44</SelectItem>
+                      <SelectItem value="+34">🇪🇸 +34</SelectItem>
+                      <SelectItem value="+49">🇩🇪 +49</SelectItem>
+                      <SelectItem value="+33">🇫🇷 +33</SelectItem>
+                      <SelectItem value="+55">🇧🇷 +55</SelectItem>
+                      <SelectItem value="+57">🇨🇴 +57</SelectItem>
+                      <SelectItem value="+56">🇨🇱 +56</SelectItem>
+                      <SelectItem value="+54">🇦🇷 +54</SelectItem>
+                      <SelectItem value="+86">🇨🇳 +86</SelectItem>
+                      <SelectItem value="+91">🇮🇳 +91</SelectItem>
+                      <SelectItem value="+81">🇯🇵 +81</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="user_phone"
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Número de teléfono"
+                    value={formData.phone_number}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setFormData({ ...formData, phone_number: val });
+                    }}
+                    className="flex-1"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user_profile">Perfil de Acceso</Label>
