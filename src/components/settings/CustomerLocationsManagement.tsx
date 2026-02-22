@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -18,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Pencil } from "lucide-react";
 
 interface CustomerLocation {
   id: string;
@@ -52,13 +50,84 @@ interface DPContact {
   is_active: boolean;
 }
 
+const DAYS = [
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+  { key: "sun", label: "Sun" },
+] as const;
+
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+type WeekSchedule = Record<string, DaySchedule>;
+
+const DEFAULT_SCHEDULE: WeekSchedule = {
+  mon: { enabled: true, open: "09:00", close: "17:00" },
+  tue: { enabled: true, open: "09:00", close: "17:00" },
+  wed: { enabled: true, open: "09:00", close: "17:00" },
+  thu: { enabled: true, open: "09:00", close: "17:00" },
+  fri: { enabled: true, open: "09:00", close: "17:00" },
+  sat: { enabled: true, open: "09:00", close: "12:00" },
+  sun: { enabled: false, open: "09:00", close: "17:00" },
+};
+
+function scheduleToString(schedule: WeekSchedule): string {
+  return JSON.stringify(schedule);
+}
+
+function parseSchedule(raw: string | null): WeekSchedule {
+  if (!raw) return { ...DEFAULT_SCHEDULE };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && parsed.mon) return parsed;
+  } catch {
+    // legacy free-text format – return defaults
+  }
+  return { ...DEFAULT_SCHEDULE };
+}
+
+function formatScheduleDisplay(raw: string | null): string {
+  const schedule = parseSchedule(raw);
+  const groups: { days: string[]; time: string }[] = [];
+
+  for (const d of DAYS) {
+    const s = schedule[d.key];
+    if (!s?.enabled) continue;
+    const time = `${s.open}–${s.close}`;
+    const last = groups[groups.length - 1];
+    if (last && last.time === time) {
+      last.days.push(d.label);
+    } else {
+      groups.push({ days: [d.label], time });
+    }
+  }
+
+  if (groups.length === 0) return "Closed";
+  return groups
+    .map((g) => {
+      const dayStr =
+        g.days.length > 2
+          ? `${g.days[0]}-${g.days[g.days.length - 1]}`
+          : g.days.join(", ");
+      return `${dayStr} ${g.time}`;
+    })
+    .join(" · ");
+}
+
 interface LocationFormData {
   name: string;
   address: string;
   city: string;
   state: string;
   zip_code: string;
-  reception_hours: string;
+  schedule: WeekSchedule;
   warehouse_manager_id: string;
 }
 
@@ -68,7 +137,7 @@ const emptyForm: LocationFormData = {
   city: "",
   state: "",
   zip_code: "",
-  reception_hours: "",
+  schedule: { ...DEFAULT_SCHEDULE },
   warehouse_manager_id: "",
 };
 
