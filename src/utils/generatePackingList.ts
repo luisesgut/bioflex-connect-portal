@@ -48,7 +48,7 @@ interface ProductRow {
   pallets: number;
 }
 
-export function generatePackingList({
+export async function generatePackingList({
   loadNumber,
   shippingDate,
   invoiceNumber,
