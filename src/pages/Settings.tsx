@@ -13,7 +13,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
-import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
+
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
@@ -112,12 +112,6 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Production Capacity Management - Admin Only */}
-        {isActualAdmin && (
-          <div style={{ animationDelay: "0.15s" }}>
-            <ProductionCapacityManagement />
-          </div>
-        )}
 
         {/* Customer Locations Management - Admin Only */}
         {isActualAdmin && (
