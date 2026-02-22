@@ -3296,10 +3296,18 @@ export default function LoadDetail() {
           onOpenChange={setReleaseDialogOpen}
           selectedPallets={selectedPalletsForReleaseData}
           loadId={id!}
+          destinationOptions={destinationOptions}
+          onAddDestination={() => setAddDestinationDialogOpen(true)}
           onComplete={() => {
             setSelectedPalletsForRelease(new Set());
             fetchLoadData();
           }}
+        />
+
+        {/* Add Destination Dialog */}
+        <AddDestinationDialog
+          open={addDestinationDialogOpen}
+          onOpenChange={setAddDestinationDialogOpen}
         />
       </div>
     </MainLayout>
