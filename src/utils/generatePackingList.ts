@@ -48,7 +48,7 @@ interface ProductRow {
   pallets: number;
 }
 
-export function generatePackingList({
+export async function generatePackingList({
   loadNumber,
   shippingDate,
   invoiceNumber,
@@ -59,7 +59,7 @@ export function generatePackingList({
   clientCode = "CL0000103",
   clientName = "DESTINY PACKAGING, LLC",
   salesPerson = "",
-}: PackingListParams): void {
+}: PackingListParams): Promise<void> {
   // Group pallets by PO + description
   const groups = new Map<string, ProductRow>();
 
@@ -100,15 +100,29 @@ export function generatePackingList({
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
 
-  // === HEADER ===
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(0, 80, 130);
-  doc.text("bioflex", margin, 18);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text("Beyond packaging.", margin, 23);
+  // === HEADER (logo) ===
+  try {
+    const logoImg = new Image();
+    logoImg.src = "/images/bioflex-logo.png";
+    await new Promise<void>((resolve, reject) => {
+      logoImg.onload = () => resolve();
+      logoImg.onerror = () => reject();
+      setTimeout(() => resolve(), 1000);
+    });
+    const logoHeight = 14;
+    const logoWidth = (logoImg.naturalWidth / logoImg.naturalHeight) * logoHeight;
+    doc.addImage(logoImg, "PNG", margin, 8, logoWidth, logoHeight);
+  } catch {
+    // Fallback to text if image fails
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 80, 130);
+    doc.text("bioflex", margin, 18);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Beyond packaging.", margin, 23);
+  }
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");

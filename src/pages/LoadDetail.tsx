@@ -517,7 +517,7 @@ export default function LoadDetail() {
     }
   };
 
-  const handleDownloadPackingList = (destinationCode: string) => {
+  const handleDownloadPackingList = async (destinationCode: string) => {
     if (!load) return;
     const destPallets = pallets.filter((p) => p.destination === destinationCode);
     if (destPallets.length === 0) {
@@ -536,7 +536,7 @@ export default function LoadDetail() {
     poSalesOrderMap.forEach((info, poNumber) => {
       poInfoMap.set(poNumber, info);
     });
-    generatePackingList({
+    await generatePackingList({
       loadNumber: load.load_number,
       shippingDate: load.shipping_date,
       invoiceNumber: load.invoice_number || "",
