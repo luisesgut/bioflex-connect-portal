@@ -65,6 +65,7 @@ import {
   Undo2,
   Clock,
   Truck,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -262,6 +263,9 @@ export default function LoadDetail() {
   const [newCityUpdate, setNewCityUpdate] = useState("");
   const [newTransitNotes, setNewTransitNotes] = useState("");
   const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
+  const [editingTransitUpdate, setEditingTransitUpdate] = useState<string | null>(null);
+  const [editTransitCity, setEditTransitCity] = useState("");
+  const [editTransitNotes, setEditTransitNotes] = useState("");
   const [destinationDates, setDestinationDates] = useState<Array<{
     id?: string;
     load_id: string;
@@ -1475,6 +1479,39 @@ export default function LoadDetail() {
     }
   };
 
+  const handleEditTransitUpdate = async (updateId: string) => {
+    if (!editTransitCity.trim() && !editTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    try {
+      const updateData: any = {
+        last_reported_city: editTransitCity.trim() || null,
+        notes: editTransitNotes.trim() || null,
+      };
+      const { error } = await supabase.from("transit_updates").update(updateData).eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update modified");
+      setEditingTransitUpdate(null);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error editing transit update:", error);
+      toast.error("Failed to edit update");
+    }
+  };
+
+  const handleDeleteTransitUpdate = async (updateId: string) => {
+    try {
+      const { error } = await supabase.from("transit_updates").delete().eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update deleted");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting transit update:", error);
+      toast.error("Failed to delete update");
+    }
+  };
+
   const handleSaveDestinationDate = async (destination: string, field: "estimated_date" | "actual_date", date: Date | null) => {
     if (!id) return;
     setSavingDestDate(destination + field);
@@ -2190,17 +2227,68 @@ export default function LoadDetail() {
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                           {transitUpdates.map((update) => (
                             <div key={update.id} className="flex items-start gap-3 text-sm border-l-2 border-muted pl-3 py-1">
-                              <div className="flex-1 min-w-0">
-                                {update.last_reported_city && (
-                                  <p className="font-medium text-foreground">{update.last_reported_city}</p>
-                                )}
-                                {update.notes && (
-                                  <p className="text-muted-foreground text-xs">{update.notes}</p>
-                                )}
-                              </div>
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {format(new Date(update.created_at), "MMM d, h:mm a")}
-                              </span>
+                              {editingTransitUpdate === update.id ? (
+                                <div className="flex-1 space-y-2">
+                                  <Input
+                                    value={editTransitCity}
+                                    onChange={(e) => setEditTransitCity(e.target.value)}
+                                    placeholder="City"
+                                    className="h-8 text-sm"
+                                  />
+                                  <Input
+                                    value={editTransitNotes}
+                                    onChange={(e) => setEditTransitNotes(e.target.value)}
+                                    placeholder="Notes"
+                                    className="h-8 text-sm"
+                                  />
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => handleEditTransitUpdate(update.id)}>
+                                      Save
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingTransitUpdate(null)}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex-1 min-w-0">
+                                    {update.last_reported_city && (
+                                      <p className="font-medium text-foreground">{update.last_reported_city}</p>
+                                    )}
+                                    {update.notes && (
+                                      <p className="text-muted-foreground text-xs">{update.notes}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    {format(new Date(update.created_at), "MMM d, h:mm a")}
+                                  </span>
+                                  {isAdmin && (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => {
+                                          setEditingTransitUpdate(update.id);
+                                          setEditTransitCity(update.last_reported_city || "");
+                                          setEditTransitNotes(update.notes || "");
+                                        }}
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                        onClick={() => handleDeleteTransitUpdate(update.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
                           ))}
                         </div>
