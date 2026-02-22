@@ -63,6 +63,8 @@ import {
   Pause,
   Scale,
   Undo2,
+  Clock,
+  Truck,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -79,7 +81,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
