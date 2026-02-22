@@ -2479,10 +2479,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
-                              {(() => {
-                                const dest = destinations.find((d) => d.value === pallet.destination);
-                                return dest ? dest.label : (pallet.destination || "TBD");
-                              })()}
+                              {getDestinationLabel(pallet.destination)}
                             </TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
@@ -2843,7 +2840,7 @@ export default function LoadDetail() {
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
-                          {destinations.find((d) => d.value === pallet.destination)?.label || "TBD"}
+                          {getDestinationLabel(pallet.destination)}
                         </TableCell>
                         <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                       </TableRow>
