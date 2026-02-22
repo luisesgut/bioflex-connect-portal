@@ -253,7 +253,19 @@ export default function ProductRequestDetail() {
         .single();
 
       if (error) throw error;
-      setRequest(data);
+      
+      // Resolve assigned designer name
+      let assignedDesignerName: string | null = null;
+      if (data.assigned_designer) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', data.assigned_designer)
+          .single();
+        assignedDesignerName = profile?.full_name || null;
+      }
+      
+      setRequest({ ...data, assigned_designer_name: assignedDesignerName } as any);
       setBionetCode(data.bionet_code || "");
       setSapCode(data.sap_code || "");
     } catch (error) {
