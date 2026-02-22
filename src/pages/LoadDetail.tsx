@@ -536,7 +536,7 @@ export default function LoadDetail() {
     poSalesOrderMap.forEach((info, poNumber) => {
       poInfoMap.set(poNumber, info);
     });
-    generatePackingList({
+    await generatePackingList({
       loadNumber: load.load_number,
       shippingDate: load.shipping_date,
       invoiceNumber: load.invoice_number || "",
