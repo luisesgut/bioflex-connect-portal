@@ -117,6 +117,7 @@ function getStatusBadgeVariant(status: string) {
 
 export default function Products() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);

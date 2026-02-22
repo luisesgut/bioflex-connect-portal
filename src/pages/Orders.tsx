@@ -105,6 +105,7 @@ const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped
 export default function Orders() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
