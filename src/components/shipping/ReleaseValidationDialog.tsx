@@ -313,7 +313,7 @@ export function ReleaseValidationDialog({
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent>
-                  {predefinedDestinations.map((dest) => (
+                  {destinationOptions.map((dest) => (
                     <SelectItem key={dest.value} value={dest.value}>
                       {dest.label}
                     </SelectItem>
@@ -326,13 +326,21 @@ export function ReleaseValidationDialog({
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {showCustomInput && (
-                <Input
-                  placeholder="Enter custom destination (e.g., Phoenix, AZ)"
-                  value={customDestination}
-                  onChange={(e) => setCustomDestination(e.target.value)}
-                  autoFocus
-                />
+              {showCustomInput && onAddDestination && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    onAddDestination();
+                    setShowCustomInput(false);
+                    setSelectedDestination("");
+                  }}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Open new destination form
+                </Button>
               )}
             </div>
 
