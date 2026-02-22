@@ -381,6 +381,15 @@ export default function LoadDetail() {
       });
       setPtCodeToPOMap(ptToPO);
 
+      // Fetch transit updates history
+      const { data: transitData } = await supabase
+        .from("transit_updates")
+        .select("id, last_reported_city, eta_cross_border, notes, created_at")
+        .eq("load_id", id)
+        .order("created_at", { ascending: false });
+
+      setTransitUpdates(transitData || []);
+
     } catch (error) {
       console.error("Error fetching load data:", error);
       toast.error("Failed to load data");
