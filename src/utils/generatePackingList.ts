@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+// @ts-ignore
 import autoTable from "jspdf-autotable";
 
 interface PackingListPallet {
