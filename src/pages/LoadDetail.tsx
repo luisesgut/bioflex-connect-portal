@@ -291,6 +291,11 @@ export default function LoadDetail() {
     return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
   };
 
+  const getFirstNames = (csrNames: string | undefined): string => {
+    if (!csrNames) return "-";
+    return csrNames.split(",").map(n => n.trim().split(" ")[0]).join(", ");
+  };
+
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
 
