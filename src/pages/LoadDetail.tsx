@@ -135,6 +135,7 @@ interface ShippingLoad {
   documents_sent: boolean | null;
   border_crossed: boolean | null;
   transit_notes: string | null;
+  cross_border_actual_date: string | null;
 }
 
 interface DeliveryDateEntry {
