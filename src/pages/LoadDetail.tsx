@@ -445,9 +445,9 @@ export default function LoadDetail() {
           .or(ptCodesInLoad.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
         const csrMap = new Map<string, string>();
         (csrProducts || []).forEach((p: any) => {
-          const code = p.codigo_producto || p.pt_code;
-          if (code && p.dp_sales_csr_names) {
-            csrMap.set(code, p.dp_sales_csr_names);
+          if (p.dp_sales_csr_names) {
+            if (p.codigo_producto) csrMap.set(p.codigo_producto, p.dp_sales_csr_names);
+            if (p.pt_code) csrMap.set(p.pt_code, p.dp_sales_csr_names);
           }
         });
         setPtCodeToCsrMap(csrMap);
