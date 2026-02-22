@@ -49,6 +49,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ShippingLoad {
@@ -107,6 +108,7 @@ const loadStatusOptions = [
 
 export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);

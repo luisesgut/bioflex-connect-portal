@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { openStorageFile } from "@/hooks/useOpenStorageFile";
+import { useLanguage } from "@/hooks/useLanguage";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,6 +135,7 @@ interface UploadedFile {
 
 export default function NonConformance() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNCR, setEditingNCR] = useState<NCRSubmission | null>(null);

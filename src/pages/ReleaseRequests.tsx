@@ -25,6 +25,7 @@ import { FileText, Loader2, Eye, Clock, CheckCircle, XCircle, Truck, Package, Ma
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
@@ -91,6 +92,7 @@ const loadStatusOptions = [
 
 export default function ReleaseRequests() {
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<ReleaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
 

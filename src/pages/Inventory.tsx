@@ -28,6 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ const statusStyles: Record<string, string> = {
 
 export default function Inventory() {
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const [inventory, setInventory] = useState<InventoryPallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

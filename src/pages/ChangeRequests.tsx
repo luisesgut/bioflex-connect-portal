@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { ReviewChangeRequestDialog } from "@/components/orders/ReviewChangeRequestDialog";
 
 interface ChangeRequest {
@@ -37,6 +38,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export default function ChangeRequests() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { isAdmin } = useAdmin();
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
