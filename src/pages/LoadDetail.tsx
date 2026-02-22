@@ -1950,7 +1950,7 @@ export default function LoadDetail() {
                 const hasBorderCrossed = load.border_crossed;
                 const hasCity = !!load.last_reported_city;
                 const latestCityUpdate = transitUpdates.find((u) => u.last_reported_city);
-                const crossBorderActualDate = (load as any).cross_border_actual_date;
+                const crossBorderActualDate = load.cross_border_actual_date;
 
                 const DatePickerInline = ({ value, onChange, placeholder, saving }: { value: string | null; onChange: (date: Date | null) => void; placeholder: string; saving: boolean }) => (
                   <Popover>
