@@ -399,9 +399,9 @@ export default function LoadDetail() {
       setPtCodeToPOMap(ptToPO);
 
       // Fetch PO prices for load value calculation
-      const loadCustomerLots = [...new Set(
+      const loadCustomerLots: string[] = [...new Set(
         (palletsData as any || [])
-          .map((p: any) => p.pallet?.customer_lot)
+          .map((p: any) => p.pallet?.customer_lot as string | null)
           .filter((lot: string | null): lot is string => !!lot)
       )];
       if (loadCustomerLots.length > 0) {
