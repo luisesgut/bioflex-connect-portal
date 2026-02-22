@@ -2465,6 +2465,44 @@ export default function LoadDetail() {
                                     : "ETA pending"}
                                 </p>
                               )}
+                              {/* POD (Proof of Delivery) */}
+                              {step.type === "destination" && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {step.podPdfUrl ? (
+                                    <button
+                                      onClick={() => openStorageFile(step.podPdfUrl, "release-documents")}
+                                      className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-xs"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      View POD
+                                    </button>
+                                  ) : null}
+                                  {isAdmin && (
+                                    <label className="cursor-pointer">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        onChange={(e) => handleUploadPod(step.destinationKey!, e)}
+                                        disabled={uploadingPod === step.destinationKey}
+                                      />
+                                      <Button variant="outline" size="sm" asChild className="h-6 px-2 text-xs gap-1" disabled={uploadingPod === step.destinationKey}>
+                                        <span>
+                                          {uploadingPod === step.destinationKey ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Plus className="h-3 w-3" />
+                                          )}
+                                          {step.podPdfUrl ? "Replace POD" : "Upload POD"}
+                                        </span>
+                                      </Button>
+                                    </label>
+                                  )}
+                                  {!isAdmin && !step.podPdfUrl && (
+                                    <span className="text-xs text-muted-foreground italic">No POD uploaded</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
