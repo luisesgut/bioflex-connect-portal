@@ -426,6 +426,61 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
+  // Sync invoice number from load data
+  useEffect(() => {
+    if (load?.invoice_number) {
+      setInvoiceNumber(load.invoice_number);
+    }
+  }, [load?.invoice_number]);
+
+  const handleSaveInvoiceNumber = async () => {
+    if (!id || !invoiceNumber.trim()) return;
+    setSavingInvoice(true);
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({ invoice_number: invoiceNumber.trim() })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Invoice number saved");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving invoice number:", error);
+      toast.error("Failed to save invoice number");
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
+  const handleUploadInvoicePdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingInvoicePdf(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `invoices/${id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const storagePath = `release-documents:${filePath}`;
+      const { error: updateError } = await supabase
+        .from("shipping_loads")
+        .update({ invoice_pdf_url: storagePath })
+        .eq("id", id);
+      if (updateError) throw updateError;
+
+      toast.success("Invoice PDF uploaded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading invoice PDF:", error);
+      toast.error("Failed to upload invoice PDF");
+    } finally {
+      setUploadingInvoicePdf(false);
+    }
+  };
+
   // Sort pallets by Customer PO (grouped), then by quantity descending within each group
   const sortByPOAndQuantity = useCallback((palletList: LoadPallet[]): LoadPallet[] => {
     return [...palletList].sort((a, b) => {
