@@ -2732,6 +2732,10 @@ export default function LoadDetail() {
           </Card>
         )}
 
+  const getFirstNames = (csrNames: string | undefined): string => {
+    if (!csrNames) return "-";
+    return csrNames.split(",").map(n => n.trim().split(" ")[0]).join(", ");
+  };
 
         {pallets.length > 0 && (
           <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} />
@@ -2827,7 +2831,7 @@ export default function LoadDetail() {
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
-                            <TableCell className="text-xs max-w-[150px] truncate">{ptCodeToCsrMap.get(pallet.pallet.pt_code) || "-"}</TableCell>
+                            <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
@@ -2945,7 +2949,7 @@ export default function LoadDetail() {
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
-                            <TableCell className="text-xs max-w-[150px] truncate">{ptCodeToCsrMap.get(pallet.pallet.pt_code) || "-"}</TableCell>
+                            <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
