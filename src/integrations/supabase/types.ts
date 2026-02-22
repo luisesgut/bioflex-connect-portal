@@ -783,6 +783,7 @@ export type Database = {
           design_reviewed_at: string | null
           design_reviewed_by: string | null
           design_status: string | null
+          dp_sales_csr_names: string | null
           engineering_notes: string | null
           engineering_reviewed_at: string | null
           engineering_reviewed_by: string | null
@@ -867,6 +868,7 @@ export type Database = {
           design_reviewed_at?: string | null
           design_reviewed_by?: string | null
           design_status?: string | null
+          dp_sales_csr_names?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
@@ -951,6 +953,7 @@ export type Database = {
           design_reviewed_at?: string | null
           design_reviewed_by?: string | null
           design_status?: string | null
+          dp_sales_csr_names?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
