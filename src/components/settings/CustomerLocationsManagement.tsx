@@ -230,9 +230,9 @@ export function CustomerLocationsManagement() {
   };
 
   const getManagerName = (managerId: string | null) => {
-    if (!managerId || !dpContacts) return "-";
-    const contact = dpContacts.find((c) => c.id === managerId);
-    return contact ? contact.full_name : "-";
+    if (!managerId || !externalUsers) return "-";
+    const user = externalUsers.find((c) => c.user_id === managerId);
+    return user ? user.full_name : "-";
   };
 
   return (
@@ -312,9 +312,9 @@ export function CustomerLocationsManagement() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-[200]">
                     <SelectItem value="__none__">None</SelectItem>
-                    {dpContacts?.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.full_name} ({contact.email})
+                    {externalUsers?.map((user) => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        {user.full_name} ({user.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
