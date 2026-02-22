@@ -469,30 +469,46 @@ export default function ProductRequestDetail() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Specifications */}
+            {/* Product Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Product Specifications</CardTitle>
+                <CardTitle>Product Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label className="text-muted-foreground">Item ID Code</Label>
+                    <Label className="text-muted-foreground">Product Name</Label>
+                    <p className="font-medium">{request.product_name || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Item / Destiny ID</Label>
                     <p className="font-medium">{request.item_id_code || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Customer Item Code</Label>
-                    <p className="font-medium">{request.customer_item_code || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Product Line</Label>
-                    <p className="font-medium">{request.product_line?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Customer</Label>
+                    <Label className="text-muted-foreground">Customer (Final Customer)</Label>
                     <p className="font-medium">{request.customer || '-'}</p>
                   </div>
+                  <div>
+                    <Label className="text-muted-foreground">Item Type</Label>
+                    <p className="font-medium">{request.item_type || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Assigned Designer</Label>
+                    <p className="font-medium">{(request as any).assigned_designer_name || '-'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">DP Sales / CSR</Label>
+                    <p className="font-medium">{(request as any).dp_sales_csr_names || '-'}</p>
+                  </div>
                 </div>
+                {request.item_description && (
+                  <div>
+                    <Label className="text-muted-foreground">Item Description</Label>
+                    <p className="font-medium">{request.item_description}</p>
+                  </div>
+                )}
+                
+                <Separator />
                 
                 <Separator />
                 

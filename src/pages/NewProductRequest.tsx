@@ -171,11 +171,16 @@ export default function NewProductRequest() {
         .filter(Boolean)
         .join(", ");
 
+      // Concatenate Item ID + Product Name for display
+      const displayName = itemIdCode.trim()
+        ? `${itemIdCode.trim()} - ${productName.trim()}`
+        : productName.trim();
+
       const { data: request, error: requestError } = await supabase
         .from("product_requests")
         .insert({
           created_by: user.id,
-          product_name: productName.trim(),
+          product_name: displayName,
           item_id_code: itemIdCode.trim() || null,
           customer: customer || null,
           item_type: itemType || null,
