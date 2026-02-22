@@ -1500,7 +1500,7 @@ export default function LoadDetail() {
           .from("load_pallets")
           .update({ delivery_date: dateStr })
           .eq("load_id", id)
-          .eq("destination", destination);
+          .eq("destination", destination as any);
 
         // Check if ALL destinations now have actual dates - if so, mark load as delivered
         const updatedDates = destinationDates.map((d) =>
