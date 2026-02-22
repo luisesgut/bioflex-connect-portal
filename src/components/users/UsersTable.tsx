@@ -345,23 +345,13 @@ export function UsersTable({ userType }: UsersTableProps) {
                   <p className="text-xs text-muted-foreground">El correo no se puede cambiar aquí</p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="user_phone">Teléfono</Label>
-                  <Input
-                    id="user_phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="user_company">Empresa</Label>
-                  <Input
-                    id="user_company"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="user_phone">Teléfono</Label>
+                <Input
+                  id="user_phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user_profile">Perfil de Acceso</Label>
@@ -450,7 +440,6 @@ export function UsersTable({ userType }: UsersTableProps) {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Correo</TableHead>
-              {userType === "external" && <TableHead>Empresa</TableHead>}
               <TableHead>Teléfono</TableHead>
               <TableHead>Perfil de Acceso</TableHead>
               <TableHead>Estado</TableHead>
@@ -462,9 +451,6 @@ export function UsersTable({ userType }: UsersTableProps) {
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                 <TableCell>{user.email || "—"}</TableCell>
-                {userType === "external" && (
-                  <TableCell>{user.company || "—"}</TableCell>
-                )}
                 <TableCell>{user.phone || "—"}</TableCell>
                 <TableCell>
                   {user.access_profile ? (
