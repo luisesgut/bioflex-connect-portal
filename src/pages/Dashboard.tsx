@@ -63,12 +63,6 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
             <p className="mt-1 text-muted-foreground">Overview of your purchase order activity.</p>
           </div>
-          <Link to="/orders/new">
-            <Button variant="accent" size="lg" className="gap-2">
-              <FileText className="h-5 w-5" />
-              Create New PO
-            </Button>
-          </Link>
         </div>
 
         {/* Stats Grid */}
