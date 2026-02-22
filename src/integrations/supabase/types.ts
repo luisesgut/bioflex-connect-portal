@@ -396,6 +396,8 @@ export type Database = {
       }
       load_pallets: {
         Row: {
+          actioned_at: string | null
+          actioned_by: string | null
           created_at: string
           delivery_date: string | null
           destination: string | null
@@ -408,6 +410,8 @@ export type Database = {
           release_pdf_url: string | null
         }
         Insert: {
+          actioned_at?: string | null
+          actioned_by?: string | null
           created_at?: string
           delivery_date?: string | null
           destination?: string | null
@@ -420,6 +424,8 @@ export type Database = {
           release_pdf_url?: string | null
         }
         Update: {
+          actioned_at?: string | null
+          actioned_by?: string | null
           created_at?: string
           delivery_date?: string | null
           destination?: string | null
