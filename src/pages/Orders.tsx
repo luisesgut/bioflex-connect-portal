@@ -678,10 +678,10 @@ export default function Orders() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Purchase Orders
+              {t('page.orders.title')}
             </h1>
             <p className="mt-1 text-muted-foreground">
-              Create and manage your purchase orders
+              {t('page.orders.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3">

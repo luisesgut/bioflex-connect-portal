@@ -230,10 +230,10 @@ export default function ShippedPallets() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Shipped Pallets History
+              {t('page.shippedPallets.title')}
             </h1>
             <p className="text-muted-foreground mt-1">
-              View all shipped products with filters
+              {t('page.shippedPallets.subtitle')}
             </p>
           </div>
           <Button onClick={exportToCSV} variant="outline" className="gap-2">
