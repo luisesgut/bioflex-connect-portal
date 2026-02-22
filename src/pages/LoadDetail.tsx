@@ -86,6 +86,7 @@ import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
+import { generatePackingList } from "@/utils/generatePackingList";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
@@ -209,7 +210,7 @@ export default function LoadDetail() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
-  const { destinationOptions, getDestinationLabel } = useCustomerLocations();
+  const { locations, destinationOptions, getDestinationLabel } = useCustomerLocations();
   const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
   const [pallets, setPallets] = useState<LoadPallet[]>([]);
@@ -247,6 +248,7 @@ export default function LoadDetail() {
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
+  const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, string | null>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [revertingPallets, setRevertingPallets] = useState(false);
