@@ -275,13 +275,13 @@ export function AccessProfilesManager() {
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="bg-card max-w-2xl max-h-[85vh] flex flex-col">
-            <DialogHeader>
+          <DialogContent className="bg-card max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>
                 {editingProfile ? "Edit Access Profile" : "New Access Profile"}
               </DialogTitle>
             </DialogHeader>
-            <ScrollArea className="flex-1 pr-4">
+            <div className="flex-1 overflow-y-auto pr-2">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -366,7 +366,7 @@ export function AccessProfilesManager() {
                 </Button>
               </div>
             </form>
-            </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
 
