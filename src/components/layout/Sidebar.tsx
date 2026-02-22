@@ -77,7 +77,7 @@ export function Sidebar() {
             <Package className="h-5 w-5 text-accent-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">Bioflex</h1>
+            <h1 className="text-lg font-bold tracking-tight">{portalName}</h1>
             <p className="text-xs text-sidebar-foreground/60">Customer Portal</p>
           </div>
         </div>

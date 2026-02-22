@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { User, Building2, Bell, Shield, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
