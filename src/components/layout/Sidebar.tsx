@@ -10,13 +10,16 @@ import {
   Warehouse,
   Truck,
   Users,
+  Globe,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,6 +46,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin, isActualAdmin, isViewingAsCustomer, toggleViewMode } = useAdmin();
+  const { language, setLanguage } = useLanguage();
 
   const { data: profile } = useQuery({
     queryKey: ["user-profile", user?.id],
@@ -203,6 +207,21 @@ export function Sidebar() {
               </p>
               <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
             </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setLanguage(language === 'en' ? 'es' : 'en')}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  >
+                    <Globe className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{language === 'en' ? 'Cambiar a Español' : 'Switch to English'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>

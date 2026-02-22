@@ -70,38 +70,6 @@ export default function Settings() {
           </p>
         </div>
 
-        {/* Language Section - Admin Only */}
-        {isActualAdmin && (
-          <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.05s" }}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Globe className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-card-foreground">{t('settings.language')}</h2>
-                <p className="text-sm text-muted-foreground">{t('settings.languageDesc')}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button 
-                variant={language === 'en' ? 'default' : 'outline'}
-                onClick={() => setLanguage('en')}
-                className="flex-1"
-              >
-                🇺🇸 {t('settings.english')}
-              </Button>
-              <Button 
-                variant={language === 'es' ? 'default' : 'outline'}
-                onClick={() => setLanguage('es')}
-                className="flex-1"
-              >
-                🇲🇽 {t('settings.spanish')}
-              </Button>
-            </div>
-          </div>
-        )}
-
 
 
 
