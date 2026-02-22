@@ -363,17 +363,6 @@ export function UsersTable({ userType }: UsersTableProps) {
                     <SelectContent className="bg-popover z-50">
                       <SelectItem value="+1">🇺🇸 +1</SelectItem>
                       <SelectItem value="+52">🇲🇽 +52</SelectItem>
-                      <SelectItem value="+44">🇬🇧 +44</SelectItem>
-                      <SelectItem value="+34">🇪🇸 +34</SelectItem>
-                      <SelectItem value="+49">🇩🇪 +49</SelectItem>
-                      <SelectItem value="+33">🇫🇷 +33</SelectItem>
-                      <SelectItem value="+55">🇧🇷 +55</SelectItem>
-                      <SelectItem value="+57">🇨🇴 +57</SelectItem>
-                      <SelectItem value="+56">🇨🇱 +56</SelectItem>
-                      <SelectItem value="+54">🇦🇷 +54</SelectItem>
-                      <SelectItem value="+86">🇨🇳 +86</SelectItem>
-                      <SelectItem value="+91">🇮🇳 +91</SelectItem>
-                      <SelectItem value="+81">🇯🇵 +81</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
