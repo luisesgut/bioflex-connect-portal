@@ -384,7 +384,7 @@ export function CustomerLocationsManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
+                
                 <TableHead>Name</TableHead>
                 <TableHead>Address</TableHead>
                 <TableHead>Reception Hours</TableHead>
@@ -396,7 +396,7 @@ export function CustomerLocationsManagement() {
             <TableBody>
               {locations.map((location) => (
                 <TableRow key={location.id}>
-                  <TableCell className="font-medium uppercase">{location.code}</TableCell>
+                  
                   <TableCell>{location.name}</TableCell>
                   <TableCell className="max-w-[200px]">
                     <div className="text-sm">
