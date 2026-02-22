@@ -398,6 +398,26 @@ export default function LoadDetail() {
       });
       setPtCodeToPOMap(ptToPO);
 
+      // Fetch PO prices for load value calculation
+      const loadCustomerLots = [...new Set(
+        (palletsData as any || [])
+          .map((p: any) => p.pallet?.customer_lot)
+          .filter((lot: string | null): lot is string => !!lot)
+      )];
+      if (loadCustomerLots.length > 0) {
+        const { data: priceData } = await supabase
+          .from("purchase_orders")
+          .select("po_number, price_per_thousand")
+          .in("po_number", loadCustomerLots);
+        const priceMap = new Map<string, number>();
+        (priceData || []).forEach((po: any) => {
+          if (po.price_per_thousand) {
+            priceMap.set(po.po_number, po.price_per_thousand);
+          }
+        });
+        setPoPriceMap(priceMap);
+      }
+
       // Fetch transit updates history
       const { data: transitData } = await supabase
         .from("transit_updates")
