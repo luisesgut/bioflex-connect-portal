@@ -245,6 +245,7 @@ export default function LoadDetail() {
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [revertingPallets, setRevertingPallets] = useState(false);
