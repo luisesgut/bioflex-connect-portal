@@ -361,6 +361,7 @@ export type Database = {
           estimated_date: string | null
           id: string
           load_id: string
+          pod_pdf_url: string | null
           updated_at: string
         }
         Insert: {
@@ -370,6 +371,7 @@ export type Database = {
           estimated_date?: string | null
           id?: string
           load_id: string
+          pod_pdf_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -379,6 +381,7 @@ export type Database = {
           estimated_date?: string | null
           id?: string
           load_id?: string
+          pod_pdf_url?: string | null
           updated_at?: string
         }
         Relationships: [

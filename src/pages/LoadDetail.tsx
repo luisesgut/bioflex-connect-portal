@@ -276,8 +276,10 @@ export default function LoadDetail() {
     destination: string;
     estimated_date: string | null;
     actual_date: string | null;
+    pod_pdf_url?: string | null;
   }>>([]);
   const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
+  const [uploadingPod, setUploadingPod] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
@@ -514,6 +516,46 @@ export default function LoadDetail() {
       toast.error("Failed to upload invoice PDF");
     } finally {
       setUploadingInvoicePdf(false);
+    }
+  };
+
+  const handleUploadPod = async (destination: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingPod(destination);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `pod/${id}/${destination}_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const storagePath = `release-documents:${filePath}`;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ pod_pdf_url: storagePath, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, pod_pdf_url: storagePath });
+        if (error) throw error;
+      }
+
+      toast.success("POD uploaded successfully");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading POD:", error);
+      toast.error("Failed to upload POD");
+    } finally {
+      setUploadingPod(null);
+      // Reset the input so same file can be re-uploaded
+      e.target.value = "";
     }
   };
 
@@ -2217,6 +2259,7 @@ export default function LoadDetail() {
                         label: getDestinationLabel(p.destination),
                         estimated_date: destDateEntry?.estimated_date || null,
                         actual_date: destDateEntry?.actual_date || null,
+                        pod_pdf_url: destDateEntry?.pod_pdf_url || null,
                       }] as const;
                     })
                 ).values()];
@@ -2264,6 +2307,7 @@ export default function LoadDetail() {
                   destinationKey?: string;
                   estimatedDate?: string | null;
                   actualDate?: string | null;
+                  podPdfUrl?: string | null;
                 }
 
                 const steps: TimelineStepData[] = [];
@@ -2309,6 +2353,7 @@ export default function LoadDetail() {
                     destinationKey: dest.destination,
                     estimatedDate: dest.estimated_date,
                     actualDate: dest.actual_date,
+                    podPdfUrl: dest.pod_pdf_url,
                   });
                 });
 
@@ -2420,6 +2465,44 @@ export default function LoadDetail() {
                                     ? `ETA: ${format(new Date(step.estimatedDate), "MMM d, yyyy")}`
                                     : "ETA pending"}
                                 </p>
+                              )}
+                              {/* POD (Proof of Delivery) */}
+                              {step.type === "destination" && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {step.podPdfUrl ? (
+                                    <button
+                                      onClick={() => openStorageFile(step.podPdfUrl, "release-documents")}
+                                      className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-xs"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      View POD
+                                    </button>
+                                  ) : null}
+                                  {isAdmin && (
+                                    <label className="cursor-pointer">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        onChange={(e) => handleUploadPod(step.destinationKey!, e)}
+                                        disabled={uploadingPod === step.destinationKey}
+                                      />
+                                      <Button variant="outline" size="sm" asChild className="h-6 px-2 text-xs gap-1" disabled={uploadingPod === step.destinationKey}>
+                                        <span>
+                                          {uploadingPod === step.destinationKey ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Plus className="h-3 w-3" />
+                                          )}
+                                          {step.podPdfUrl ? "Replace POD" : "Upload POD"}
+                                        </span>
+                                      </Button>
+                                    </label>
+                                  )}
+                                  {!isAdmin && !step.podPdfUrl && (
+                                    <span className="text-xs text-muted-foreground italic">No POD uploaded</span>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
