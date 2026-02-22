@@ -1394,6 +1394,8 @@ export type Database = {
           estimated_delivery_date: string | null
           eta_cross_border: string | null
           id: string
+          invoice_number: string | null
+          invoice_pdf_url: string | null
           last_reported_city: string | null
           load_number: string
           notes: string | null
@@ -1414,6 +1416,8 @@ export type Database = {
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
           id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
           last_reported_city?: string | null
           load_number: string
           notes?: string | null
@@ -1434,6 +1438,8 @@ export type Database = {
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
           id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
           last_reported_city?: string | null
           load_number?: string
           notes?: string | null
