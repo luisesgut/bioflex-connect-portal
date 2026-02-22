@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Building2, Bell, Shield, Globe } from "lucide-react";
+import { Building2, Bell, Shield, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
