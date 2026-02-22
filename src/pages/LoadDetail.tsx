@@ -63,6 +63,8 @@ import {
   Pause,
   Scale,
   Undo2,
+  Clock,
+  Truck,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -79,7 +81,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
@@ -248,6 +251,16 @@ export default function LoadDetail() {
   const [replaceSelectedPalletIds, setReplaceSelectedPalletIds] = useState<Set<string>>(new Set());
   const [replacingPallets, setReplacingPallets] = useState(false);
   const [replaceInventorySearch, setReplaceInventorySearch] = useState("");
+  const [transitUpdates, setTransitUpdates] = useState<Array<{
+    id: string;
+    last_reported_city: string | null;
+    eta_cross_border: string | null;
+    notes: string | null;
+    created_at: string;
+  }>>([]);
+  const [newCityUpdate, setNewCityUpdate] = useState("");
+  const [newTransitNotes, setNewTransitNotes] = useState("");
+  const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -367,6 +380,15 @@ export default function LoadDetail() {
         }
       });
       setPtCodeToPOMap(ptToPO);
+
+      // Fetch transit updates history
+      const { data: transitData } = await supabase
+        .from("transit_updates")
+        .select("id, last_reported_city, eta_cross_border, notes, created_at")
+        .eq("load_id", id)
+        .order("created_at", { ascending: false });
+
+      setTransitUpdates(transitData || []);
 
     } catch (error) {
       console.error("Error fetching load data:", error);
@@ -1398,6 +1420,44 @@ export default function LoadDetail() {
     handleUpdateLoadStatus("delivered", deliveryDates);
   };
 
+  const handleAddTransitUpdate = async () => {
+    if (!newCityUpdate.trim() && !newTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    if (!id || !user) return;
+
+    setSavingTransitUpdate(true);
+    try {
+      const updateData: any = {
+        load_id: id,
+        updated_by: user.id,
+      };
+      if (newCityUpdate.trim()) updateData.last_reported_city = newCityUpdate.trim();
+      if (newTransitNotes.trim()) updateData.notes = newTransitNotes.trim();
+
+      const { error: insertError } = await supabase.from("transit_updates").insert(updateData);
+      if (insertError) throw insertError;
+
+      if (newCityUpdate.trim()) {
+        await supabase
+          .from("shipping_loads")
+          .update({ last_reported_city: newCityUpdate.trim() })
+          .eq("id", id);
+      }
+
+      toast.success("Transit update recorded");
+      setNewCityUpdate("");
+      setNewTransitNotes("");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving transit update:", error);
+      toast.error("Failed to save transit update");
+    } finally {
+      setSavingTransitUpdate(false);
+    }
+  };
+
   const handleGenerateCustomsDocument = async () => {
     if (!load || pallets.length === 0) {
       toast.error("No pallets in load to generate document");
@@ -1578,116 +1638,182 @@ export default function LoadDetail() {
         </div>
 
         {/* Load Summary Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pallets.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {pallets.length >= 24 && pallets.length <= 30
-                  ? "Full load"
-                  : pallets.length < 24
-                  ? `${24 - pallets.length} more for full load`
-                  : "Over capacity"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
-              <Scale className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
-              <p className="text-xs text-muted-foreground">
-                {totalGrossWeight > 20000 ? (
-                  <span className="text-destructive">Over weight limit!</span>
-                ) : (
-                  `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
-                )}
-              </p>
-            </CardContent>
-          </Card>
-          {isReleasePhase && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
-                    <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
-                    <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    const destLabels: Record<string, string> = {
-                      yuma: "Yuma, AZ",
-                      salinas: "Salinas, CA",
-                      bakersfield: "Bakersfield, CA",
-                      coachella: "Coachella, CA",
-                    };
-                    const destinations = [...new Set(
-                      pallets
-                        .filter((p) => p.destination && p.destination !== "tbd")
-                        .map((p) => destLabels[p.destination!] || p.destination!)
-                    )];
-                    return destinations.length > 0 ? (
-                      <ul className="space-y-1">
-                        {destinations.map((dest) => (
-                          <li key={dest} className="text-sm font-medium flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                            {dest}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No destinations assigned</p>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            </>
-          )}
-          {!isReleasePhase && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">pallets with destination</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Release #</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{load.release_number || "-"}</div>
-                  <p className="text-xs text-muted-foreground">from customer</p>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
+        {(load.status === "in_transit" || load.status === "delivered") ? (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">in this load</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">POs in Load</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const uniquePOs = new Set(
+                    pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                  );
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">{uniquePOs.size}</div>
+                      <p className="text-xs text-muted-foreground">purchase orders</p>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Days in Transit</CardTitle>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {differenceInDays(new Date(), new Date(load.shipping_date))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  since {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Estimated Delivery</CardTitle>
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {load.estimated_delivery_date
+                    ? format(new Date(load.estimated_delivery_date), "MMM d")
+                    : "-"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {load.estimated_delivery_date
+                    ? format(new Date(load.estimated_delivery_date), "yyyy")
+                    : "No ETA set"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {pallets.length >= 24 && pallets.length <= 30
+                    ? "Full load"
+                    : pallets.length < 24
+                    ? `${24 - pallets.length} more for full load`
+                    : "Over capacity"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
+                <Scale className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
+                <p className="text-xs text-muted-foreground">
+                  {totalGrossWeight > 20000 ? (
+                    <span className="text-destructive">Over weight limit!</span>
+                  ) : (
+                    `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+            {isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
+                      <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const destLabels: Record<string, string> = {
+                        yuma: "Yuma, AZ",
+                        salinas: "Salinas, CA",
+                        bakersfield: "Bakersfield, CA",
+                        coachella: "Coachella, CA",
+                      };
+                      const dests = [...new Set(
+                        pallets
+                          .filter((p) => p.destination && p.destination !== "tbd")
+                          .map((p) => destLabels[p.destination!] || p.destination!)
+                      )];
+                      return dests.length > 0 ? (
+                        <ul className="space-y-1">
+                          {dests.map((dest) => (
+                            <li key={dest} className="text-sm font-medium flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                              {dest}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No destinations assigned</p>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            {!isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">pallets with destination</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Release #</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{load.release_number || "-"}</div>
+                    <p className="text-xs text-muted-foreground">from customer</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Transit Timeline - Courier Style */}
         {(load.status === "in_transit" || load.status === "delivered") && (
@@ -1697,6 +1823,9 @@ export default function LoadDetail() {
                 <Package className="h-5 w-5 text-primary" />
                 Shipment Tracking
               </CardTitle>
+              <CardDescription>
+                Track this load's journey from BFX to destination
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {(() => {
@@ -1707,7 +1836,6 @@ export default function LoadDetail() {
                   coachella: "Coachella, CA",
                 };
 
-                // Get unique destinations with their delivery dates
                 const destEntries = [...new Map(
                   pallets
                     .filter((p) => p.destination && p.destination !== "tbd")
@@ -1739,12 +1867,15 @@ export default function LoadDetail() {
                   active: false,
                 });
 
-                // Step 2: Last Reported City (active if not yet at border)
+                // Step 2: Last Reported City
                 const hasBorderCrossed = load.border_crossed;
                 const hasCity = !!load.last_reported_city;
+                const latestCityUpdate = transitUpdates.find((u) => u.last_reported_city);
                 steps.push({
                   label: load.last_reported_city || "In Transit",
-                  sublabel: hasCity ? "Last reported location" : "Awaiting update",
+                  sublabel: hasCity && latestCityUpdate
+                    ? `Updated: ${format(new Date(latestCityUpdate.created_at), "MMM d, yyyy h:mm a")}`
+                    : "Awaiting update",
                   completed: hasBorderCrossed || false,
                   active: hasCity && !hasBorderCrossed,
                 });
@@ -1776,56 +1907,123 @@ export default function LoadDetail() {
                 });
 
                 return (
-                  <div className="relative flex flex-col gap-0 pl-4">
-                    {steps.map((step, idx) => {
-                      const isLast = idx === steps.length - 1;
-                      return (
-                        <div key={idx} className="relative flex items-start gap-4 pb-6">
-                          {/* Vertical line */}
-                          {!isLast && (
+                  <div className="space-y-6">
+                    {/* Timeline */}
+                    <div className="relative flex flex-col gap-0 pl-4">
+                      {steps.map((step, idx) => {
+                        const isLast = idx === steps.length - 1;
+                        return (
+                          <div key={idx} className="relative flex items-start gap-4 pb-6">
+                            {!isLast && (
+                              <div
+                                className={cn(
+                                  "absolute left-[7px] top-[20px] w-0.5 h-[calc(100%-8px)]",
+                                  step.completed ? "bg-primary" : "bg-border"
+                                )}
+                              />
+                            )}
                             <div
                               className={cn(
-                                "absolute left-[7px] top-[20px] w-0.5 h-[calc(100%-8px)]",
-                                step.completed ? "bg-primary" : "bg-border"
+                                "relative z-10 flex items-center justify-center rounded-full shrink-0",
+                                step.completed
+                                  ? "h-4 w-4 bg-primary"
+                                  : step.active
+                                  ? "h-4 w-4 border-2 border-primary bg-background"
+                                  : "h-4 w-4 border-2 border-muted-foreground/30 bg-background"
                               )}
-                            />
-                          )}
-                          {/* Dot */}
-                          <div
-                            className={cn(
-                              "relative z-10 flex items-center justify-center rounded-full shrink-0",
-                              step.completed
-                                ? "h-4 w-4 bg-primary"
-                                : step.active
-                                ? "h-4 w-4 border-2 border-primary bg-background"
-                                : "h-4 w-4 border-2 border-muted-foreground/30 bg-background"
-                            )}
-                          >
-                            {step.completed && (
-                              <span className="text-primary-foreground text-[10px]">✓</span>
-                            )}
-                            {step.active && (
-                              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                            )}
-                          </div>
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "text-sm font-medium leading-none",
-                              step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
-                            )}>
-                              {step.label}
-                            </p>
-                            {(step.sublabel || step.date) && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {step.date && <span className="font-medium">{step.date} • </span>}
-                                {step.sublabel}
+                            >
+                              {step.completed && (
+                                <span className="text-primary-foreground text-[10px]">✓</span>
+                              )}
+                              {step.active && (
+                                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn(
+                                "text-sm font-medium leading-none",
+                                step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
+                              )}>
+                                {step.label}
                               </p>
-                            )}
+                              {(step.sublabel || step.date) && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {step.date && <span className="font-medium">{step.date} • </span>}
+                                  {step.sublabel}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Add Transit Update Form (Admin only, in_transit only) */}
+                    {isAdmin && load.status === "in_transit" && (
+                      <div className="border-t pt-4 space-y-3">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Add Transit Update
+                        </h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Last Reported City</Label>
+                            <Input
+                              placeholder="e.g. Monterrey, NL"
+                              value={newCityUpdate}
+                              onChange={(e) => setNewCityUpdate(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Notes (optional)</Label>
+                            <Input
+                              placeholder="e.g. Waiting at customs"
+                              value={newTransitNotes}
+                              onChange={(e) => setNewTransitNotes(e.target.value)}
+                            />
                           </div>
                         </div>
-                      );
-                    })}
+                        <Button
+                          size="sm"
+                          onClick={handleAddTransitUpdate}
+                          disabled={savingTransitUpdate || (!newCityUpdate.trim() && !newTransitNotes.trim())}
+                        >
+                          {savingTransitUpdate ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                          )}
+                          Record Update
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Transit Updates History */}
+                    {transitUpdates.length > 0 && (
+                      <div className="border-t pt-4 space-y-3">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Update History
+                        </h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {transitUpdates.map((update) => (
+                            <div key={update.id} className="flex items-start gap-3 text-sm border-l-2 border-muted pl-3 py-1">
+                              <div className="flex-1 min-w-0">
+                                {update.last_reported_city && (
+                                  <p className="font-medium text-foreground">{update.last_reported_city}</p>
+                                )}
+                                {update.notes && (
+                                  <p className="text-muted-foreground text-xs">{update.notes}</p>
+                                )}
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {format(new Date(update.created_at), "MMM d, h:mm a")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
