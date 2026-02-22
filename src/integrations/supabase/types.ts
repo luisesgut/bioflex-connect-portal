@@ -306,6 +306,44 @@ export type Database = {
           },
         ]
       }
+      load_destination_dates: {
+        Row: {
+          actual_date: string | null
+          created_at: string
+          destination: string
+          estimated_date: string | null
+          id: string
+          load_id: string
+          updated_at: string
+        }
+        Insert: {
+          actual_date?: string | null
+          created_at?: string
+          destination: string
+          estimated_date?: string | null
+          id?: string
+          load_id: string
+          updated_at?: string
+        }
+        Update: {
+          actual_date?: string | null
+          created_at?: string
+          destination?: string
+          estimated_date?: string | null
+          id?: string
+          load_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_destination_dates_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       load_pallets: {
         Row: {
           created_at: string
@@ -1337,6 +1375,7 @@ export type Database = {
           border_crossed: boolean | null
           created_at: string
           created_by: string
+          cross_border_actual_date: string | null
           documents_sent: boolean | null
           estimated_delivery_date: string | null
           eta_cross_border: string | null
@@ -1356,6 +1395,7 @@ export type Database = {
           border_crossed?: boolean | null
           created_at?: string
           created_by: string
+          cross_border_actual_date?: string | null
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
@@ -1375,6 +1415,7 @@ export type Database = {
           border_crossed?: boolean | null
           created_at?: string
           created_by?: string
+          cross_border_actual_date?: string | null
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null

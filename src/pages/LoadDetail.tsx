@@ -261,6 +261,14 @@ export default function LoadDetail() {
   const [newCityUpdate, setNewCityUpdate] = useState("");
   const [newTransitNotes, setNewTransitNotes] = useState("");
   const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
+  const [destinationDates, setDestinationDates] = useState<Array<{
+    id?: string;
+    load_id: string;
+    destination: string;
+    estimated_date: string | null;
+    actual_date: string | null;
+  }>>([]);
+  const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
