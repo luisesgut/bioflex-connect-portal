@@ -262,6 +262,9 @@ export default function LoadDetail() {
   const [newCityUpdate, setNewCityUpdate] = useState("");
   const [newTransitNotes, setNewTransitNotes] = useState("");
   const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
+  const [editingTransitUpdate, setEditingTransitUpdate] = useState<string | null>(null);
+  const [editTransitCity, setEditTransitCity] = useState("");
+  const [editTransitNotes, setEditTransitNotes] = useState("");
   const [destinationDates, setDestinationDates] = useState<Array<{
     id?: string;
     load_id: string;
