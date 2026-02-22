@@ -144,9 +144,6 @@ export function ReleaseValidationDialog({
   };
 
   const getDestinationValue = (): string => {
-    if (showCustomInput && customDestination.trim()) {
-      return customDestination.trim();
-    }
     return selectedDestination;
   };
 
@@ -250,7 +247,7 @@ export function ReleaseValidationDialog({
     }
   };
 
-  const isReleaseValid = manualReleaseNumber.trim() && (selectedDestination || (showCustomInput && customDestination.trim()));
+  const isReleaseValid = manualReleaseNumber.trim() && selectedDestination;
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
