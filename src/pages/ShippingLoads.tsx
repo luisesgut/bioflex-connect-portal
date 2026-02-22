@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ShippingLoad {
