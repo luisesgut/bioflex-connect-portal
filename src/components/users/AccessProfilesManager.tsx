@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Shield } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const MODULES = [
   { key: "dashboard", label: "Dashboard" },
@@ -365,6 +366,7 @@ export function AccessProfilesManager() {
                 </Button>
               </div>
             </form>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
 
