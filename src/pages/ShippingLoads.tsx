@@ -126,7 +126,7 @@ export default function ShippingLoads() {
   const [transitLoadPending, setTransitLoadPending] = useState<ShippingLoad | null>(null);
   const fetchData = useCallback(async () => {
     try {
-      const [loadsRes, requestsRes] = await Promise.all([
+      const [loadsRes, requestsRes, destDatesRes] = await Promise.all([
         supabase
           .from("shipping_loads")
           .select("*")
@@ -135,6 +135,10 @@ export default function ShippingLoads() {
           .from("release_requests")
           .select("id, load_id, requested_at, status, response_at, release_number, is_hot_order")
           .order("requested_at", { ascending: false }),
+        supabase
+          .from("load_destination_dates")
+          .select("load_id, destination, actual_date")
+          .not("actual_date", "is", null),
       ]);
 
       if (loadsRes.error) throw loadsRes.error;
@@ -142,6 +146,15 @@ export default function ShippingLoads() {
 
       setLoads(loadsRes.data || []);
       setReleaseRequests(requestsRes.data || []);
+
+      // Build map of load_id -> destination dates with actual_date
+      const ddMap = new Map<string, Array<{ destination: string; actual_date: string | null }>>();
+      (destDatesRes.data || []).forEach((dd) => {
+        const existing = ddMap.get(dd.load_id) || [];
+        existing.push({ destination: dd.destination, actual_date: dd.actual_date });
+        ddMap.set(dd.load_id, existing);
+      });
+      setDestinationDatesMap(ddMap);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load shipping data");
