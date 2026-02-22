@@ -514,6 +514,49 @@ export default function LoadDetail() {
     }
   };
 
+  const handleDownloadPackingList = (destinationCode: string) => {
+    if (!load) return;
+    const destPallets = pallets.filter((p) => p.destination === destinationCode);
+    if (destPallets.length === 0) {
+      toast.error("No pallets for this destination");
+      return;
+    }
+    const loc = locations.find((l) => l.code === destinationCode);
+    const destInfo = {
+      name: loc ? (loc.city && loc.state ? `${loc.name}, ${loc.state}` : loc.name) : destinationCode,
+      address: loc?.address || null,
+      city: loc?.city || null,
+      state: loc?.state || null,
+      zip_code: loc?.zip_code || null,
+    };
+    const poInfoMap = new Map<string, { sales_order_number: string | null }>();
+    poSalesOrderMap.forEach((salesOrder, poNumber) => {
+      poInfoMap.set(poNumber, { sales_order_number: salesOrder });
+    });
+    generatePackingList({
+      loadNumber: load.load_number,
+      shippingDate: load.shipping_date,
+      invoiceNumber: load.invoice_number || "",
+      destination: destInfo,
+      pallets: destPallets.map((p) => ({
+        description: p.pallet.description,
+        customer_lot: p.pallet.customer_lot,
+        quantity: p.quantity,
+        release_number: p.release_number,
+        pt_code: p.pallet.pt_code,
+        gross_weight: p.pallet.gross_weight,
+        net_weight: p.pallet.net_weight,
+        pieces: p.pallet.pieces,
+        unit: p.pallet.unit,
+      })),
+      poInfoMap,
+      resolveCustomerPO: (pallet) => {
+        if (pallet.customer_lot) return pallet.customer_lot;
+        return ptCodeToPOMap.get(pallet.pt_code) || "-";
+      },
+    });
+  };
+
   // Sort pallets by Customer PO (grouped), then by quantity descending within each group
   const sortByPOAndQuantity = useCallback((palletList: LoadPallet[]): LoadPallet[] => {
     return [...palletList].sort((a, b) => {
