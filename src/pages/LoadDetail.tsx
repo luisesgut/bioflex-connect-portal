@@ -274,6 +274,9 @@ export default function LoadDetail() {
     actual_date: string | null;
   }>>([]);
   const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [savingInvoice, setSavingInvoice] = useState(false);
+  const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
