@@ -7,8 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
-import { TeamManagement } from "@/components/settings/TeamManagement";
-import { DPContactsManagement } from "@/components/settings/DPContactsManagement";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
@@ -61,19 +59,8 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Team Management Section - Admin Only */}
-        {isActualAdmin && (
-          <div style={{ animationDelay: "0.1s" }}>
-            <TeamManagement />
-          </div>
-        )}
 
-        {/* DP Contacts Management - Admin Only */}
-        {isActualAdmin && (
-          <div style={{ animationDelay: "0.12s" }}>
-            <DPContactsManagement />
-          </div>
-        )}
+
 
         {/* Dropdown Options Management - Admin Only */}
         {isActualAdmin && (

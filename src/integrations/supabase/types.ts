@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_profiles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string | null
+          user_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_type?: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_type?: string
+        }
+        Relationships: []
+      }
       customer_locations: {
         Row: {
           address: string | null
@@ -1155,32 +1188,87 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_permissions: {
+        Row: {
+          can_edit: boolean | null
+          can_view: boolean | null
+          created_at: string | null
+          id: string
+          module: string
+          profile_id: string
+        }
+        Insert: {
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module: string
+          profile_id: string
+        }
+        Update: {
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "access_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          access_profile_id: string | null
+          company: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          phone: string | null
           updated_at: string
           user_id: string
+          user_type: string | null
         }
         Insert: {
+          access_profile_id?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id: string
+          user_type?: string | null
         }
         Update: {
+          access_profile_id?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_access_profile_id_fkey"
+            columns: ["access_profile_id"]
+            isOneToOne: false
+            referencedRelation: "access_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_orders: {
         Row: {
