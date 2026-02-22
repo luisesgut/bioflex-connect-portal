@@ -111,6 +111,7 @@ export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { getDestinationLabel } = useCustomerLocations();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
