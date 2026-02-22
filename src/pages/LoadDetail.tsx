@@ -1638,116 +1638,182 @@ export default function LoadDetail() {
         </div>
 
         {/* Load Summary Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pallets.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {pallets.length >= 24 && pallets.length <= 30
-                  ? "Full load"
-                  : pallets.length < 24
-                  ? `${24 - pallets.length} more for full load`
-                  : "Over capacity"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
-              <Scale className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
-              <p className="text-xs text-muted-foreground">
-                {totalGrossWeight > 20000 ? (
-                  <span className="text-destructive">Over weight limit!</span>
-                ) : (
-                  `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
-                )}
-              </p>
-            </CardContent>
-          </Card>
-          {isReleasePhase && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
-                    <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
-                    <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    const destLabels: Record<string, string> = {
-                      yuma: "Yuma, AZ",
-                      salinas: "Salinas, CA",
-                      bakersfield: "Bakersfield, CA",
-                      coachella: "Coachella, CA",
-                    };
-                    const destinations = [...new Set(
-                      pallets
-                        .filter((p) => p.destination && p.destination !== "tbd")
-                        .map((p) => destLabels[p.destination!] || p.destination!)
-                    )];
-                    return destinations.length > 0 ? (
-                      <ul className="space-y-1">
-                        {destinations.map((dest) => (
-                          <li key={dest} className="text-sm font-medium flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
-                            {dest}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No destinations assigned</p>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            </>
-          )}
-          {!isReleasePhase && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">pallets with destination</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Release #</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{load.release_number || "-"}</div>
-                  <p className="text-xs text-muted-foreground">from customer</p>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
+        {(load.status === "in_transit" || load.status === "delivered") ? (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">in this load</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">POs in Load</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const uniquePOs = new Set(
+                    pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                  );
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">{uniquePOs.size}</div>
+                      <p className="text-xs text-muted-foreground">purchase orders</p>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Days in Transit</CardTitle>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {differenceInDays(new Date(), new Date(load.shipping_date))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  since {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Estimated Delivery</CardTitle>
+                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {load.estimated_delivery_date
+                    ? format(new Date(load.estimated_delivery_date), "MMM d")
+                    : "-"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {load.estimated_delivery_date
+                    ? format(new Date(load.estimated_delivery_date), "yyyy")
+                    : "No ETA set"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {pallets.length >= 24 && pallets.length <= 30
+                    ? "Full load"
+                    : pallets.length < 24
+                    ? `${24 - pallets.length} more for full load`
+                    : "Over capacity"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
+                <Scale className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
+                <p className="text-xs text-muted-foreground">
+                  {totalGrossWeight > 20000 ? (
+                    <span className="text-destructive">Over weight limit!</span>
+                  ) : (
+                    `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+            {isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
+                      <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const destLabels: Record<string, string> = {
+                        yuma: "Yuma, AZ",
+                        salinas: "Salinas, CA",
+                        bakersfield: "Bakersfield, CA",
+                        coachella: "Coachella, CA",
+                      };
+                      const dests = [...new Set(
+                        pallets
+                          .filter((p) => p.destination && p.destination !== "tbd")
+                          .map((p) => destLabels[p.destination!] || p.destination!)
+                      )];
+                      return dests.length > 0 ? (
+                        <ul className="space-y-1">
+                          {dests.map((dest) => (
+                            <li key={dest} className="text-sm font-medium flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                              {dest}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No destinations assigned</p>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            {!isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">pallets with destination</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Release #</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{load.release_number || "-"}</div>
+                    <p className="text-xs text-muted-foreground">from customer</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Transit Timeline - Courier Style */}
         {(load.status === "in_transit" || load.status === "delivered") && (
