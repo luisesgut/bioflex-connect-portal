@@ -31,6 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Shield } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const MODULES = [
   { key: "dashboard", label: "Dashboard" },
@@ -274,12 +275,13 @@ export function AccessProfilesManager() {
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="bg-card max-w-2xl">
+          <DialogContent className="bg-card max-w-2xl max-h-[85vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>
                 {editingProfile ? "Edit Access Profile" : "New Access Profile"}
               </DialogTitle>
             </DialogHeader>
+            <ScrollArea className="flex-1 pr-4">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -364,6 +366,7 @@ export function AccessProfilesManager() {
                 </Button>
               </div>
             </form>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
 

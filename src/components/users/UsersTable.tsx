@@ -24,12 +24,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Search } from "lucide-react";
+import { Plus, Pencil, Search, Send } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface UserProfile {
   id: string;
@@ -58,6 +57,7 @@ export function UsersTable({ userType }: UsersTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
@@ -121,14 +121,45 @@ export function UsersTable({ userType }: UsersTableProps) {
     },
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: async (data: {
+      email: string;
+      full_name: string;
+      phone: string;
+      company: string;
+      user_type: string;
+      access_profile_id: string;
+    }) => {
+      const { data: result, error } = await supabase.functions.invoke("invite-user", {
+        body: data,
+      });
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Invitation sent",
+        description: "The user has been invited and will receive an email to set up their account.",
+      });
+      resetForm();
+    },
+    onError: (error) => {
+      toast({ title: "Error sending invitation", description: error.message, variant: "destructive" });
+    },
+  });
+
   const resetForm = () => {
     setFormData({ full_name: "", email: "", phone: "", company: "", access_profile_id: "" });
     setEditingUser(null);
+    setIsCreating(false);
     setIsDialogOpen(false);
   };
 
   const handleEdit = (user: UserProfile) => {
     setEditingUser(user);
+    setIsCreating(false);
     setFormData({
       full_name: user.full_name || "",
       email: user.email || "",
@@ -139,19 +170,35 @@ export function UsersTable({ userType }: UsersTableProps) {
     setIsDialogOpen(true);
   };
 
+  const handleCreate = () => {
+    setEditingUser(null);
+    setIsCreating(true);
+    setFormData({ full_name: "", email: "", phone: "", company: "", access_profile_id: "" });
+    setIsDialogOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser) return;
-
-    updateMutation.mutate({
-      id: editingUser.id,
-      data: {
+    if (isCreating) {
+      inviteMutation.mutate({
+        email: formData.email,
         full_name: formData.full_name,
-        phone: formData.phone || null,
-        company: formData.company || null,
-        access_profile_id: formData.access_profile_id || null,
-      },
-    });
+        phone: formData.phone,
+        company: formData.company,
+        user_type: userType,
+        access_profile_id: formData.access_profile_id,
+      });
+    } else if (editingUser) {
+      updateMutation.mutate({
+        id: editingUser.id,
+        data: {
+          full_name: formData.full_name,
+          phone: formData.phone || null,
+          company: formData.company || null,
+          access_profile_id: formData.access_profile_id || null,
+        },
+      });
+    }
   };
 
   const filteredUsers = users?.filter((user) => {
@@ -177,6 +224,10 @@ export function UsersTable({ userType }: UsersTableProps) {
               : "Manage client users and their access profiles"}
           </p>
         </div>
+        <Button onClick={handleCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          Invite User
+        </Button>
       </div>
 
       {/* Search */}
@@ -190,72 +241,94 @@ export function UsersTable({ userType }: UsersTableProps) {
         />
       </div>
 
-      {/* Edit Dialog */}
+      {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-card">
+        <DialogContent className="bg-card max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>{isCreating ? "Invite New User" : "Edit User"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="user_full_name">Full Name</Label>
-              <Input
-                id="user_full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="user_email">Email</Label>
-              <Input id="user_email" value={formData.email} disabled className="opacity-60" />
-              <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <ScrollArea className="flex-1 pr-4">
+            <form onSubmit={handleSubmit} className="space-y-4 pb-2">
               <div className="space-y-2">
-                <Label htmlFor="user_phone">Phone</Label>
+                <Label htmlFor="user_full_name">Full Name</Label>
                 <Input
-                  id="user_phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  id="user_full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user_company">Company</Label>
+                <Label htmlFor="user_email">Email</Label>
                 <Input
-                  id="user_company"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  id="user_email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={!isCreating}
+                  className={!isCreating ? "opacity-60" : ""}
+                  required
                 />
+                {!isCreating && (
+                  <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
+                )}
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="user_profile">Access Profile</Label>
-              <Select
-                value={formData.access_profile_id}
-                onValueChange={(value) => setFormData({ ...formData, access_profile_id: value })}
-              >
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Select a profile..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  {accessProfiles?.map((profile) => (
-                    <SelectItem key={profile.id} value={profile.id}>
-                      {profile.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                Save
-              </Button>
-            </div>
-          </form>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user_phone">Phone</Label>
+                  <Input
+                    id="user_phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user_company">Company</Label>
+                  <Input
+                    id="user_company"
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user_profile">Access Profile</Label>
+                <Select
+                  value={formData.access_profile_id}
+                  onValueChange={(value) => setFormData({ ...formData, access_profile_id: value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select a profile..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {accessProfiles?.map((profile) => (
+                      <SelectItem key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending || inviteMutation.isPending}
+                >
+                  {isCreating ? (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
