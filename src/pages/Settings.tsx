@@ -126,41 +126,6 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Profile Section */}
-        <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.15s" }}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-card-foreground">Profile Information</h2>
-              <p className="text-sm text-muted-foreground">Update your personal details</p>
-            </div>
-          </div>
-          
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="John" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Smith" />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" defaultValue="john@acme.com" />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" />
-            </div>
-          </div>
-          
-          <div className="mt-6 flex justify-end">
-            <Button variant="accent">Save Changes</Button>
-          </div>
-        </div>
 
         {/* Company Section */}
         <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.2s" }}>
