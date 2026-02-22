@@ -324,22 +324,6 @@ export function ReleaseValidationDialog({
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {showCustomInput && onAddDestination && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    onAddDestination();
-                    setShowCustomInput(false);
-                    setSelectedDestination("");
-                  }}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Open new destination form
-                </Button>
-              )}
             </div>
 
             {/* PDF Upload (optional) */}
