@@ -1613,13 +1613,16 @@ export default function LoadDetail() {
                 </CardHeader>
                 <CardContent>
                   {(() => {
+                    const destLabels: Record<string, string> = {
+                      yuma: "Yuma, AZ",
+                      salinas: "Salinas, CA",
+                      bakersfield: "Bakersfield, CA",
+                      coachella: "Coachella, CA",
+                    };
                     const destinations = [...new Set(
                       pallets
                         .filter((p) => p.destination && p.destination !== "tbd")
-                        .map((p) => {
-                          const label = predefinedDestinations.find(d => d.value === p.destination)?.label;
-                          return label || p.destination;
-                        })
+                        .map((p) => destLabels[p.destination!] || p.destination!)
                     )];
                     return destinations.length > 0 ? (
                       <ul className="space-y-1">
