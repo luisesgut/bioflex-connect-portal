@@ -43,12 +43,6 @@ interface CustomerLocation {
   created_at: string;
 }
 
-interface DPContact {
-  id: string;
-  full_name: string;
-  email: string;
-  is_active: boolean;
-}
 
 const DAYS = [
   { key: "mon", label: "Mon" },
@@ -160,16 +154,16 @@ export function CustomerLocationsManagement() {
     },
   });
 
-  const { data: dpContacts } = useQuery({
-    queryKey: ["dp-contacts-active"],
+  const { data: externalUsers } = useQuery({
+    queryKey: ["external-users-active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dp_contacts")
-        .select("*")
-        .eq("is_active", true)
+        .from("profiles")
+        .select("id, user_id, full_name, email")
+        .eq("user_type", "external")
         .order("full_name");
       if (error) throw error;
-      return data as DPContact[];
+      return data;
     },
   });
 
@@ -230,9 +224,9 @@ export function CustomerLocationsManagement() {
   };
 
   const getManagerName = (managerId: string | null) => {
-    if (!managerId || !dpContacts) return "-";
-    const contact = dpContacts.find((c) => c.id === managerId);
-    return contact ? contact.full_name : "-";
+    if (!managerId || !externalUsers) return "-";
+    const user = externalUsers.find((c) => c.user_id === managerId);
+    return user ? user.full_name : "-";
   };
 
   return (
@@ -312,9 +306,9 @@ export function CustomerLocationsManagement() {
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-[200]">
                     <SelectItem value="__none__">None</SelectItem>
-                    {dpContacts?.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.full_name} ({contact.email})
+                    {externalUsers?.map((user) => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        {user.full_name} ({user.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
