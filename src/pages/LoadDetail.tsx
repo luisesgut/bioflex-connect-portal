@@ -127,6 +127,11 @@ interface ShippingLoad {
   release_number: string | null;
   release_pdf_url: string | null;
   notes: string | null;
+  eta_cross_border: string | null;
+  last_reported_city: string | null;
+  documents_sent: boolean | null;
+  border_crossed: boolean | null;
+  transit_notes: string | null;
 }
 
 interface DeliveryDateEntry {
@@ -229,6 +234,7 @@ export default function LoadDetail() {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
+  const [inTransitShipDate, setInTransitShipDate] = useState<Date | undefined>(undefined);
   const [activePOsWithInventory, setActivePOsWithInventory] = useState<ActivePOWithInventory[]>([]);
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
@@ -1245,6 +1251,7 @@ export default function LoadDetail() {
         toast.error(validation.message);
         return;
       }
+      setInTransitShipDate(new Date(load!.shipping_date));
       setInTransitConfirmOpen(true);
     } else if (newStatus === "pending_release" && user) {
       // Create release request if transitioning to pending_release and none exists
@@ -1272,12 +1279,23 @@ export default function LoadDetail() {
     }
   };
 
-  const handleConfirmInTransit = () => {
+  const handleConfirmInTransit = async () => {
     const validation = validateForInTransit();
     if (!validation.valid) {
       toast.error(validation.message);
       setInTransitConfirmOpen(false);
       return;
+    }
+    // Update ship date if changed
+    if (inTransitShipDate && id) {
+      try {
+        await supabase
+          .from("shipping_loads")
+          .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
+          .eq("id", id);
+      } catch (error) {
+        console.error("Error updating ship date:", error);
+      }
     }
     setInTransitConfirmOpen(false);
     handleUpdateLoadStatus("in_transit");
@@ -1668,6 +1686,150 @@ export default function LoadDetail() {
             </>
           )}
         </div>
+
+        {/* Transit Timeline - Courier Style */}
+        {(load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Shipment Tracking
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const destLabelsMap: Record<string, string> = {
+                  yuma: "Yuma, AZ",
+                  salinas: "Salinas, CA",
+                  bakersfield: "Bakersfield, CA",
+                  coachella: "Coachella, CA",
+                };
+
+                // Get unique destinations with their delivery dates
+                const destEntries = [...new Map(
+                  pallets
+                    .filter((p) => p.destination && p.destination !== "tbd")
+                    .map((p) => {
+                      const lp = p as any;
+                      return [p.destination!, { 
+                        destination: p.destination!, 
+                        label: destLabelsMap[p.destination!] || p.destination!,
+                        delivery_date: lp.delivery_date || null,
+                      }] as const;
+                    })
+                ).values()];
+
+                interface TimelineStep {
+                  label: string;
+                  sublabel?: string;
+                  date?: string;
+                  completed: boolean;
+                  active: boolean;
+                }
+
+                const steps: TimelineStep[] = [];
+
+                // Step 1: Departed BFX
+                steps.push({
+                  label: "Departed BFX",
+                  date: format(new Date(load.shipping_date), "MMM d, yyyy"),
+                  completed: true,
+                  active: false,
+                });
+
+                // Step 2: Last Reported City (active if not yet at border)
+                const hasBorderCrossed = load.border_crossed;
+                const hasCity = !!load.last_reported_city;
+                steps.push({
+                  label: load.last_reported_city || "In Transit",
+                  sublabel: hasCity ? "Last reported location" : "Awaiting update",
+                  completed: hasBorderCrossed || false,
+                  active: hasCity && !hasBorderCrossed,
+                });
+
+                // Step 3: Cross Border
+                steps.push({
+                  label: "Cross Border",
+                  sublabel: load.eta_cross_border
+                    ? `ETA: ${format(new Date(load.eta_cross_border), "MMM d, yyyy")}`
+                    : "ETA pending",
+                  date: hasBorderCrossed ? (load.eta_cross_border ? format(new Date(load.eta_cross_border), "MMM d") : "Crossed") : undefined,
+                  completed: hasBorderCrossed || false,
+                  active: hasCity && !hasBorderCrossed,
+                });
+
+                // Steps 4+: Each destination
+                destEntries.forEach((dest) => {
+                  const isDelivered = load.status === "delivered" && !!dest.delivery_date;
+                  steps.push({
+                    label: dest.label,
+                    sublabel: dest.delivery_date
+                      ? `Delivered: ${format(new Date(dest.delivery_date), "MMM d, yyyy")}`
+                      : load.estimated_delivery_date
+                      ? `ETA: ${format(new Date(load.estimated_delivery_date), "MMM d, yyyy")}`
+                      : "ETA pending",
+                    completed: isDelivered,
+                    active: hasBorderCrossed && !isDelivered,
+                  });
+                });
+
+                return (
+                  <div className="relative flex flex-col gap-0 pl-4">
+                    {steps.map((step, idx) => {
+                      const isLast = idx === steps.length - 1;
+                      return (
+                        <div key={idx} className="relative flex items-start gap-4 pb-6">
+                          {/* Vertical line */}
+                          {!isLast && (
+                            <div
+                              className={cn(
+                                "absolute left-[7px] top-[20px] w-0.5 h-[calc(100%-8px)]",
+                                step.completed ? "bg-primary" : "bg-border"
+                              )}
+                            />
+                          )}
+                          {/* Dot */}
+                          <div
+                            className={cn(
+                              "relative z-10 flex items-center justify-center rounded-full shrink-0",
+                              step.completed
+                                ? "h-4 w-4 bg-primary"
+                                : step.active
+                                ? "h-4 w-4 border-2 border-primary bg-background"
+                                : "h-4 w-4 border-2 border-muted-foreground/30 bg-background"
+                            )}
+                          >
+                            {step.completed && (
+                              <span className="text-primary-foreground text-[10px]">✓</span>
+                            )}
+                            {step.active && (
+                              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "text-sm font-medium leading-none",
+                              step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
+                            )}>
+                              {step.label}
+                            </p>
+                            {(step.sublabel || step.date) && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {step.date && <span className="font-medium">{step.date} • </span>}
+                                {step.sublabel}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* PO Summary for pallets in load */}
         {pallets.length > 0 && (
@@ -2529,27 +2691,55 @@ export default function LoadDetail() {
         </Dialog>
 
         {/* In Transit Confirmation Dialog */}
-        <AlertDialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Change Status to In Transit?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
+        <Dialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Status to In Transit?</DialogTitle>
+              <DialogDescription className="space-y-2">
                 <span className="block text-destructive font-medium">
                   ⚠️ Warning: Once the load is marked as "In Transit", you will no longer be able to modify pallets.
                 </span>
-                <span className="block">
-                  Are you sure you want to proceed?
-                </span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmInTransit}>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Ship Date (departure date)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !inTransitShipDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {inTransitShipDate ? format(inTransitShipDate, "PPP") : "Select ship date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={inTransitShipDate}
+                      onSelect={setInTransitShipDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInTransitConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmInTransit} disabled={!inTransitShipDate || updatingStatus}>
+                {updatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm In Transit
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Release Validation Dialog */}
         <ReleaseValidationDialog
