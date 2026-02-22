@@ -251,6 +251,16 @@ export default function LoadDetail() {
   const [replaceSelectedPalletIds, setReplaceSelectedPalletIds] = useState<Set<string>>(new Set());
   const [replacingPallets, setReplacingPallets] = useState(false);
   const [replaceInventorySearch, setReplaceInventorySearch] = useState("");
+  const [transitUpdates, setTransitUpdates] = useState<Array<{
+    id: string;
+    last_reported_city: string | null;
+    eta_cross_border: string | null;
+    notes: string | null;
+    created_at: string;
+  }>>([]);
+  const [newCityUpdate, setNewCityUpdate] = useState("");
+  const [newTransitNotes, setNewTransitNotes] = useState("");
+  const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
