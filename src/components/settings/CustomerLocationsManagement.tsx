@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -18,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Pencil } from "lucide-react";
 
 interface CustomerLocation {
   id: string;
@@ -52,13 +50,84 @@ interface DPContact {
   is_active: boolean;
 }
 
+const DAYS = [
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+  { key: "sun", label: "Sun" },
+] as const;
+
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+}
+
+type WeekSchedule = Record<string, DaySchedule>;
+
+const DEFAULT_SCHEDULE: WeekSchedule = {
+  mon: { enabled: true, open: "09:00", close: "17:00" },
+  tue: { enabled: true, open: "09:00", close: "17:00" },
+  wed: { enabled: true, open: "09:00", close: "17:00" },
+  thu: { enabled: true, open: "09:00", close: "17:00" },
+  fri: { enabled: true, open: "09:00", close: "17:00" },
+  sat: { enabled: true, open: "09:00", close: "12:00" },
+  sun: { enabled: false, open: "09:00", close: "17:00" },
+};
+
+function scheduleToString(schedule: WeekSchedule): string {
+  return JSON.stringify(schedule);
+}
+
+function parseSchedule(raw: string | null): WeekSchedule {
+  if (!raw) return { ...DEFAULT_SCHEDULE };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && parsed.mon) return parsed;
+  } catch {
+    // legacy free-text format – return defaults
+  }
+  return { ...DEFAULT_SCHEDULE };
+}
+
+function formatScheduleDisplay(raw: string | null): string {
+  const schedule = parseSchedule(raw);
+  const groups: { days: string[]; time: string }[] = [];
+
+  for (const d of DAYS) {
+    const s = schedule[d.key];
+    if (!s?.enabled) continue;
+    const time = `${s.open}–${s.close}`;
+    const last = groups[groups.length - 1];
+    if (last && last.time === time) {
+      last.days.push(d.label);
+    } else {
+      groups.push({ days: [d.label], time });
+    }
+  }
+
+  if (groups.length === 0) return "Closed";
+  return groups
+    .map((g) => {
+      const dayStr =
+        g.days.length > 2
+          ? `${g.days[0]}-${g.days[g.days.length - 1]}`
+          : g.days.join(", ");
+      return `${dayStr} ${g.time}`;
+    })
+    .join(" · ");
+}
+
 interface LocationFormData {
   name: string;
   address: string;
   city: string;
   state: string;
   zip_code: string;
-  reception_hours: string;
+  schedule: WeekSchedule;
   warehouse_manager_id: string;
 }
 
@@ -68,7 +137,7 @@ const emptyForm: LocationFormData = {
   city: "",
   state: "",
   zip_code: "",
-  reception_hours: "",
+  schedule: { ...DEFAULT_SCHEDULE },
   warehouse_manager_id: "",
 };
 
@@ -136,7 +205,7 @@ export function CustomerLocationsManagement() {
         city: formData.city || null,
         state: formData.state || null,
         zip_code: formData.zip_code || null,
-        reception_hours: formData.reception_hours || null,
+        reception_hours: scheduleToString(formData.schedule),
         warehouse_manager_id: formData.warehouse_manager_id || null,
       },
     });
@@ -150,7 +219,7 @@ export function CustomerLocationsManagement() {
       city: location.city || "",
       state: location.state || "",
       zip_code: location.zip_code || "",
-      reception_hours: location.reception_hours || "",
+      schedule: parseSchedule(location.reception_hours),
       warehouse_manager_id: location.warehouse_manager_id || "",
     });
     setIsDialogOpen(true);
@@ -231,14 +300,56 @@ export function CustomerLocationsManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="loc_hours">Reception Hours</Label>
-              <Textarea
-                id="loc_hours"
-                value={formData.reception_hours}
-                onChange={(e) => setFormData({ ...formData, reception_hours: e.target.value })}
-                placeholder="Mon-Fri 7:00 AM - 4:00 PM"
-                rows={2}
-              />
+              <Label>Reception Hours</Label>
+              <div className="space-y-1.5 rounded-md border p-3">
+                {DAYS.map((d) => {
+                  const day = formData.schedule[d.key];
+                  return (
+                    <div key={d.key} className="flex items-center gap-2">
+                      <Switch
+                        checked={day.enabled}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            schedule: { ...prev.schedule, [d.key]: { ...day, enabled: checked } },
+                          }))
+                        }
+                        className="scale-75"
+                      />
+                      <span className="w-8 text-xs font-medium text-muted-foreground">{d.label}</span>
+                      {day.enabled ? (
+                        <>
+                          <Input
+                            type="time"
+                            value={day.open}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                schedule: { ...prev.schedule, [d.key]: { ...day, open: e.target.value } },
+                              }))
+                            }
+                            className="h-7 w-[100px] text-xs"
+                          />
+                          <span className="text-xs text-muted-foreground">–</span>
+                          <Input
+                            type="time"
+                            value={day.close}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                schedule: { ...prev.schedule, [d.key]: { ...day, close: e.target.value } },
+                              }))
+                            }
+                            className="h-7 w-[100px] text-xs"
+                          />
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Closed</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Warehouse Manager</Label>
@@ -299,7 +410,7 @@ export function CustomerLocationsManagement() {
                       {!location.address && !location.city && "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{location.reception_hours || "-"}</TableCell>
+                  <TableCell className="text-sm">{formatScheduleDisplay(location.reception_hours)}</TableCell>
                   <TableCell className="text-sm">{getManagerName(location.warehouse_manager_id)}</TableCell>
                   <TableCell>
                     <Switch checked={location.is_active} onCheckedChange={() => handleToggleActive(location)} />
