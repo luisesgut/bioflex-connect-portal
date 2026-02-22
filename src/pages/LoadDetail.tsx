@@ -416,15 +416,18 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand, sales_order_number")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item)")
           .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
-        const salesMap = new Map<string, string | null>();
+        const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
           }
-          salesMap.set(po.po_number, po.sales_order_number || null);
+          salesMap.set(po.po_number, {
+            sales_order_number: po.sales_order_number || null,
+            customer_item: po.product?.customer_item || null,
+          });
         });
         setPoPriceMap(priceMap);
         setPoSalesOrderMap(salesMap);
@@ -529,9 +532,9 @@ export default function LoadDetail() {
       state: loc?.state || null,
       zip_code: loc?.zip_code || null,
     };
-    const poInfoMap = new Map<string, { sales_order_number: string | null }>();
-    poSalesOrderMap.forEach((salesOrder, poNumber) => {
-      poInfoMap.set(poNumber, { sales_order_number: salesOrder });
+    const poInfoMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
+    poSalesOrderMap.forEach((info, poNumber) => {
+      poInfoMap.set(poNumber, info);
     });
     generatePackingList({
       loadNumber: load.load_number,
