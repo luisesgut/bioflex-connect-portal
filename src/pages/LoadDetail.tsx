@@ -1420,6 +1420,44 @@ export default function LoadDetail() {
     handleUpdateLoadStatus("delivered", deliveryDates);
   };
 
+  const handleAddTransitUpdate = async () => {
+    if (!newCityUpdate.trim() && !newTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    if (!id || !user) return;
+
+    setSavingTransitUpdate(true);
+    try {
+      const updateData: any = {
+        load_id: id,
+        updated_by: user.id,
+      };
+      if (newCityUpdate.trim()) updateData.last_reported_city = newCityUpdate.trim();
+      if (newTransitNotes.trim()) updateData.notes = newTransitNotes.trim();
+
+      const { error: insertError } = await supabase.from("transit_updates").insert(updateData);
+      if (insertError) throw insertError;
+
+      if (newCityUpdate.trim()) {
+        await supabase
+          .from("shipping_loads")
+          .update({ last_reported_city: newCityUpdate.trim() })
+          .eq("id", id);
+      }
+
+      toast.success("Transit update recorded");
+      setNewCityUpdate("");
+      setNewTransitNotes("");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving transit update:", error);
+      toast.error("Failed to save transit update");
+    } finally {
+      setSavingTransitUpdate(false);
+    }
+  };
+
   const handleGenerateCustomsDocument = async () => {
     if (!load || pallets.length === 0) {
       toast.error("No pallets in load to generate document");
