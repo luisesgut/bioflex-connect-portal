@@ -56,18 +56,15 @@ interface ValidationResult {
   message: string;
 }
 
-const predefinedDestinations = [
-  { value: "yuma", label: "Yuma, AZ" },
-  { value: "salinas", label: "Salinas, CA" },
-  { value: "bakersfield", label: "Bakersfield, CA" },
-  { value: "coachella", label: "Coachella, CA" },
-];
+// predefinedDestinations removed – now passed via props
 
 export function ReleaseValidationDialog({
   open,
   onOpenChange,
   selectedPallets,
   loadId,
+  destinationOptions = [],
+  onAddDestination,
   onComplete,
 }: ReleaseValidationDialogProps) {
   const [activeTab, setActiveTab] = useState<"release" | "hold">("release");
