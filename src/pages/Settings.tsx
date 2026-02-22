@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { User, Building2, Bell, Shield, Globe } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -7,12 +8,54 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [companyName, setCompanyName] = useState("");
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("company")
+        .eq("user_id", user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    if (profile?.company) setCompanyName(profile.company);
+  }, [profile?.company]);
+
+  const handleSaveCompany = async () => {
+    if (!user?.id) return;
+    setSavingCompany(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ company: companyName })
+      .eq("user_id", user.id);
+    setSavingCompany(false);
+    if (error) {
+      toast.error("Error al guardar");
+    } else {
+      toast.success("Nombre de empresa guardado");
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+    }
+  };
 
   return (
     <MainLayout>
@@ -134,7 +177,7 @@ export default function Settings() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="company">Company Name</Label>
-              <Input id="company" defaultValue="Acme Corporation" />
+              <Input id="company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="address">Address</Label>
@@ -151,7 +194,9 @@ export default function Settings() {
           </div>
           
           <div className="mt-6 flex justify-end">
-            <Button variant="accent">Save Changes</Button>
+            <Button variant="accent" onClick={handleSaveCompany} disabled={savingCompany}>
+              {savingCompany ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </div>
 
