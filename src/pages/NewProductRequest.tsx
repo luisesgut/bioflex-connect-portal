@@ -42,7 +42,8 @@ export default function NewProductRequest() {
   const [itemType, setItemType] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [assignedDesigner, setAssignedDesigner] = useState("");
-  const [dpSalesCsr, setDpSalesCsr] = useState("");
+  const [dpSalesCsr, setDpSalesCsr] = useState<string[]>([]);
+  const [designNotes, setDesignNotes] = useState("");
 
   // Files
   const [techSpecFile, setTechSpecFile] = useState<File | null>(null);
