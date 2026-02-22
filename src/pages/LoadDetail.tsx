@@ -88,6 +88,8 @@ import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
+import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
 
 interface InventoryFilters {
   fecha: string[];
@@ -197,13 +199,7 @@ const statusLabels: Record<string, string> = {
   delivered: "Delivered",
 };
 
-const destinations = [
-  { value: "tbd", label: "TBD" },
-  { value: "salinas", label: "Salinas, CA" },
-  { value: "bakersfield", label: "Bakersfield, CA" },
-  { value: "coachella", label: "Coachella, CA" },
-  { value: "yuma", label: "Yuma, AZ" },
-];
+// destinations now come from useCustomerLocations hook
 
 export default function LoadDetail() {
   const { id } = useParams<{ id: string }>();
