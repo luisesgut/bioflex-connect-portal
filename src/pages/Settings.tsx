@@ -61,19 +61,8 @@ export default function Settings() {
           </div>
         )}
 
-        {/* Team Management Section - Admin Only */}
-        {isActualAdmin && (
-          <div style={{ animationDelay: "0.1s" }}>
-            <TeamManagement />
-          </div>
-        )}
 
-        {/* DP Contacts Management - Admin Only */}
-        {isActualAdmin && (
-          <div style={{ animationDelay: "0.12s" }}>
-            <DPContactsManagement />
-          </div>
-        )}
+
 
         {/* Dropdown Options Management - Admin Only */}
         {isActualAdmin && (
