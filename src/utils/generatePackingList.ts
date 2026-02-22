@@ -236,7 +236,7 @@ export function generatePackingList({
     pallets: totalPallets.toString(),
   });
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     columns: tableColumns,
     body: tableRows,
     startY: tableStartY,
