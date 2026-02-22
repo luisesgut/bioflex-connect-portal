@@ -2732,6 +2732,10 @@ export default function LoadDetail() {
           </Card>
         )}
 
+  const getFirstNames = (csrNames: string | undefined): string => {
+    if (!csrNames) return "-";
+    return csrNames.split(",").map(n => n.trim().split(" ")[0]).join(", ");
+  };
 
         {pallets.length > 0 && (
           <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} />
