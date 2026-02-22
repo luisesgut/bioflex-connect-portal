@@ -416,15 +416,18 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand")
+          .select("po_number, price_per_thousand, sales_order_number")
           .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
+        const salesMap = new Map<string, string | null>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
           }
+          salesMap.set(po.po_number, po.sales_order_number || null);
         });
         setPoPriceMap(priceMap);
+        setPoSalesOrderMap(salesMap);
       }
 
       // Fetch transit updates history
