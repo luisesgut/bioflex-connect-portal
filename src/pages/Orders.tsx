@@ -21,6 +21,7 @@ import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface LoadDetail {
   load_number: string;

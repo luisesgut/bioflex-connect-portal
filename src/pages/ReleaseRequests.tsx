@@ -355,9 +355,9 @@ export default function ReleaseRequests() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Release Requests</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('page.releaseRequests.title')}</h1>
           <p className="text-muted-foreground">
-            Review and respond to shipment release requests
+            {t('page.releaseRequests.subtitle')}
           </p>
         </div>
 

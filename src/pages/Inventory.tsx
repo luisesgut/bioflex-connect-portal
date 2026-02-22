@@ -471,9 +471,9 @@ export default function Inventory() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('page.inventory.title')}</h1>
             <p className="text-muted-foreground">
-              Manage production inventory and pallets
+              {t('page.inventory.subtitle')}
             </p>
             {latestUploadDate && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">

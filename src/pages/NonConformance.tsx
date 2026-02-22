@@ -396,9 +396,9 @@ export default function NonConformance() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Non-Conformance Reports</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('page.nonConformance.title')}</h1>
             <p className="text-muted-foreground">
-              Submit and track quality issues with previous orders
+              {t('page.nonConformance.subtitle')}
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => open ? handleOpenDialog() : handleCloseDialog()}>

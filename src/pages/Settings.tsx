@@ -62,11 +62,11 @@ export default function Settings() {
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Header */}
         <div className="animate-fade-in">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {t('settings.title')}
+           <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {t('page.settings.title')}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            {t('settings.subtitle')}
+            {t('page.settings.subtitle')}
           </p>
         </div>
 

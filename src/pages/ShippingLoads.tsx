@@ -445,9 +445,9 @@ export default function ShippingLoads() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Shipping Loads</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('page.shippingLoads.title')}</h1>
             <p className="text-muted-foreground">
-              Manage truck loads, releases, and shipment tracking
+              {t('page.shippingLoads.subtitle')}
             </p>
           </div>
           {isAdmin && (
