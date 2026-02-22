@@ -177,7 +177,7 @@ export default function Settings() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="company">Company Name</Label>
-              <Input id="company" defaultValue="Acme Corporation" />
+              <Input id="company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="address">Address</Label>
@@ -194,7 +194,9 @@ export default function Settings() {
           </div>
           
           <div className="mt-6 flex justify-end">
-            <Button variant="accent">Save Changes</Button>
+            <Button variant="accent" onClick={handleSaveCompany} disabled={savingCompany}>
+              {savingCompany ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </div>
 
