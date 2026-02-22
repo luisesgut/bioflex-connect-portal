@@ -1286,14 +1286,11 @@ export default function LoadDetail() {
       setInTransitConfirmOpen(false);
       return;
     }
-    // Update ship date and status together
+    // Update ship date first, then proceed with status change
     if (inTransitShipDate && id) {
       const { error: shipDateError } = await supabase
         .from("shipping_loads")
-        .update({ 
-          shipping_date: format(inTransitShipDate, "yyyy-MM-dd"),
-          status: "in_transit" as any
-        })
+        .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
         .eq("id", id);
       
       if (shipDateError) {
@@ -1303,9 +1300,7 @@ export default function LoadDetail() {
       }
     }
     setInTransitConfirmOpen(false);
-    // Skip the status update in handleUpdateLoadStatus since we already set it above
-    // but still run the shipped pallets logic
-    handlePostInTransitLogic();
+    await handleUpdateLoadStatus("in_transit");
   };
 
   const handleUpdateLoadStatus = async (newStatus: string, deliveryDatesData?: DeliveryDateEntry[]) => {
