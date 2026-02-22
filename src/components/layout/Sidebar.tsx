@@ -9,6 +9,7 @@ import {
   EyeOff,
   Warehouse,
   Truck,
+  Users,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: "Users", href: "/users", icon: Users },
   { name: "Inventory", href: "/inventory", icon: Warehouse },
 ];
 
