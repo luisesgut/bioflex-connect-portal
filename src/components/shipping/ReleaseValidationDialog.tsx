@@ -43,6 +43,7 @@ interface ReleaseValidationDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedPallets: LoadPallet[];
   loadId: string;
+  userId?: string;
   destinationOptions?: { value: string; label: string }[];
   onAddDestination?: () => void;
   onComplete: () => void;
@@ -63,6 +64,7 @@ export function ReleaseValidationDialog({
   onOpenChange,
   selectedPallets,
   loadId,
+  userId,
   destinationOptions = [],
   onAddDestination,
   onComplete,
@@ -180,6 +182,8 @@ export function ReleaseValidationDialog({
         release_number: manualReleaseNumber.trim(),
         destination: destinationValue,
         is_on_hold: false,
+        actioned_by: userId || null,
+        actioned_at: new Date().toISOString(),
       };
       if (storagePath) {
         updateData.release_pdf_url = storagePath;
@@ -209,7 +213,7 @@ export function ReleaseValidationDialog({
       const palletIds = selectedPallets.map((p) => p.id);
       const { error } = await supabase
         .from("load_pallets")
-        .update({ is_on_hold: true })
+        .update({ is_on_hold: true, actioned_by: userId || null, actioned_at: new Date().toISOString() })
         .in("id", palletIds);
 
       if (error) throw error;

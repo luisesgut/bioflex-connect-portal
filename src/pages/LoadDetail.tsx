@@ -110,6 +110,8 @@ interface LoadPallet {
   release_number: string | null;
   release_pdf_url: string | null;
   is_on_hold: boolean;
+  actioned_by: string | null;
+  actioned_at: string | null;
   pallet: {
     pt_code: string;
     description: string;
@@ -252,6 +254,7 @@ export default function LoadDetail() {
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
+  const [profilesMap, setProfilesMap] = useState<Map<string, string>>(new Map());
   const [revertingPallets, setRevertingPallets] = useState(false);
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
   const [palletsToReplace, setPalletsToReplace] = useState<Set<string>>(new Set());
@@ -321,12 +324,29 @@ export default function LoadDetail() {
           release_number,
           release_pdf_url,
           is_on_hold,
+          actioned_by,
+          actioned_at,
           pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces)
         `)
         .eq("load_id", id);
 
       if (palletsError) throw palletsError;
-      setPallets((palletsData as any) || []);
+      const typedPallets = (palletsData as any) || [];
+      setPallets(typedPallets);
+
+      // Fetch profiles for actioned_by users
+      const actionedUserIds = [...new Set(typedPallets.map((p: any) => p.actioned_by).filter(Boolean))] as string[];
+      if (actionedUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", actionedUserIds);
+        const pMap = new Map<string, string>();
+        (profilesData || []).forEach((p: any) => {
+          if (p.user_id && p.full_name) pMap.set(p.user_id, p.full_name.split(" ")[0]);
+        });
+        setProfilesMap(pMap);
+      }
 
       // Fetch release request
       const { data: requestData } = await supabase
@@ -1271,7 +1291,7 @@ export default function LoadDetail() {
       const palletIds = Array.from(selectedReleasedPallets);
       const { error } = await supabase
         .from("load_pallets")
-        .update({ release_number: null, release_pdf_url: null, destination: "tbd", is_on_hold: false })
+        .update({ release_number: null, release_pdf_url: null, destination: "tbd", is_on_hold: false, actioned_by: null, actioned_at: null })
         .in("id", palletIds);
 
       if (error) throw error;
@@ -1294,7 +1314,7 @@ export default function LoadDetail() {
       const palletIds = Array.from(selectedOnHoldPallets);
       const { error } = await supabase
         .from("load_pallets")
-        .update({ is_on_hold: false })
+        .update({ is_on_hold: false, actioned_by: null, actioned_at: null })
         .in("id", palletIds);
 
       if (error) throw error;
@@ -2810,6 +2830,7 @@ export default function LoadDetail() {
                           <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                           <TableHead>Destination</TableHead>
+                          <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
                         </TableRow>
@@ -2836,6 +2857,7 @@ export default function LoadDetail() {
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
                             </TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
                               {pallet.release_pdf_url ? (
@@ -3046,6 +3068,7 @@ export default function LoadDetail() {
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>Held By</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3066,6 +3089,7 @@ export default function LoadDetail() {
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
@@ -3653,6 +3677,7 @@ export default function LoadDetail() {
           onOpenChange={setReleaseDialogOpen}
           selectedPallets={selectedPalletsForReleaseData}
           loadId={id!}
+          userId={user?.id}
           destinationOptions={destinationOptions}
           onAddDestination={() => setAddDestinationDialogOpen(true)}
           onComplete={() => {
