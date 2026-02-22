@@ -1,10 +1,4 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-// Ensure autoTable is available
-if (typeof autoTable === "function") {
-  // Plugin loaded correctly
-}
 
 interface PackingListPallet {
   description: string;
@@ -81,7 +75,7 @@ export function generatePackingList({
         itemNumber: poInfo?.customer_item || "",
         description: pallet.description,
         quantity: 0,
-        units: pallet.unit === "bags" ? "PZA" : "PZA",
+        units: "PZA",
         pallets: 0,
       });
     }
@@ -94,11 +88,6 @@ export function generatePackingList({
   const products = Array.from(groups.values());
   const totalPallets = pallets.length;
 
-  // Build address
-  const addressParts = [destination.address].filter(Boolean);
-  const cityLine = [destination.city, destination.state].filter(Boolean).join(" ");
-  const fullCityLine = cityLine + (destination.zip_code ? ` ${destination.zip_code}` : "");
-
   // Format ship date as DD/MM/YYYY
   const dateParts = shippingDate.split("T")[0].split("-");
   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
@@ -106,13 +95,12 @@ export function generatePackingList({
   // Get unique release numbers
   const releaseNumbers = [...new Set(pallets.map((p) => p.release_number).filter(Boolean))];
 
-  // Create PDF (letter size)
+  // Create PDF (landscape letter)
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
 
-  // === HEADER SECTION ===
-  // Bioflex logo (text-based)
+  // === HEADER ===
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 80, 130);
@@ -122,7 +110,6 @@ export function generatePackingList({
   doc.setTextColor(100, 100, 100);
   doc.text("Beyond packaging.", margin, 23);
 
-  // Center: Packing List title
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
@@ -131,46 +118,42 @@ export function generatePackingList({
   doc.setFont("helvetica", "normal");
   doc.text("Revisión: 00", pageWidth / 2, 20, { align: "center" });
 
-  // Right: Code
   doc.setFontSize(9);
   doc.text("Código: LOG-FOR-05", pageWidth - margin, 14, { align: "right" });
 
-  // === PACKING LIST UNDERLINED TITLE ===
+  // === PACKING LIST underlined ===
+  const plY = 32;
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  const plTitleY = 32;
-  doc.text("PACKING LIST", margin, plTitleY);
-  const plTextWidth = doc.getTextWidth("PACKING LIST");
-  doc.setDrawColor(0, 0, 0);
+  doc.text("PACKING LIST", margin, plY);
+  const plW = doc.getTextWidth("PACKING LIST");
   doc.setLineWidth(0.5);
-  doc.line(margin, plTitleY + 1, margin + plTextWidth, plTitleY + 1);
+  doc.line(margin, plY + 1, margin + plW, plY + 1);
 
   // === SHIP TO (center) ===
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("SHIP TO", pageWidth / 2, plTitleY, { align: "center" });
+  doc.text("SHIP TO", pageWidth / 2, plY, { align: "center" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-
-  let shipToY = plTitleY + 5;
-  if (addressParts.length > 0) {
-    doc.text(addressParts[0]!, pageWidth / 2, shipToY, { align: "center" });
-    shipToY += 4;
+  let shipY = plY + 5;
+  if (destination.address) {
+    doc.text(destination.address, pageWidth / 2, shipY, { align: "center" });
+    shipY += 4;
   }
-  if (fullCityLine) {
-    doc.text(fullCityLine, pageWidth / 2, shipToY, { align: "center" });
-    shipToY += 4;
+  const cityLine = [destination.city, destination.state].filter(Boolean).join(" ") + (destination.zip_code ? ` ${destination.zip_code}` : "");
+  if (cityLine.trim()) {
+    doc.text(cityLine, pageWidth / 2, shipY, { align: "center" });
+    shipY += 4;
   }
 
   // === Ship Date (right) ===
   doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Ship Date: ${formattedDate}`, pageWidth - margin, plTitleY, { align: "right" });
+  doc.text(`Ship Date: ${formattedDate}`, pageWidth - margin, plY, { align: "right" });
 
-  // === Client and Sales (left) ===
-  let leftY = plTitleY + 8;
-  doc.setFontSize(9);
+  // === Client / Sales (left) ===
+  let leftY = plY + 8;
   doc.setFont("helvetica", "bold");
   doc.text(`Client: ${clientCode} – ${clientName}`, margin, leftY);
   leftY += 5;
@@ -180,25 +163,20 @@ export function generatePackingList({
     leftY += 5;
   }
 
-  // === Load #, Invoice (right side) ===
-  let rightY = plTitleY + 8;
-  doc.setFontSize(9);
+  // === Load # / Invoice (right) ===
+  let rightY = plY + 8;
   doc.setFont("helvetica", "normal");
-
-  // Load #
   doc.text("Load #:", pageWidth - margin - 40, rightY);
   doc.setFont("helvetica", "bold");
   doc.text(loadNumber, pageWidth - margin, rightY, { align: "right" });
   rightY += 5;
 
-  // Product Invoice
   doc.setFont("helvetica", "normal");
   doc.text("Product Invoice", pageWidth - margin - 40, rightY);
   doc.setFont("helvetica", "bold");
   doc.text(invoiceNumber || "-", pageWidth - margin, rightY, { align: "right" });
   rightY += 5;
 
-  // Release numbers
   if (releaseNumbers.length > 0) {
     doc.setFont("helvetica", "normal");
     doc.text("Release #", pageWidth - margin - 40, rightY);
@@ -207,79 +185,69 @@ export function generatePackingList({
     rightY += 5;
   }
 
-  // === TABLE ===
-  const tableStartY = Math.max(leftY, rightY) + 8;
+  // === TABLE (drawn manually) ===
+  const tableTop = Math.max(leftY, rightY) + 6;
+  const colWidths = [28, 22, 38, 80, 30, 20, 22]; // PO, LOT, ITEM, DESC, QTY, UNITS, PALLETS
+  const headers = ["PO #", "LOT #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
+  const rowHeight = 8;
+  const tableLeft = margin;
 
-  const tableColumns = [
-    { header: "PO #", dataKey: "poNumber" },
-    { header: "LOT #", dataKey: "lotNumber" },
-    { header: "ITEM #", dataKey: "itemNumber" },
-    { header: "DESCRIPTION", dataKey: "description" },
-    { header: "QUANTITY", dataKey: "quantity" },
-    { header: "UNITS", dataKey: "units" },
-    { header: "PALLETS", dataKey: "pallets" },
-  ];
+  // Header row
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 80, 130);
+  doc.setDrawColor(0, 80, 130);
+  doc.setLineWidth(0.3);
 
-  const tableRows = products.map((p) => ({
-    poNumber: p.poNumber,
-    lotNumber: p.lotNumber,
-    itemNumber: p.itemNumber,
-    description: p.description,
-    quantity: p.quantity.toLocaleString(),
-    units: p.units,
-    pallets: p.pallets.toString(),
-  }));
+  let xPos = tableLeft;
+  // Draw header underline
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  doc.line(tableLeft, tableTop + 2, tableLeft + totalWidth, tableTop + 2);
 
-  // Add total row
-  tableRows.push({
-    poNumber: "",
-    lotNumber: "",
-    itemNumber: "",
-    description: "",
-    quantity: "",
-    units: "TOTAL",
-    pallets: totalPallets.toString(),
+  headers.forEach((header, i) => {
+    const cellCenter = xPos + colWidths[i] / 2;
+    doc.text(header, cellCenter, tableTop, { align: "center" });
+    xPos += colWidths[i];
   });
 
-  autoTable(doc, {
-    columns: tableColumns,
-    body: tableRows,
-    startY: tableStartY,
-    margin: { left: margin, right: margin },
-    styles: {
-      fontSize: 9,
-      cellPadding: 3,
-      lineColor: [200, 200, 200],
-      lineWidth: 0.1,
-    },
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [0, 80, 130],
-      fontStyle: "bold",
-      lineColor: [0, 80, 130],
-      lineWidth: 0.3,
-      halign: "center",
-    },
-    bodyStyles: {
-      textColor: [50, 50, 50],
-    },
-    columnStyles: {
-      poNumber: { halign: "center", cellWidth: 25 },
-      lotNumber: { halign: "center", cellWidth: 25 },
-      itemNumber: { halign: "center", cellWidth: 35 },
-      description: { cellWidth: "auto" },
-      quantity: { halign: "center", cellWidth: 28 },
-      units: { halign: "center", cellWidth: 20 },
-      pallets: { halign: "center", cellWidth: 22 },
-    },
-    didParseCell: (data: any) => {
-      // Style the total row
-      if (data.row.index === tableRows.length - 1) {
-        data.cell.styles.fontStyle = "bold";
-        data.cell.styles.textColor = [0, 80, 130];
+  // Data rows
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(50, 50, 50);
+  let currentY = tableTop + rowHeight;
+
+  products.forEach((product) => {
+    xPos = tableLeft;
+    const vals = [
+      product.poNumber,
+      product.lotNumber,
+      product.itemNumber,
+      product.description,
+      product.quantity.toLocaleString(),
+      product.units,
+      product.pallets.toString(),
+    ];
+    vals.forEach((val, i) => {
+      const cellCenter = xPos + colWidths[i] / 2;
+      if (i === 3) {
+        // Description left-aligned, truncated
+        const maxW = colWidths[i] - 2;
+        doc.text(val, xPos + 1, currentY, { maxWidth: maxW });
+      } else {
+        doc.text(val, cellCenter, currentY, { align: "center" });
       }
-    },
+      xPos += colWidths[i];
+    });
+    currentY += rowHeight;
   });
+
+  // Total row
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 80, 130);
+  xPos = tableLeft;
+  for (let i = 0; i < 5; i++) xPos += colWidths[i];
+  doc.text("TOTAL", xPos + colWidths[5] / 2, currentY, { align: "center" });
+  xPos += colWidths[5];
+  doc.text(totalPallets.toString(), xPos + colWidths[6] / 2, currentY, { align: "center" });
 
   // === DOWNLOAD ===
   const date = shippingDate.split("T")[0].split("-").reverse().join(".");
