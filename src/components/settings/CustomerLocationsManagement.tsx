@@ -250,55 +250,79 @@ export function CustomerLocationsManagement() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-card sm:max-w-lg">
+        <DialogContent className="bg-card sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Location: {editingLocation?.code?.toUpperCase()}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="loc_name">Display Name</Label>
-              <Input
-                id="loc_name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="loc_address">Address</Label>
-              <Input
-                id="loc_address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="123 Main St"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
+          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
+            {/* Left column */}
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="loc_city">City</Label>
+                <Label htmlFor="loc_name">Display Name</Label>
                 <Input
-                  id="loc_city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  id="loc_name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="loc_state">State</Label>
+                <Label htmlFor="loc_address">Address</Label>
                 <Input
-                  id="loc_state"
-                  value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  id="loc_address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="123 Main St"
                 />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="loc_city">City</Label>
+                  <Input
+                    id="loc_city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="loc_state">State</Label>
+                  <Input
+                    id="loc_state"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="loc_zip">ZIP</Label>
+                  <Input
+                    id="loc_zip"
+                    value={formData.zip_code}
+                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="loc_zip">ZIP</Label>
-                <Input
-                  id="loc_zip"
-                  value={formData.zip_code}
-                  onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-                />
+                <Label>Warehouse Manager</Label>
+                <Select
+                  value={formData.warehouse_manager_id}
+                  onValueChange={(val) => setFormData({ ...formData, warehouse_manager_id: val === "__none__" ? "" : val })}
+                >
+                  <SelectTrigger className="bg-card">
+                    <SelectValue placeholder="Select a contact" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-[200]">
+                    <SelectItem value="__none__">None</SelectItem>
+                    {dpContacts?.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.full_name} ({contact.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+
+            {/* Right column – Schedule */}
             <div className="space-y-2">
               <Label>Reception Hours</Label>
               <div className="space-y-1.5 rounded-md border p-3">
@@ -351,26 +375,7 @@ export function CustomerLocationsManagement() {
                 })}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Warehouse Manager</Label>
-              <Select
-                value={formData.warehouse_manager_id}
-                onValueChange={(val) => setFormData({ ...formData, warehouse_manager_id: val === "__none__" ? "" : val })}
-              >
-                <SelectTrigger className="bg-card">
-                  <SelectValue placeholder="Select a contact" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-[200]">
-                  <SelectItem value="__none__">None</SelectItem>
-                  {dpContacts?.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.full_name} ({contact.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="col-span-2 flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={updateMutation.isPending}>Save</Button>
             </div>
