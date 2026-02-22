@@ -26,19 +26,19 @@ import { supabase } from "@/integrations/supabase/client";
 export type AdminViewMode = 'all' | 'engineering' | 'design';
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Package },
-  { name: "Purchase Orders", href: "/orders", icon: FileText },
-  { name: "Shipping Loads", href: "/shipping-loads", icon: Truck },
+  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
+  { nameKey: "nav.products", href: "/products", icon: Package },
+  { nameKey: "nav.purchaseOrders", href: "/orders", icon: FileText },
+  { nameKey: "nav.shippingLoads", href: "/shipping-loads", icon: Truck },
 ];
 
 const adminNavigation = [
-  { name: "Users", href: "/users", icon: Users },
-  { name: "Inventory", href: "/inventory", icon: Warehouse },
+  { nameKey: "nav.users", href: "/users", icon: Users },
+  { nameKey: "nav.inventory", href: "/inventory", icon: Warehouse },
 ];
 
 const bottomNavigation = [
-  { name: "Settings", href: "/settings", icon: Settings },
+  { nameKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -46,7 +46,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin, isActualAdmin, isViewingAsCustomer, toggleViewMode } = useAdmin();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
 
   const { data: profile } = useQuery({
     queryKey: ["user-profile", user?.id],
@@ -82,7 +82,7 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight">{portalName}</h1>
-            <p className="text-xs text-sidebar-foreground/60">Customer Portal</p>
+            <p className="text-xs text-sidebar-foreground/60">{t('nav.customerPortal')}</p>
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export function Sidebar() {
                   <EyeOff className="h-4 w-4 text-sidebar-foreground/60" />
                 )}
                 <Label htmlFor="view-toggle" className="text-xs font-medium cursor-pointer">
-                  {isViewingAsCustomer ? "Customer View" : "Admin View"}
+                  {isViewingAsCustomer ? t('nav.customerView') : t('nav.adminView')}
                 </Label>
               </div>
               <Switch
@@ -122,7 +122,7 @@ export function Sidebar() {
               const isActive = location.pathname === item.href;
               return (
                 <Link
-                  key={item.name}
+                  key={item.nameKey}
                   to={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
@@ -135,7 +135,7 @@ export function Sidebar() {
                     "h-5 w-5",
                     isActive && "text-sidebar-primary"
                   )} />
-                  {item.name}
+                  {t(item.nameKey)}
                 </Link>
               );
             })}
@@ -145,14 +145,14 @@ export function Sidebar() {
               <>
                 <div className="mt-4 mb-2 px-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                    Admin
+                    {t('nav.admin')}
                   </span>
                 </div>
                 {adminNavigation.map((item) => {
                   const isActive = location.pathname === item.href;
                   return (
                     <Link
-                      key={item.name}
+                      key={item.nameKey}
                       to={item.href}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
@@ -165,7 +165,7 @@ export function Sidebar() {
                         "h-5 w-5",
                         isActive && "text-accent"
                       )} />
-                      {item.name}
+                      {t(item.nameKey)}
                     </Link>
                   );
                 })}
@@ -178,12 +178,12 @@ export function Sidebar() {
         <div className="border-t border-sidebar-border px-3 py-4">
           {bottomNavigation.map((item) => (
             <Link
-              key={item.name}
+              key={item.nameKey}
               to={item.href}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             >
               <item.icon className="h-5 w-5" />
-              {item.name}
+              {t(item.nameKey)}
             </Link>
           ))}
           <button 
@@ -191,7 +191,7 @@ export function Sidebar() {
             className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-destructive/20 hover:text-destructive"
           >
             <LogOut className="h-5 w-5" />
-            Sign Out
+            {t('nav.signOut')}
           </button>
         </div>
 
@@ -203,7 +203,7 @@ export function Sidebar() {
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium">
-                {isActualAdmin ? (isViewingAsCustomer ? "Viewing as Customer" : "Admin") : "Customer"}
+                {isActualAdmin ? (isViewingAsCustomer ? t('user.viewingAsCustomer') : t('user.admin')) : t('user.customer')}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/60">{userEmail}</p>
             </div>
