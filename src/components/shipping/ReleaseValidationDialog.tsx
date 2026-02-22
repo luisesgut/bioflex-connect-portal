@@ -238,8 +238,9 @@ export function ReleaseValidationDialog({
 
   const handleDestinationChange = (value: string) => {
     if (value === "__custom__") {
-      setShowCustomInput(true);
-      setSelectedDestination("");
+      if (onAddDestination) {
+        onAddDestination();
+      }
     } else {
       setShowCustomInput(false);
       setCustomDestination("");
