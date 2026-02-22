@@ -18,7 +18,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
-          code: Database["public"]["Enums"]["customer_location"]
+          code: string
           created_at: string
           id: string
           is_active: boolean
@@ -31,7 +31,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
-          code: Database["public"]["Enums"]["customer_location"]
+          code: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -44,7 +44,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
-          code?: Database["public"]["Enums"]["customer_location"]
+          code?: string
           created_at?: string
           id?: string
           is_active?: boolean
@@ -362,7 +362,7 @@ export type Database = {
         Row: {
           created_at: string
           delivery_date: string | null
-          destination: Database["public"]["Enums"]["customer_location"] | null
+          destination: string | null
           id: string
           is_on_hold: boolean
           load_id: string
@@ -374,7 +374,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_date?: string | null
-          destination?: Database["public"]["Enums"]["customer_location"] | null
+          destination?: string | null
           id?: string
           is_on_hold?: boolean
           load_id: string
@@ -386,7 +386,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_date?: string | null
-          destination?: Database["public"]["Enums"]["customer_location"] | null
+          destination?: string | null
           id?: string
           is_on_hold?: boolean
           load_id?: string

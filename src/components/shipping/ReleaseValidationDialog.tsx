@@ -43,6 +43,8 @@ interface ReleaseValidationDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedPallets: LoadPallet[];
   loadId: string;
+  destinationOptions?: { value: string; label: string }[];
+  onAddDestination?: () => void;
   onComplete: () => void;
 }
 
@@ -54,18 +56,15 @@ interface ValidationResult {
   message: string;
 }
 
-const predefinedDestinations = [
-  { value: "yuma", label: "Yuma, AZ" },
-  { value: "salinas", label: "Salinas, CA" },
-  { value: "bakersfield", label: "Bakersfield, CA" },
-  { value: "coachella", label: "Coachella, CA" },
-];
+// predefinedDestinations removed – now passed via props
 
 export function ReleaseValidationDialog({
   open,
   onOpenChange,
   selectedPallets,
   loadId,
+  destinationOptions = [],
+  onAddDestination,
   onComplete,
 }: ReleaseValidationDialogProps) {
   const [activeTab, setActiveTab] = useState<"release" | "hold">("release");
@@ -145,9 +144,6 @@ export function ReleaseValidationDialog({
   };
 
   const getDestinationValue = (): string => {
-    if (showCustomInput && customDestination.trim()) {
-      return customDestination.trim();
-    }
     return selectedDestination;
   };
 
@@ -242,8 +238,9 @@ export function ReleaseValidationDialog({
 
   const handleDestinationChange = (value: string) => {
     if (value === "__custom__") {
-      setShowCustomInput(true);
-      setSelectedDestination("");
+      if (onAddDestination) {
+        onAddDestination();
+      }
     } else {
       setShowCustomInput(false);
       setCustomDestination("");
@@ -251,7 +248,7 @@ export function ReleaseValidationDialog({
     }
   };
 
-  const isReleaseValid = manualReleaseNumber.trim() && (selectedDestination || (showCustomInput && customDestination.trim()));
+  const isReleaseValid = manualReleaseNumber.trim() && selectedDestination;
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
@@ -314,7 +311,7 @@ export function ReleaseValidationDialog({
                   <SelectValue placeholder="Select destination" />
                 </SelectTrigger>
                 <SelectContent>
-                  {predefinedDestinations.map((dest) => (
+                  {destinationOptions.map((dest) => (
                     <SelectItem key={dest.value} value={dest.value}>
                       {dest.label}
                     </SelectItem>
@@ -327,14 +324,6 @@ export function ReleaseValidationDialog({
                   </SelectItem>
                 </SelectContent>
               </Select>
-              {showCustomInput && (
-                <Input
-                  placeholder="Enter custom destination (e.g., Phoenix, AZ)"
-                  value={customDestination}
-                  onChange={(e) => setCustomDestination(e.target.value)}
-                  autoFocus
-                />
-              )}
             </div>
 
             {/* PDF Upload (optional) */}

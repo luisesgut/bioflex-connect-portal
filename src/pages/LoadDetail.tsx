@@ -88,6 +88,8 @@ import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
+import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
 
 interface InventoryFilters {
   fecha: string[];
@@ -197,19 +199,15 @@ const statusLabels: Record<string, string> = {
   delivered: "Delivered",
 };
 
-const destinations = [
-  { value: "tbd", label: "TBD" },
-  { value: "salinas", label: "Salinas, CA" },
-  { value: "bakersfield", label: "Bakersfield, CA" },
-  { value: "coachella", label: "Coachella, CA" },
-  { value: "yuma", label: "Yuma, AZ" },
-];
+// destinations now come from useCustomerLocations hook
 
 export default function LoadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
+  const { destinationOptions, getDestinationLabel } = useCustomerLocations();
+  const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
   const [pallets, setPallets] = useState<LoadPallet[]>([]);
   const [releaseRequest, setReleaseRequest] = useState<ReleaseRequest | null>(null);
@@ -1969,16 +1967,10 @@ export default function LoadDetail() {
                   </CardHeader>
                   <CardContent>
                     {(() => {
-                      const destLabels: Record<string, string> = {
-                        yuma: "Yuma, AZ",
-                        salinas: "Salinas, CA",
-                        bakersfield: "Bakersfield, CA",
-                        coachella: "Coachella, CA",
-                      };
                       const dests = [...new Set(
                         pallets
                           .filter((p) => p.destination && p.destination !== "tbd")
-                          .map((p) => destLabels[p.destination!] || p.destination!)
+                          .map((p) => getDestinationLabel(p.destination))
                       )];
                       return dests.length > 0 ? (
                         <ul className="space-y-1">
@@ -2047,13 +2039,6 @@ export default function LoadDetail() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const destLabelsMap: Record<string, string> = {
-                  yuma: "Yuma, AZ",
-                  salinas: "Salinas, CA",
-                  bakersfield: "Bakersfield, CA",
-                  coachella: "Coachella, CA",
-                };
-
                 const destEntries = [...new Map(
                   pallets
                     .filter((p) => p.destination && p.destination !== "tbd")
@@ -2061,7 +2046,7 @@ export default function LoadDetail() {
                       const destDateEntry = destinationDates.find((d) => d.destination === p.destination);
                       return [p.destination!, { 
                         destination: p.destination!, 
-                        label: destLabelsMap[p.destination!] || p.destination!,
+                        label: getDestinationLabel(p.destination),
                         estimated_date: destDateEntry?.estimated_date || null,
                         actual_date: destDateEntry?.actual_date || null,
                       }] as const;
@@ -2481,10 +2466,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
-                              {(() => {
-                                const dest = destinations.find((d) => d.value === pallet.destination);
-                                return dest ? dest.label : (pallet.destination || "TBD");
-                              })()}
+                              {getDestinationLabel(pallet.destination)}
                             </TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
@@ -2845,7 +2827,7 @@ export default function LoadDetail() {
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
-                          {destinations.find((d) => d.value === pallet.destination)?.label || "TBD"}
+                          {getDestinationLabel(pallet.destination)}
                         </TableCell>
                         <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                       </TableRow>
@@ -3301,10 +3283,18 @@ export default function LoadDetail() {
           onOpenChange={setReleaseDialogOpen}
           selectedPallets={selectedPalletsForReleaseData}
           loadId={id!}
+          destinationOptions={destinationOptions}
+          onAddDestination={() => setAddDestinationDialogOpen(true)}
           onComplete={() => {
             setSelectedPalletsForRelease(new Set());
             fetchLoadData();
           }}
+        />
+
+        {/* Add Destination Dialog */}
+        <AddDestinationDialog
+          open={addDestinationDialogOpen}
+          onOpenChange={setAddDestinationDialogOpen}
         />
       </div>
     </MainLayout>
