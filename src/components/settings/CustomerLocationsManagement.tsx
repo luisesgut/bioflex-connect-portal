@@ -205,7 +205,7 @@ export function CustomerLocationsManagement() {
         city: formData.city || null,
         state: formData.state || null,
         zip_code: formData.zip_code || null,
-        reception_hours: formData.reception_hours || null,
+        reception_hours: scheduleToString(formData.schedule),
         warehouse_manager_id: formData.warehouse_manager_id || null,
       },
     });
@@ -219,7 +219,7 @@ export function CustomerLocationsManagement() {
       city: location.city || "",
       state: location.state || "",
       zip_code: location.zip_code || "",
-      reception_hours: location.reception_hours || "",
+      schedule: parseSchedule(location.reception_hours),
       warehouse_manager_id: location.warehouse_manager_id || "",
     });
     setIsDialogOpen(true);
@@ -300,14 +300,56 @@ export function CustomerLocationsManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="loc_hours">Reception Hours</Label>
-              <Textarea
-                id="loc_hours"
-                value={formData.reception_hours}
-                onChange={(e) => setFormData({ ...formData, reception_hours: e.target.value })}
-                placeholder="Mon-Fri 7:00 AM - 4:00 PM"
-                rows={2}
-              />
+              <Label>Reception Hours</Label>
+              <div className="space-y-1.5 rounded-md border p-3">
+                {DAYS.map((d) => {
+                  const day = formData.schedule[d.key];
+                  return (
+                    <div key={d.key} className="flex items-center gap-2">
+                      <Switch
+                        checked={day.enabled}
+                        onCheckedChange={(checked) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            schedule: { ...prev.schedule, [d.key]: { ...day, enabled: checked } },
+                          }))
+                        }
+                        className="scale-75"
+                      />
+                      <span className="w-8 text-xs font-medium text-muted-foreground">{d.label}</span>
+                      {day.enabled ? (
+                        <>
+                          <Input
+                            type="time"
+                            value={day.open}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                schedule: { ...prev.schedule, [d.key]: { ...day, open: e.target.value } },
+                              }))
+                            }
+                            className="h-7 w-[100px] text-xs"
+                          />
+                          <span className="text-xs text-muted-foreground">–</span>
+                          <Input
+                            type="time"
+                            value={day.close}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                schedule: { ...prev.schedule, [d.key]: { ...day, close: e.target.value } },
+                              }))
+                            }
+                            className="h-7 w-[100px] text-xs"
+                          />
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Closed</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Warehouse Manager</Label>
@@ -368,7 +410,7 @@ export function CustomerLocationsManagement() {
                       {!location.address && !location.city && "-"}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{location.reception_hours || "-"}</TableCell>
+                  <TableCell className="text-sm">{formatScheduleDisplay(location.reception_hours)}</TableCell>
                   <TableCell className="text-sm">{getManagerName(location.warehouse_manager_id)}</TableCell>
                   <TableCell>
                     <Switch checked={location.is_active} onCheckedChange={() => handleToggleActive(location)} />
