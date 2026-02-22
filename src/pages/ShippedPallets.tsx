@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,13 +58,7 @@ interface Filters {
   destination: string[];
 }
 
-const destinationLabels: Record<string, string> = {
-  salinas: "Salinas",
-  bakersfield: "Bakersfield",
-  coachella: "Coachella",
-  yuma: "Yuma",
-  tbd: "TBD",
-};
+// destinationLabels now come from useCustomerLocations hook
 
 export default function ShippedPallets() {
   const { isAdmin } = useAdmin();
