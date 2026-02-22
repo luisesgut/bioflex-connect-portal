@@ -116,7 +116,9 @@ export default function ShippingLoads() {
   const [newLoadNumber, setNewLoadNumber] = useState("");
   const [shippingDate, setShippingDate] = useState<Date>();
   const [creating, setCreating] = useState(false);
-
+  const [transitDialogOpen, setTransitDialogOpen] = useState(false);
+  const [transitShipDate, setTransitShipDate] = useState<Date | undefined>(undefined);
+  const [transitLoadPending, setTransitLoadPending] = useState<ShippingLoad | null>(null);
   const fetchData = useCallback(async () => {
     try {
       const [loadsRes, requestsRes] = await Promise.all([
@@ -212,6 +214,36 @@ export default function ShippingLoads() {
   };
 
   const handleStatusChange = async (load: ShippingLoad, newStatus: string) => {
+    // If transitioning to in_transit, prompt for ship date first
+    if (newStatus === "in_transit") {
+      setTransitLoadPending(load);
+      setTransitShipDate(new Date(load.shipping_date));
+      setTransitDialogOpen(true);
+      return;
+    }
+
+    await executeStatusChange(load, newStatus);
+  };
+
+  const handleConfirmTransit = async () => {
+    if (!transitLoadPending || !transitShipDate) return;
+    
+    try {
+      // Update ship date first
+      await supabase
+        .from("shipping_loads")
+        .update({ shipping_date: format(transitShipDate, "yyyy-MM-dd") })
+        .eq("id", transitLoadPending.id);
+    } catch (error) {
+      console.error("Error updating ship date:", error);
+    }
+
+    await executeStatusChange(transitLoadPending, "in_transit");
+    setTransitDialogOpen(false);
+    setTransitLoadPending(null);
+  };
+
+  const executeStatusChange = async (load: ShippingLoad, newStatus: string) => {
     try {
       type LoadStatus = "assembling" | "pending_release" | "approved" | "on_hold" | "shipped" | "in_transit" | "delivered";
       type ReleaseStatus = "pending" | "approved" | "on_hold" | "shipped";
