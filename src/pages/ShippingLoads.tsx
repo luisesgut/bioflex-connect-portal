@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ShippingLoad {
@@ -110,8 +111,10 @@ export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { getDestinationLabel } = useCustomerLocations();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
+  const [destinationDatesMap, setDestinationDatesMap] = useState<Map<string, Array<{ destination: string; actual_date: string | null }>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -123,7 +126,7 @@ export default function ShippingLoads() {
   const [transitLoadPending, setTransitLoadPending] = useState<ShippingLoad | null>(null);
   const fetchData = useCallback(async () => {
     try {
-      const [loadsRes, requestsRes] = await Promise.all([
+      const [loadsRes, requestsRes, destDatesRes] = await Promise.all([
         supabase
           .from("shipping_loads")
           .select("*")
@@ -132,6 +135,10 @@ export default function ShippingLoads() {
           .from("release_requests")
           .select("id, load_id, requested_at, status, response_at, release_number, is_hot_order")
           .order("requested_at", { ascending: false }),
+        supabase
+          .from("load_destination_dates")
+          .select("load_id, destination, actual_date")
+          .not("actual_date", "is", null),
       ]);
 
       if (loadsRes.error) throw loadsRes.error;
@@ -139,6 +146,15 @@ export default function ShippingLoads() {
 
       setLoads(loadsRes.data || []);
       setReleaseRequests(requestsRes.data || []);
+
+      // Build map of load_id -> destination dates with actual_date
+      const ddMap = new Map<string, Array<{ destination: string; actual_date: string | null }>>();
+      (destDatesRes.data || []).forEach((dd) => {
+        const existing = ddMap.get(dd.load_id) || [];
+        existing.push({ destination: dd.destination, actual_date: dd.actual_date });
+        ddMap.set(dd.load_id, existing);
+      });
+      setDestinationDatesMap(ddMap);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load shipping data");
@@ -312,6 +328,16 @@ export default function ShippingLoads() {
   // Build transit data for TransitTrackingTable
   const transitTrackingData = inTransitLoads.map((load) => {
     const release = getReleaseForLoad(load.id);
+    
+    // Determine display city: if any destination has actual_date, show the latest one
+    const destDates = destinationDatesMap.get(load.id) || [];
+    const deliveredDests = destDates
+      .filter((d) => d.actual_date)
+      .sort((a, b) => (a.actual_date! > b.actual_date! ? -1 : 1));
+    const displayCity = deliveredDests.length > 0
+      ? getDestinationLabel(deliveredDests[0].destination)
+      : load.last_reported_city;
+
     return {
       id: release?.id || load.id,
       load_id: load.id,
@@ -328,7 +354,7 @@ export default function ShippingLoads() {
         eta_cross_border: load.eta_cross_border,
         documents_sent: load.documents_sent || false,
         border_crossed: load.border_crossed || false,
-        last_reported_city: load.last_reported_city,
+        last_reported_city: displayCity,
         transit_notes: load.transit_notes,
       },
     };
