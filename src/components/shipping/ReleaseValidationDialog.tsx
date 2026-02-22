@@ -43,6 +43,8 @@ interface ReleaseValidationDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedPallets: LoadPallet[];
   loadId: string;
+  destinationOptions?: { value: string; label: string }[];
+  onAddDestination?: () => void;
   onComplete: () => void;
 }
 
