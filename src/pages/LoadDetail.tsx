@@ -135,6 +135,7 @@ interface ShippingLoad {
   documents_sent: boolean | null;
   border_crossed: boolean | null;
   transit_notes: string | null;
+  cross_border_actual_date: string | null;
 }
 
 interface DeliveryDateEntry {
@@ -261,6 +262,14 @@ export default function LoadDetail() {
   const [newCityUpdate, setNewCityUpdate] = useState("");
   const [newTransitNotes, setNewTransitNotes] = useState("");
   const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
+  const [destinationDates, setDestinationDates] = useState<Array<{
+    id?: string;
+    load_id: string;
+    destination: string;
+    estimated_date: string | null;
+    actual_date: string | null;
+  }>>([]);
+  const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -389,6 +398,14 @@ export default function LoadDetail() {
         .order("created_at", { ascending: false });
 
       setTransitUpdates(transitData || []);
+
+      // Fetch destination dates
+      const { data: destDatesData } = await supabase
+        .from("load_destination_dates")
+        .select("*")
+        .eq("load_id", id);
+
+      setDestinationDates(destDatesData || []);
 
     } catch (error) {
       console.error("Error fetching load data:", error);
@@ -1458,6 +1475,86 @@ export default function LoadDetail() {
     }
   };
 
+  const handleSaveDestinationDate = async (destination: string, field: "estimated_date" | "actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate(destination + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ [field]: dateStr, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, [field]: dateStr });
+        if (error) throw error;
+      }
+
+      // If setting actual_date on a destination, update pallets with that destination as delivered
+      if (field === "actual_date" && dateStr) {
+        await supabase
+          .from("load_pallets")
+          .update({ delivery_date: dateStr })
+          .eq("load_id", id)
+          .eq("destination", destination as any);
+
+        // Check if ALL destinations now have actual dates - if so, mark load as delivered
+        const updatedDates = destinationDates.map((d) =>
+          d.destination === destination ? { ...d, actual_date: dateStr } : d
+        );
+        if (!existing) updatedDates.push({ load_id: id, destination, estimated_date: null, actual_date: dateStr });
+
+        const allDests = [...new Set(pallets.filter((p) => p.destination && p.destination !== "tbd").map((p) => p.destination!))];
+        const allDelivered = allDests.every((dest) => updatedDates.find((d) => d.destination === dest)?.actual_date);
+
+        if (allDelivered && allDests.length > 0) {
+          await supabase
+            .from("shipping_loads")
+            .update({ status: "delivered" })
+            .eq("id", id);
+          toast.success("All destinations delivered! Load marked as delivered.");
+        }
+      }
+
+      toast.success(`${field === "estimated_date" ? "ETA" : "Delivery date"} updated`);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving destination date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
+  };
+
+  const handleSaveCrossBorderDate = async (field: "eta_cross_border" | "cross_border_actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate("cross_border_" + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const updateData: any = { [field]: dateStr };
+      if (field === "cross_border_actual_date" && dateStr) {
+        updateData.border_crossed = true;
+      }
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update(updateData)
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(field === "eta_cross_border" ? "Border ETA updated" : "Border crossing date recorded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving cross border date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
+  };
+
   const handleGenerateCustomsDocument = async () => {
     if (!load || pallets.length === 0) {
       toast.error("No pallets in load to generate document");
@@ -1840,24 +1937,62 @@ export default function LoadDetail() {
                   pallets
                     .filter((p) => p.destination && p.destination !== "tbd")
                     .map((p) => {
-                      const lp = p as any;
+                      const destDateEntry = destinationDates.find((d) => d.destination === p.destination);
                       return [p.destination!, { 
                         destination: p.destination!, 
                         label: destLabelsMap[p.destination!] || p.destination!,
-                        delivery_date: lp.delivery_date || null,
+                        estimated_date: destDateEntry?.estimated_date || null,
+                        actual_date: destDateEntry?.actual_date || null,
                       }] as const;
                     })
                 ).values()];
 
-                interface TimelineStep {
+                const hasBorderCrossed = load.border_crossed;
+                const hasCity = !!load.last_reported_city;
+                const latestCityUpdate = transitUpdates.find((u) => u.last_reported_city);
+                const crossBorderActualDate = load.cross_border_actual_date;
+
+                const DatePickerInline = ({ value, onChange, placeholder, saving }: { value: string | null; onChange: (date: Date | null) => void; placeholder: string; saving: boolean }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-7 px-2 text-xs gap-1",
+                          !value && "text-muted-foreground"
+                        )}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarIcon className="h-3 w-3" />}
+                        {value ? format(new Date(value), "MMM d, yyyy") : placeholder}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={value ? new Date(value) : undefined}
+                        onSelect={(date) => onChange(date || null)}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                );
+
+                interface TimelineStepData {
                   label: string;
                   sublabel?: string;
                   date?: string;
                   completed: boolean;
                   active: boolean;
+                  type: "departed" | "city" | "cross_border" | "destination";
+                  destinationKey?: string;
+                  estimatedDate?: string | null;
+                  actualDate?: string | null;
                 }
 
-                const steps: TimelineStep[] = [];
+                const steps: TimelineStepData[] = [];
 
                 // Step 1: Departed BFX
                 steps.push({
@@ -1865,12 +2000,10 @@ export default function LoadDetail() {
                   date: format(new Date(load.shipping_date), "MMM d, yyyy"),
                   completed: true,
                   active: false,
+                  type: "departed",
                 });
 
                 // Step 2: Last Reported City
-                const hasBorderCrossed = load.border_crossed;
-                const hasCity = !!load.last_reported_city;
-                const latestCityUpdate = transitUpdates.find((u) => u.last_reported_city);
                 steps.push({
                   label: load.last_reported_city || "In Transit",
                   sublabel: hasCity && latestCityUpdate
@@ -1878,31 +2011,30 @@ export default function LoadDetail() {
                     : "Awaiting update",
                   completed: hasBorderCrossed || false,
                   active: hasCity && !hasBorderCrossed,
+                  type: "city",
                 });
 
                 // Step 3: Cross Border
                 steps.push({
                   label: "Cross Border",
-                  sublabel: load.eta_cross_border
-                    ? `ETA: ${format(new Date(load.eta_cross_border), "MMM d, yyyy")}`
-                    : "ETA pending",
-                  date: hasBorderCrossed ? (load.eta_cross_border ? format(new Date(load.eta_cross_border), "MMM d") : "Crossed") : undefined,
                   completed: hasBorderCrossed || false,
                   active: hasCity && !hasBorderCrossed,
+                  type: "cross_border",
+                  estimatedDate: load.eta_cross_border,
+                  actualDate: crossBorderActualDate,
                 });
 
                 // Steps 4+: Each destination
                 destEntries.forEach((dest) => {
-                  const isDelivered = load.status === "delivered" && !!dest.delivery_date;
+                  const isDelivered = !!dest.actual_date;
                   steps.push({
                     label: dest.label,
-                    sublabel: dest.delivery_date
-                      ? `Delivered: ${format(new Date(dest.delivery_date), "MMM d, yyyy")}`
-                      : load.estimated_delivery_date
-                      ? `ETA: ${format(new Date(load.estimated_delivery_date), "MMM d, yyyy")}`
-                      : "ETA pending",
                     completed: isDelivered,
-                    active: hasBorderCrossed && !isDelivered,
+                    active: (hasBorderCrossed || false) && !isDelivered,
+                    type: "destination",
+                    destinationKey: dest.destination,
+                    estimatedDate: dest.estimated_date,
+                    actualDate: dest.actual_date,
                   });
                 });
 
@@ -1946,10 +2078,60 @@ export default function LoadDetail() {
                               )}>
                                 {step.label}
                               </p>
-                              {(step.sublabel || step.date) && (
+                              {step.type === "departed" && step.date && (
+                                <p className="text-xs text-muted-foreground mt-1">{step.date}</p>
+                              )}
+                              {step.type === "city" && step.sublabel && (
+                                <p className="text-xs text-muted-foreground mt-1">{step.sublabel}</p>
+                              )}
+                              {step.type === "cross_border" && isAdmin && load.status === "in_transit" && (
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  <DatePickerInline
+                                    value={step.estimatedDate || null}
+                                    onChange={(date) => handleSaveCrossBorderDate("eta_cross_border", date)}
+                                    placeholder="Set ETA"
+                                    saving={savingDestDate === "cross_border_eta_cross_border"}
+                                  />
+                                  <DatePickerInline
+                                    value={step.actualDate || null}
+                                    onChange={(date) => handleSaveCrossBorderDate("cross_border_actual_date", date)}
+                                    placeholder="Set actual date"
+                                    saving={savingDestDate === "cross_border_cross_border_actual_date"}
+                                  />
+                                </div>
+                              )}
+                              {step.type === "cross_border" && (!isAdmin || load.status !== "in_transit") && (
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {step.date && <span className="font-medium">{step.date} • </span>}
-                                  {step.sublabel}
+                                  {step.actualDate
+                                    ? `Crossed: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
+                                    : step.estimatedDate
+                                    ? `ETA: ${format(new Date(step.estimatedDate), "MMM d, yyyy")}`
+                                    : "ETA pending"}
+                                </p>
+                              )}
+                              {step.type === "destination" && isAdmin && load.status === "in_transit" && (
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  <DatePickerInline
+                                    value={step.estimatedDate || null}
+                                    onChange={(date) => handleSaveDestinationDate(step.destinationKey!, "estimated_date", date)}
+                                    placeholder="Set ETA"
+                                    saving={savingDestDate === step.destinationKey + "estimated_date"}
+                                  />
+                                  <DatePickerInline
+                                    value={step.actualDate || null}
+                                    onChange={(date) => handleSaveDestinationDate(step.destinationKey!, "actual_date", date)}
+                                    placeholder="Set delivery date"
+                                    saving={savingDestDate === step.destinationKey + "actual_date"}
+                                  />
+                                </div>
+                              )}
+                              {step.type === "destination" && (!isAdmin || load.status !== "in_transit") && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {step.actualDate
+                                    ? `Delivered: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
+                                    : step.estimatedDate
+                                    ? `ETA: ${format(new Date(step.estimatedDate), "MMM d, yyyy")}`
+                                    : "ETA pending"}
                                 </p>
                               )}
                             </div>
