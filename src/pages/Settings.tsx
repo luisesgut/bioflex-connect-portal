@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAdmin } from "@/hooks/useAdmin";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
-import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
 export default function Settings() {
