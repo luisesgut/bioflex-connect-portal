@@ -2039,13 +2039,6 @@ export default function LoadDetail() {
             </CardHeader>
             <CardContent>
               {(() => {
-                const destLabelsMap: Record<string, string> = {
-                  yuma: "Yuma, AZ",
-                  salinas: "Salinas, CA",
-                  bakersfield: "Bakersfield, CA",
-                  coachella: "Coachella, CA",
-                };
-
                 const destEntries = [...new Map(
                   pallets
                     .filter((p) => p.destination && p.destination !== "tbd")
@@ -2053,7 +2046,7 @@ export default function LoadDetail() {
                       const destDateEntry = destinationDates.find((d) => d.destination === p.destination);
                       return [p.destination!, { 
                         destination: p.destination!, 
-                        label: destLabelsMap[p.destination!] || p.destination!,
+                        label: getDestinationLabel(p.destination),
                         estimated_date: destDateEntry?.estimated_date || null,
                         actual_date: destDateEntry?.actual_date || null,
                       }] as const;
