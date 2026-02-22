@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { ReviewChangeRequestDialog } from "@/components/orders/ReviewChangeRequestDialog";
 
 interface ChangeRequest {
@@ -37,6 +38,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export default function ChangeRequests() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { isAdmin } = useAdmin();
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,10 +123,10 @@ export default function ChangeRequests() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Change Requests
+              {t('page.changeRequests.title')}
             </h1>
             <p className="mt-1 text-muted-foreground">
-              {isAdmin ? "Review and manage order change requests" : "Track your order change requests"}
+              {t('page.changeRequests.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">

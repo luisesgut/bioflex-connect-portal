@@ -49,6 +49,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import { TransitTrackingTable } from "@/components/shipping/TransitTrackingTable";
 
 interface ShippingLoad {
@@ -107,6 +108,7 @@ const loadStatusOptions = [
 
 export default function ShippingLoads() {
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
@@ -445,9 +447,9 @@ export default function ShippingLoads() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Shipping Loads</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('page.shippingLoads.title')}</h1>
             <p className="text-muted-foreground">
-              Manage truck loads, releases, and shipment tracking
+              {t('page.shippingLoads.subtitle')}
             </p>
           </div>
           {isAdmin && (

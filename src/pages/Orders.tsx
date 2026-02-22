@@ -21,6 +21,7 @@ import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface LoadDetail {
   load_number: string;
@@ -104,6 +105,7 @@ const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped
 export default function Orders() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -676,10 +678,10 @@ export default function Orders() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Purchase Orders
+              {t('page.orders.title')}
             </h1>
             <p className="mt-1 text-muted-foreground">
-              Create and manage your purchase orders
+              {t('page.orders.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3">

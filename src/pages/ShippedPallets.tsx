@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { format } from "date-fns";
 import {
   Search,
@@ -62,6 +63,7 @@ interface Filters {
 
 export default function ShippedPallets() {
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const { getDestinationLabel } = useCustomerLocations();
   const [pallets, setPallets] = useState<ShippedPallet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,10 +230,10 @@ export default function ShippedPallets() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Shipped Pallets History
+              {t('page.shippedPallets.title')}
             </h1>
             <p className="text-muted-foreground mt-1">
-              View all shipped products with filters
+              {t('page.shippedPallets.subtitle')}
             </p>
           </div>
           <Button onClick={exportToCSV} variant="outline" className="gap-2">

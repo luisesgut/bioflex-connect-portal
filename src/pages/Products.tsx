@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Product {
   id: string;
@@ -116,6 +117,7 @@ function getStatusBadgeVariant(status: string) {
 
 export default function Products() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
@@ -467,8 +469,8 @@ export default function Products() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Products</h1>
-            <p className="mt-1 text-muted-foreground">Manage your product catalog and new product requests</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('page.products.title')}</h1>
+            <p className="mt-1 text-muted-foreground">{t('page.products.subtitle')}</p>
           </div>
           <Button variant="accent" className="gap-2" onClick={() => navigate("/products/new")}>
             <Plus className="h-5 w-5" />

@@ -4,9 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTable } from "@/components/users/UsersTable";
 import { AccessProfilesManager } from "@/components/users/AccessProfilesManager";
 import { Users as UsersIcon, Shield } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function Users() {
   const [activeTab, setActiveTab] = useState("internal");
+  const { t } = useLanguage();
 
   return (
     <MainLayout>
@@ -14,10 +16,10 @@ export default function Users() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            User Management
+            {t('page.users.title')}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Manage platform users and access profiles
+            {t('page.users.subtitle')}
           </p>
         </div>
 

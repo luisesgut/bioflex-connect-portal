@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   Command,
   CommandEmpty,
@@ -50,6 +51,7 @@ interface ExtractedPOData {
 
 export default function CreateOrder() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -381,10 +383,10 @@ export default function CreateOrder() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Create Purchase Order
+              {t('page.createOrder.title')}
             </h1>
             <p className="mt-1 text-muted-foreground">
-              Submit a new order for your custom packaging products
+              {t('page.createOrder.subtitle')}
             </p>
           </div>
         </div>

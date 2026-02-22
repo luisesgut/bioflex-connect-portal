@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ArrowRight, Check, Upload, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -158,6 +159,7 @@ function getSteps(productLine: ProductLine | null) {
 
 export default function NewProductRequest() {
   const [currentStep, setCurrentStep] = useState(1);
+  const { t } = useLanguage();
   const [productLine, setProductLine] = useState<ProductLine | null>(null);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [techSpecFile, setTechSpecFile] = useState<File | null>(null);
@@ -1035,9 +1037,9 @@ export default function NewProductRequest() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">New Product Request</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t('page.newProductRequest.title')}</h1>
             <p className="text-muted-foreground">
-              Submit a new product for registration
+              {t('page.newProductRequest.subtitle')}
             </p>
           </div>
         </div>
