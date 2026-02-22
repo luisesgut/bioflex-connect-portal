@@ -18,6 +18,44 @@ import { CustomerLocationsManagement } from "@/components/settings/CustomerLocat
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [companyName, setCompanyName] = useState("");
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("company")
+        .eq("user_id", user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    if (profile?.company) setCompanyName(profile.company);
+  }, [profile?.company]);
+
+  const handleSaveCompany = async () => {
+    if (!user?.id) return;
+    setSavingCompany(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ company: companyName })
+      .eq("user_id", user.id);
+    setSavingCompany(false);
+    if (error) {
+      toast.error("Error al guardar");
+    } else {
+      toast.success("Nombre de empresa guardado");
+      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
+    }
+  };
 
   return (
     <MainLayout>
