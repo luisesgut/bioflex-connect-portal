@@ -5,7 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, FileText, Loader2 } from "lucide-react";
+import { Upload, X, FileText, Loader2, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,7 +48,8 @@ export default function NewProductRequest() {
   const [itemType, setItemType] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [assignedDesigner, setAssignedDesigner] = useState("");
-  const [dpSalesCsr, setDpSalesCsr] = useState("");
+  const [dpSalesCsr, setDpSalesCsr] = useState<string[]>([]);
+  const [designNotes, setDesignNotes] = useState("");
 
   // Files
   const [techSpecFile, setTechSpecFile] = useState<File | null>(null);
@@ -158,8 +165,11 @@ export default function NewProductRequest() {
     setUploading(true);
 
     try {
-      // Find the selected designer name for dp_sales_csr_names
-      const selectedCsr = destinyUsers.find((u) => u.user_id === dpSalesCsr);
+      // Build comma-separated CSR names
+      const csrNames = dpSalesCsr
+        .map((id) => destinyUsers.find((u) => u.user_id === id)?.full_name)
+        .filter(Boolean)
+        .join(", ");
 
       const { data: request, error: requestError } = await supabase
         .from("product_requests")
@@ -171,9 +181,10 @@ export default function NewProductRequest() {
           item_type: itemType || null,
           item_description: itemDescription.trim() || null,
           assigned_designer: assignedDesigner || null,
-          dp_sales_csr_names: selectedCsr?.full_name || null,
+          dp_sales_csr_names: csrNames || null,
           tech_spec_filename: techSpecFile?.name || null,
-          status: artworkFiles.length > 0 ? "artwork_uploaded" : techSpecFile ? "specs_submitted" : "specs_submitted",
+          notes: designNotes.trim() || null,
+          status: artworkFiles.length > 0 ? "artwork_uploaded" : "specs_submitted",
           engineering_status: "pending",
         } as any)
         .select()
@@ -299,21 +310,48 @@ export default function NewProductRequest() {
               </div>
             </div>
 
-            {/* DP Sales/CSR */}
+            {/* DP Sales/CSR - Multi-select */}
             <div className="space-y-2">
               <Label>DP Sales / CSR</Label>
-              <Select value={dpSalesCsr} onValueChange={setDpSalesCsr}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select DP Sales/CSR" />
-                </SelectTrigger>
-                <SelectContent>
-                  {destinyUsers.map((u) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    {dpSalesCsr.length > 0
+                      ? destinyUsers
+                          .filter((u) => dpSalesCsr.includes(u.user_id))
+                          .map((u) => u.full_name)
+                          .join(", ")
+                      : "Select DP Sales/CSR"}
+                    <span className="ml-2 opacity-50">▼</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-2" align="start">
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {destinyUsers.map((u) => (
+                      <label
+                        key={u.user_id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={dpSalesCsr.includes(u.user_id)}
+                          onCheckedChange={(checked) => {
+                            setDpSalesCsr((prev) =>
+                              checked
+                                ? [...prev, u.user_id]
+                                : prev.filter((id) => id !== u.user_id)
+                            );
+                          }}
+                        />
+                        {u.full_name}
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Item Description */}
@@ -483,6 +521,21 @@ export default function NewProductRequest() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Initial Design Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Initial Design Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={designNotes}
+              onChange={(e) => setDesignNotes(e.target.value)}
+              placeholder="Add any initial notes, annotations or instructions for the design team..."
+              rows={4}
+            />
           </CardContent>
         </Card>
 
