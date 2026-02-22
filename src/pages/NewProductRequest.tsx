@@ -309,21 +309,48 @@ export default function NewProductRequest() {
               </div>
             </div>
 
-            {/* DP Sales/CSR */}
+            {/* DP Sales/CSR - Multi-select */}
             <div className="space-y-2">
               <Label>DP Sales / CSR</Label>
-              <Select value={dpSalesCsr} onValueChange={setDpSalesCsr}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select DP Sales/CSR" />
-                </SelectTrigger>
-                <SelectContent>
-                  {destinyUsers.map((u) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    {dpSalesCsr.length > 0
+                      ? destinyUsers
+                          .filter((u) => dpSalesCsr.includes(u.user_id))
+                          .map((u) => u.full_name)
+                          .join(", ")
+                      : "Select DP Sales/CSR"}
+                    <span className="ml-2 opacity-50">▼</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-2" align="start">
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {destinyUsers.map((u) => (
+                      <label
+                        key={u.user_id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={dpSalesCsr.includes(u.user_id)}
+                          onCheckedChange={(checked) => {
+                            setDpSalesCsr((prev) =>
+                              checked
+                                ? [...prev, u.user_id]
+                                : prev.filter((id) => id !== u.user_id)
+                            );
+                          }}
+                        />
+                        {u.full_name}
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Item Description */}
@@ -493,6 +520,21 @@ export default function NewProductRequest() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Initial Design Notes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Initial Design Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={designNotes}
+              onChange={(e) => setDesignNotes(e.target.value)}
+              placeholder="Add any initial notes, annotations or instructions for the design team..."
+              rows={4}
+            />
           </CardContent>
         </Card>
 
