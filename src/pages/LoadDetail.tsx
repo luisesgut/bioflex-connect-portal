@@ -229,6 +229,7 @@ export default function LoadDetail() {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
+  const [inTransitShipDate, setInTransitShipDate] = useState<Date | undefined>(undefined);
   const [activePOsWithInventory, setActivePOsWithInventory] = useState<ActivePOWithInventory[]>([]);
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
@@ -1245,6 +1246,7 @@ export default function LoadDetail() {
         toast.error(validation.message);
         return;
       }
+      setInTransitShipDate(new Date(load!.shipping_date));
       setInTransitConfirmOpen(true);
     } else if (newStatus === "pending_release" && user) {
       // Create release request if transitioning to pending_release and none exists
@@ -1272,12 +1274,23 @@ export default function LoadDetail() {
     }
   };
 
-  const handleConfirmInTransit = () => {
+  const handleConfirmInTransit = async () => {
     const validation = validateForInTransit();
     if (!validation.valid) {
       toast.error(validation.message);
       setInTransitConfirmOpen(false);
       return;
+    }
+    // Update ship date if changed
+    if (inTransitShipDate && id) {
+      try {
+        await supabase
+          .from("shipping_loads")
+          .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
+          .eq("id", id);
+      } catch (error) {
+        console.error("Error updating ship date:", error);
+      }
     }
     setInTransitConfirmOpen(false);
     handleUpdateLoadStatus("in_transit");
@@ -2529,27 +2542,55 @@ export default function LoadDetail() {
         </Dialog>
 
         {/* In Transit Confirmation Dialog */}
-        <AlertDialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Change Status to In Transit?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
+        <Dialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Status to In Transit?</DialogTitle>
+              <DialogDescription className="space-y-2">
                 <span className="block text-destructive font-medium">
                   ⚠️ Warning: Once the load is marked as "In Transit", you will no longer be able to modify pallets.
                 </span>
-                <span className="block">
-                  Are you sure you want to proceed?
-                </span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmInTransit}>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Ship Date (departure date)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !inTransitShipDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {inTransitShipDate ? format(inTransitShipDate, "PPP") : "Select ship date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={inTransitShipDate}
+                      onSelect={setInTransitShipDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInTransitConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmInTransit} disabled={!inTransitShipDate || updatingStatus}>
+                {updatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm In Transit
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Release Validation Dialog */}
         <ReleaseValidationDialog
