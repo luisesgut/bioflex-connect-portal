@@ -66,6 +66,7 @@ interface UsersTableProps {
 
 export function UsersTable({ userType }: UsersTableProps) {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
