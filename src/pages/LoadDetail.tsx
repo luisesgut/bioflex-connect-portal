@@ -276,6 +276,7 @@ export default function LoadDetail() {
     destination: string;
     estimated_date: string | null;
     actual_date: string | null;
+    pod_pdf_url?: string | null;
   }>>([]);
   const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
   const [uploadingPod, setUploadingPod] = useState<string | null>(null);
