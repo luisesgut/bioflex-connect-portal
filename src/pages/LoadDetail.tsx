@@ -139,6 +139,8 @@ interface ShippingLoad {
   border_crossed: boolean | null;
   transit_notes: string | null;
   cross_border_actual_date: string | null;
+  invoice_number: string | null;
+  invoice_pdf_url: string | null;
 }
 
 interface DeliveryDateEntry {
