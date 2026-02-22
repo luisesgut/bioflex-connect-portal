@@ -683,6 +683,54 @@ export default function ShippingLoads() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Transit Ship Date Dialog */}
+        <Dialog open={transitDialogOpen} onOpenChange={setTransitDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Ship Date</DialogTitle>
+              <DialogDescription>
+                Confirm or update the ship date for load {transitLoadPending?.load_number} before marking it as In Transit.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Ship Date (departure date)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !transitShipDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {transitShipDate ? format(transitShipDate, "PPP") : "Select ship date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={transitShipDate}
+                      onSelect={setTransitShipDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTransitDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmTransit} disabled={!transitShipDate}>
+                Confirm In Transit
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
