@@ -2306,6 +2306,7 @@ export default function LoadDetail() {
                   destinationKey?: string;
                   estimatedDate?: string | null;
                   actualDate?: string | null;
+                  podPdfUrl?: string | null;
                 }
 
                 const steps: TimelineStepData[] = [];
