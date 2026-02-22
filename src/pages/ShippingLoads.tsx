@@ -328,6 +328,16 @@ export default function ShippingLoads() {
   // Build transit data for TransitTrackingTable
   const transitTrackingData = inTransitLoads.map((load) => {
     const release = getReleaseForLoad(load.id);
+    
+    // Determine display city: if any destination has actual_date, show the latest one
+    const destDates = destinationDatesMap.get(load.id) || [];
+    const deliveredDests = destDates
+      .filter((d) => d.actual_date)
+      .sort((a, b) => (a.actual_date! > b.actual_date! ? -1 : 1));
+    const displayCity = deliveredDests.length > 0
+      ? getDestinationLabel(deliveredDests[0].destination)
+      : load.last_reported_city;
+
     return {
       id: release?.id || load.id,
       load_id: load.id,
@@ -344,7 +354,7 @@ export default function ShippingLoads() {
         eta_cross_border: load.eta_cross_border,
         documents_sent: load.documents_sent || false,
         border_crossed: load.border_crossed || false,
-        last_reported_city: load.last_reported_city,
+        last_reported_city: displayCity,
         transit_notes: load.transit_notes,
       },
     };
