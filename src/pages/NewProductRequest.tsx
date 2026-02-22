@@ -159,8 +159,11 @@ export default function NewProductRequest() {
     setUploading(true);
 
     try {
-      // Find the selected designer name for dp_sales_csr_names
-      const selectedCsr = destinyUsers.find((u) => u.user_id === dpSalesCsr);
+      // Build comma-separated CSR names
+      const csrNames = dpSalesCsr
+        .map((id) => destinyUsers.find((u) => u.user_id === id)?.full_name)
+        .filter(Boolean)
+        .join(", ");
 
       const { data: request, error: requestError } = await supabase
         .from("product_requests")
