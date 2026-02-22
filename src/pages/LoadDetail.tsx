@@ -399,11 +399,11 @@ export default function LoadDetail() {
       setPtCodeToPOMap(ptToPO);
 
       // Fetch PO prices for load value calculation
-      const loadCustomerLots: string[] = [...new Set(
-        (palletsData as any || [])
-          .map((p: any) => p.pallet?.customer_lot as string | null)
-          .filter((lot: string | null): lot is string => !!lot)
-      )];
+      const loadCustomerLotsSet = new Set<string>();
+      (palletsData as any || []).forEach((p: any) => {
+        if (p.pallet?.customer_lot) loadCustomerLotsSet.add(p.pallet.customer_lot);
+      });
+      const loadCustomerLots = Array.from(loadCustomerLotsSet);
       if (loadCustomerLots.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
