@@ -11,6 +11,7 @@ import { TeamManagement } from "@/components/settings/TeamManagement";
 import { DPContactsManagement } from "@/components/settings/DPContactsManagement";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { ProductionCapacityManagement } from "@/components/settings/ProductionCapacityManagement";
+import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -85,6 +86,13 @@ export default function Settings() {
         {isActualAdmin && (
           <div style={{ animationDelay: "0.15s" }}>
             <ProductionCapacityManagement />
+          </div>
+        )}
+
+        {/* Customer Locations Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.16s" }}>
+            <CustomerLocationsManagement />
           </div>
         )}
 

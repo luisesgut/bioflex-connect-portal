@@ -23,7 +23,9 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          reception_hours: string | null
           state: string | null
+          warehouse_manager_id: string | null
           zip_code: string | null
         }
         Insert: {
@@ -34,7 +36,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          reception_hours?: string | null
           state?: string | null
+          warehouse_manager_id?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -45,10 +49,20 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          reception_hours?: string | null
           state?: string | null
+          warehouse_manager_id?: string | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customer_locations_warehouse_manager_id_fkey"
+            columns: ["warehouse_manager_id"]
+            isOneToOne: false
+            referencedRelation: "dp_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dp_contacts: {
         Row: {
