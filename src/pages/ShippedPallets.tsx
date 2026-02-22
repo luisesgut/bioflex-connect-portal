@@ -191,7 +191,7 @@ export default function ShippedPallets() {
       p.bfx_order || "",
       p.quantity,
       p.unit,
-      p.destination ? destinationLabels[p.destination] || p.destination : "",
+      p.destination ? getDestinationLabel(p.destination) : "",
       format(new Date(p.shipped_at), "yyyy-MM-dd"),
       p.delivery_date || "",
     ]);
@@ -352,7 +352,7 @@ export default function ShippedPallets() {
                 ))}
                 {filters.destination.map((val) => (
                   <Badge key={val} variant="secondary" className="gap-1">
-                    {destinationLabels[val] || val}
+                    {getDestinationLabel(val)}
                     <X
                       className="h-3 w-3 cursor-pointer"
                       onClick={() => handleFilterChange("destination", val)}
@@ -450,7 +450,7 @@ export default function ShippedPallets() {
                                 >
                                   <Checkbox checked={filters.destination.includes(val)} />
                                   <span className="text-sm">
-                                    {destinationLabels[val] || val}
+                                    {getDestinationLabel(val)}
                                   </span>
                                 </div>
                               ))}
@@ -482,7 +482,7 @@ export default function ShippedPallets() {
                         <TableCell>
                           {pallet.destination ? (
                             <Badge variant="outline">
-                              {destinationLabels[pallet.destination] || pallet.destination}
+                              {getDestinationLabel(pallet.destination)}
                             </Badge>
                           ) : (
                             "—"
