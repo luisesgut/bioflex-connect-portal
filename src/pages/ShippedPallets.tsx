@@ -62,6 +62,7 @@ interface Filters {
 
 export default function ShippedPallets() {
   const { isAdmin } = useAdmin();
+  const { getDestinationLabel } = useCustomerLocations();
   const [pallets, setPallets] = useState<ShippedPallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
