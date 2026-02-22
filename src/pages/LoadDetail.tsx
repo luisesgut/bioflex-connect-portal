@@ -398,6 +398,14 @@ export default function LoadDetail() {
 
       setTransitUpdates(transitData || []);
 
+      // Fetch destination dates
+      const { data: destDatesData } = await supabase
+        .from("load_destination_dates")
+        .select("*")
+        .eq("load_id", id);
+
+      setDestinationDates(destDatesData || []);
+
     } catch (error) {
       console.error("Error fetching load data:", error);
       toast.error("Failed to load data");
