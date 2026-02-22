@@ -2351,6 +2351,7 @@ export default function LoadDetail() {
                     destinationKey: dest.destination,
                     estimatedDate: dest.estimated_date,
                     actualDate: dest.actual_date,
+                    podPdfUrl: dest.pod_pdf_url,
                   });
                 });
 
