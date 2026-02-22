@@ -1474,7 +1474,87 @@ export default function LoadDetail() {
     }
   };
 
-  const handleGenerateCustomsDocument = async () => {
+  const handleSaveDestinationDate = async (destination: string, field: "estimated_date" | "actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate(destination + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ [field]: dateStr, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, [field]: dateStr });
+        if (error) throw error;
+      }
+
+      // If setting actual_date on a destination, update pallets with that destination as delivered
+      if (field === "actual_date" && dateStr) {
+        await supabase
+          .from("load_pallets")
+          .update({ delivery_date: dateStr })
+          .eq("load_id", id)
+          .eq("destination", destination);
+
+        // Check if ALL destinations now have actual dates - if so, mark load as delivered
+        const updatedDates = destinationDates.map((d) =>
+          d.destination === destination ? { ...d, actual_date: dateStr } : d
+        );
+        if (!existing) updatedDates.push({ load_id: id, destination, estimated_date: null, actual_date: dateStr });
+
+        const allDests = [...new Set(pallets.filter((p) => p.destination && p.destination !== "tbd").map((p) => p.destination!))];
+        const allDelivered = allDests.every((dest) => updatedDates.find((d) => d.destination === dest)?.actual_date);
+
+        if (allDelivered && allDests.length > 0) {
+          await supabase
+            .from("shipping_loads")
+            .update({ status: "delivered" })
+            .eq("id", id);
+          toast.success("All destinations delivered! Load marked as delivered.");
+        }
+      }
+
+      toast.success(`${field === "estimated_date" ? "ETA" : "Delivery date"} updated`);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving destination date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
+  };
+
+  const handleSaveCrossBorderDate = async (field: "eta_cross_border" | "cross_border_actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate("cross_border_" + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const updateData: any = { [field]: dateStr };
+      if (field === "cross_border_actual_date" && dateStr) {
+        updateData.border_crossed = true;
+      }
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update(updateData)
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(field === "eta_cross_border" ? "Border ETA updated" : "Border crossing date recorded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving cross border date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
+  };
+
+
     if (!load || pallets.length === 0) {
       toast.error("No pallets in load to generate document");
       return;
