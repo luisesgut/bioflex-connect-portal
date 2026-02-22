@@ -2830,6 +2830,7 @@ export default function LoadDetail() {
                           <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                           <TableHead>Destination</TableHead>
+                          <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
                         </TableRow>
@@ -2856,6 +2857,7 @@ export default function LoadDetail() {
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
                             </TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
                               {pallet.release_pdf_url ? (
@@ -3066,6 +3068,7 @@ export default function LoadDetail() {
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>Held By</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -3086,6 +3089,7 @@ export default function LoadDetail() {
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
@@ -3673,6 +3677,7 @@ export default function LoadDetail() {
           onOpenChange={setReleaseDialogOpen}
           selectedPallets={selectedPalletsForReleaseData}
           loadId={id!}
+          userId={user?.id}
           destinationOptions={destinationOptions}
           onAddDestination={() => setAddDestinationDialogOpen(true)}
           onComplete={() => {
