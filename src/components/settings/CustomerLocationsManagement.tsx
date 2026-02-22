@@ -375,7 +375,7 @@ export function CustomerLocationsManagement() {
                 })}
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="col-span-2 flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={updateMutation.isPending}>Save</Button>
             </div>
