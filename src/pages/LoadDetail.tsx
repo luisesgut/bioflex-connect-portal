@@ -436,6 +436,23 @@ export default function LoadDetail() {
         setPoSalesOrderMap(salesMap);
       }
 
+      // Fetch products CSR map by pt_code
+      const ptCodesInLoad = [...new Set((palletsData as any || []).map((p: any) => p.pallet?.pt_code).filter(Boolean))];
+      if (ptCodesInLoad.length > 0) {
+        const { data: csrProducts } = await supabase
+          .from("products")
+          .select("codigo_producto, pt_code, dp_sales_csr_names")
+          .or(ptCodesInLoad.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
+        const csrMap = new Map<string, string>();
+        (csrProducts || []).forEach((p: any) => {
+          const code = p.codigo_producto || p.pt_code;
+          if (code && p.dp_sales_csr_names) {
+            csrMap.set(code, p.dp_sales_csr_names);
+          }
+        });
+        setPtCodeToCsrMap(csrMap);
+      }
+
       // Fetch transit updates history
       const { data: transitData } = await supabase
         .from("transit_updates")
@@ -2786,6 +2803,7 @@ export default function LoadDetail() {
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                           <TableHead>Destination</TableHead>
                           <TableHead>Release #</TableHead>
@@ -2809,6 +2827,7 @@ export default function LoadDetail() {
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs max-w-[150px] truncate">{ptCodeToCsrMap.get(pallet.pallet.pt_code) || "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
