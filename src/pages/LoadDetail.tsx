@@ -66,6 +66,7 @@ import {
   Clock,
   Truck,
   Pencil,
+  DollarSign,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -245,6 +246,7 @@ export default function LoadDetail() {
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [revertingPallets, setRevertingPallets] = useState(false);
@@ -396,6 +398,26 @@ export default function LoadDetail() {
         }
       });
       setPtCodeToPOMap(ptToPO);
+
+      // Fetch PO prices for load value calculation
+      const loadCustomerLotsSet = new Set<string>();
+      (palletsData as any || []).forEach((p: any) => {
+        if (p.pallet?.customer_lot) loadCustomerLotsSet.add(p.pallet.customer_lot);
+      });
+      const loadCustomerLots = Array.from(loadCustomerLotsSet);
+      if (loadCustomerLots.length > 0) {
+        const { data: priceData } = await supabase
+          .from("purchase_orders")
+          .select("po_number, price_per_thousand")
+          .in("po_number", loadCustomerLots);
+        const priceMap = new Map<string, number>();
+        (priceData || []).forEach((po: any) => {
+          if (po.price_per_thousand) {
+            priceMap.set(po.po_number, po.price_per_thousand);
+          }
+        });
+        setPoPriceMap(priceMap);
+      }
 
       // Fetch transit updates history
       const { data: transitData } = await supabase
@@ -1952,24 +1974,53 @@ export default function LoadDetail() {
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Estimated Delivery</CardTitle>
-                <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {load.estimated_delivery_date
-                    ? format(new Date(load.estimated_delivery_date), "MMM d")
-                    : "-"}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {load.estimated_delivery_date
-                    ? format(new Date(load.estimated_delivery_date), "yyyy")
-                    : "No ETA set"}
-                </p>
-              </CardContent>
-            </Card>
+            {isAdmin ? (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Load Value</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    let totalValue = 0;
+                    pallets.forEach((p) => {
+                      const poNumber = p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code);
+                      const price = poNumber ? poPriceMap.get(poNumber) : undefined;
+                      if (price) {
+                        totalValue += (p.quantity / 1000) * price;
+                      }
+                    });
+                    return (
+                      <>
+                        <div className="text-2xl font-bold">
+                          ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">USD total</p>
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Estimated Delivery</CardTitle>
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "MMM d")
+                      : "-"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "yyyy")
+                      : "No ETA set"}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-4">
