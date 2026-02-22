@@ -66,6 +66,7 @@ import {
   Clock,
   Truck,
   Pencil,
+  DollarSign,
 } from "lucide-react";
 import {
   AlertDialog,
