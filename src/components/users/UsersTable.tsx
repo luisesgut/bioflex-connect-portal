@@ -25,10 +25,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Search, Send } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Pencil, Search, Send, Trash2, CheckCircle, Clock, UserPlus } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -39,6 +48,7 @@ interface UserProfile {
   company: string | null;
   user_type: string | null;
   access_profile_id: string | null;
+  invitation_status: string;
   created_at: string;
   access_profile?: { id: string; name: string } | null;
 }
@@ -59,6 +69,7 @@ export function UsersTable({ userType }: UsersTableProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     full_name: "",
@@ -78,7 +89,7 @@ export function UsersTable({ userType }: UsersTableProps) {
         .order("full_name", { ascending: true });
 
       if (error) throw error;
-      return data as UserProfile[];
+      return data as unknown as UserProfile[];
     },
   });
 
@@ -98,22 +109,13 @@ export function UsersTable({ userType }: UsersTableProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Record<string, unknown>;
-    }) => {
-      const { error } = await supabase
-        .from("profiles")
-        .update(data)
-        .eq("id", id);
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
+      const { error } = await supabase.from("profiles").update(data).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast({ title: "User updated", description: "User profile has been updated." });
+      toast({ title: "Usuario actualizado", description: "El perfil ha sido actualizado." });
       resetForm();
     },
     onError: (error) => {
@@ -121,7 +123,7 @@ export function UsersTable({ userType }: UsersTableProps) {
     },
   });
 
-  const inviteMutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: async (data: {
       email: string;
       full_name: string;
@@ -131,7 +133,7 @@ export function UsersTable({ userType }: UsersTableProps) {
       access_profile_id: string;
     }) => {
       const { data: result, error } = await supabase.functions.invoke("invite-user", {
-        body: data,
+        body: { action: "create", ...data },
       });
       if (error) throw error;
       if (result?.error) throw new Error(result.error);
@@ -140,13 +142,57 @@ export function UsersTable({ userType }: UsersTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
-        title: "Invitation sent",
-        description: "The user has been invited and will receive an email to set up their account.",
+        title: "Usuario creado",
+        description: "El usuario ha sido dado de alta. Puedes enviarle la invitación cuando lo desees.",
       });
       resetForm();
     },
     onError: (error) => {
-      toast({ title: "Error sending invitation", description: error.message, variant: "destructive" });
+      toast({ title: "Error al crear usuario", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: async (user_id: string) => {
+      const { data: result, error } = await supabase.functions.invoke("invite-user", {
+        body: { action: "invite", user_id },
+      });
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Invitación enviada",
+        description: "El usuario recibirá un correo para configurar su cuenta.",
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Error al enviar invitación", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (user_id: string) => {
+      const { data: result, error } = await supabase.functions.invoke("invite-user", {
+        body: { action: "delete", user_id },
+      });
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Usuario eliminado",
+        description: "El usuario y toda su información han sido eliminados.",
+      });
+      setDeletingUser(null);
+    },
+    onError: (error) => {
+      toast({ title: "Error al eliminar usuario", description: error.message, variant: "destructive" });
+      setDeletingUser(null);
     },
   });
 
@@ -180,7 +226,7 @@ export function UsersTable({ userType }: UsersTableProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isCreating) {
-      inviteMutation.mutate({
+      createMutation.mutate({
         email: formData.email,
         full_name: formData.full_name,
         phone: formData.phone,
@@ -201,6 +247,32 @@ export function UsersTable({ userType }: UsersTableProps) {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "verified":
+        return (
+          <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Verificado
+          </Badge>
+        );
+      case "invited":
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <Send className="h-3 w-3" />
+            Invitado
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="gap-1">
+            <Clock className="h-3 w-3" />
+            Sin verificar
+          </Badge>
+        );
+    }
+  };
+
   const filteredUsers = users?.filter((user) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -216,17 +288,17 @@ export function UsersTable({ userType }: UsersTableProps) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">
-            {userType === "internal" ? "Internal Users (Bioflex)" : "External Users (Clients)"}
+            {userType === "internal" ? "Usuarios Internos (Bioflex)" : "Usuarios Externos (Clientes)"}
           </h2>
           <p className="text-sm text-muted-foreground">
             {userType === "internal"
-              ? "Manage internal team members and their access profiles"
-              : "Manage client users and their access profiles"}
+              ? "Administra los miembros internos del equipo y sus perfiles de acceso"
+              : "Administra los usuarios cliente y sus perfiles de acceso"}
           </p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="h-4 w-4 mr-2" />
-          Invite User
+          Dar de Alta
         </Button>
       </div>
 
@@ -234,7 +306,7 @@ export function UsersTable({ userType }: UsersTableProps) {
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search by name, email, or company..."
+          placeholder="Buscar por nombre, correo o empresa..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -245,12 +317,12 @@ export function UsersTable({ userType }: UsersTableProps) {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-card max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{isCreating ? "Invite New User" : "Edit User"}</DialogTitle>
+            <DialogTitle>{isCreating ? "Dar de Alta Usuario" : "Editar Usuario"}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 pr-4">
+          <div className="flex-1 overflow-y-auto pr-4">
             <form onSubmit={handleSubmit} className="space-y-4 pb-2">
               <div className="space-y-2">
-                <Label htmlFor="user_full_name">Full Name</Label>
+                <Label htmlFor="user_full_name">Nombre Completo</Label>
                 <Input
                   id="user_full_name"
                   value={formData.full_name}
@@ -259,7 +331,7 @@ export function UsersTable({ userType }: UsersTableProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user_email">Email</Label>
+                <Label htmlFor="user_email">Correo Electrónico</Label>
                 <Input
                   id="user_email"
                   type="email"
@@ -270,12 +342,12 @@ export function UsersTable({ userType }: UsersTableProps) {
                   required
                 />
                 {!isCreating && (
-                  <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
+                  <p className="text-xs text-muted-foreground">El correo no se puede cambiar aquí</p>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user_phone">Phone</Label>
+                  <Label htmlFor="user_phone">Teléfono</Label>
                   <Input
                     id="user_phone"
                     value={formData.phone}
@@ -283,7 +355,7 @@ export function UsersTable({ userType }: UsersTableProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="user_company">Company</Label>
+                  <Label htmlFor="user_company">Empresa</Label>
                   <Input
                     id="user_company"
                     value={formData.company}
@@ -292,13 +364,13 @@ export function UsersTable({ userType }: UsersTableProps) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user_profile">Access Profile</Label>
+                <Label htmlFor="user_profile">Perfil de Acceso</Label>
                 <Select
                   value={formData.access_profile_id}
                   onValueChange={(value) => setFormData({ ...formData, access_profile_id: value })}
                 >
                   <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select a profile..." />
+                    <SelectValue placeholder="Selecciona un perfil..." />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
                     {accessProfiles?.map((profile) => (
@@ -311,40 +383,78 @@ export function UsersTable({ userType }: UsersTableProps) {
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={updateMutation.isPending || inviteMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {isCreating ? (
                     <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Invitation
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Dar de Alta
                     </>
                   ) : (
-                    "Save"
+                    "Guardar"
                   )}
                 </Button>
               </div>
             </form>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingUser} onOpenChange={(open) => !open && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Estás a punto de eliminar a <strong>{deletingUser?.full_name}</strong> ({deletingUser?.email}).
+              </p>
+              <p className="text-destructive font-medium">
+                ⚠️ Esta acción es irreversible. Toda la información ligada a esta cuenta será desvinculada o eliminada, incluyendo:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                <li>Perfil y datos personales</li>
+                <li>Órdenes de compra asociadas</li>
+                <li>Comentarios y solicitudes de cambio</li>
+                <li>Solicitudes de producto</li>
+                <li>Historial de actividad</li>
+              </ul>
+              <p className="text-sm text-muted-foreground">
+                Si deseas conservar la información, desvincula los registros antes de proceder con la eliminación.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingUser && deleteMutation.mutate(deletingUser.user_id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Eliminando..." : "Eliminar Usuario"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Table */}
       {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        <div className="text-center py-8 text-muted-foreground">Cargando...</div>
       ) : filteredUsers && filteredUsers.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              {userType === "external" && <TableHead>Company</TableHead>}
-              <TableHead>Phone</TableHead>
-              <TableHead>Access Profile</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Correo</TableHead>
+              {userType === "external" && <TableHead>Empresa</TableHead>}
+              <TableHead>Teléfono</TableHead>
+              <TableHead>Perfil de Acceso</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -360,13 +470,36 @@ export function UsersTable({ userType }: UsersTableProps) {
                   {user.access_profile ? (
                     <Badge variant="secondary">{user.access_profile.name}</Badge>
                   ) : (
-                    <span className="text-muted-foreground text-sm">No profile</span>
+                    <span className="text-muted-foreground text-sm">Sin perfil</span>
                   )}
                 </TableCell>
+                <TableCell>{getStatusBadge(user.invitation_status)}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(user)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    {user.invitation_status !== "verified" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => inviteMutation.mutate(user.user_id)}
+                        disabled={inviteMutation.isPending}
+                        title="Enviar invitación"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(user)} title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeletingUser(user)}
+                      title="Eliminar"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -374,7 +507,7 @@ export function UsersTable({ userType }: UsersTableProps) {
         </Table>
       ) : (
         <div className="text-center py-8 text-muted-foreground">
-          {searchQuery ? "No users match your search." : "No users found."}
+          {searchQuery ? "No se encontraron usuarios." : "No hay usuarios registrados."}
         </div>
       )}
     </div>
