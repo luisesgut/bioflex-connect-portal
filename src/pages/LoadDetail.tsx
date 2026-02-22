@@ -127,6 +127,11 @@ interface ShippingLoad {
   release_number: string | null;
   release_pdf_url: string | null;
   notes: string | null;
+  eta_cross_border: string | null;
+  last_reported_city: string | null;
+  documents_sent: boolean | null;
+  border_crossed: boolean | null;
+  transit_notes: string | null;
 }
 
 interface DeliveryDateEntry {
