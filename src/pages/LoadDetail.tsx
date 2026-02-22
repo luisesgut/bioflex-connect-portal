@@ -1479,6 +1479,39 @@ export default function LoadDetail() {
     }
   };
 
+  const handleEditTransitUpdate = async (updateId: string) => {
+    if (!editTransitCity.trim() && !editTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    try {
+      const updateData: any = {
+        last_reported_city: editTransitCity.trim() || null,
+        notes: editTransitNotes.trim() || null,
+      };
+      const { error } = await supabase.from("transit_updates").update(updateData).eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update modified");
+      setEditingTransitUpdate(null);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error editing transit update:", error);
+      toast.error("Failed to edit update");
+    }
+  };
+
+  const handleDeleteTransitUpdate = async (updateId: string) => {
+    try {
+      const { error } = await supabase.from("transit_updates").delete().eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update deleted");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting transit update:", error);
+      toast.error("Failed to delete update");
+    }
+  };
+
   const handleSaveDestinationDate = async (destination: string, field: "estimated_date" | "actual_date", date: Date | null) => {
     if (!id) return;
     setSavingDestDate(destination + field);
