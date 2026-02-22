@@ -400,16 +400,22 @@ export default function LoadDetail() {
       setPtCodeToPOMap(ptToPO);
 
       // Fetch PO prices for load value calculation
-      const loadCustomerLotsSet = new Set<string>();
+      // Collect PO numbers from customer_lot OR pt_code->PO fallback
+      const loadPOSet = new Set<string>();
       (palletsData as any || []).forEach((p: any) => {
-        if (p.pallet?.customer_lot) loadCustomerLotsSet.add(p.pallet.customer_lot);
+        if (p.pallet?.customer_lot) {
+          loadPOSet.add(p.pallet.customer_lot);
+        } else if (p.pallet?.pt_code) {
+          const mappedPO = ptToPO.get(p.pallet.pt_code);
+          if (mappedPO) loadPOSet.add(mappedPO);
+        }
       });
-      const loadCustomerLots = Array.from(loadCustomerLotsSet);
-      if (loadCustomerLots.length > 0) {
+      const loadPONumbers = Array.from(loadPOSet);
+      if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
           .select("po_number, price_per_thousand")
-          .in("po_number", loadCustomerLots);
+          .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
