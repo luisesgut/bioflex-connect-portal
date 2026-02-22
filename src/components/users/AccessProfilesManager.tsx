@@ -366,7 +366,7 @@ export function AccessProfilesManager() {
                 </Button>
               </div>
             </form>
-            </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
 
