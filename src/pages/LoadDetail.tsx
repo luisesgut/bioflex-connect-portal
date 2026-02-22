@@ -331,7 +331,22 @@ export default function LoadDetail() {
         .eq("load_id", id);
 
       if (palletsError) throw palletsError;
-      setPallets((palletsData as any) || []);
+      const typedPallets = (palletsData as any) || [];
+      setPallets(typedPallets);
+
+      // Fetch profiles for actioned_by users
+      const actionedUserIds = [...new Set(typedPallets.map((p: any) => p.actioned_by).filter(Boolean))] as string[];
+      if (actionedUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", actionedUserIds);
+        const pMap = new Map<string, string>();
+        (profilesData || []).forEach((p: any) => {
+          if (p.user_id && p.full_name) pMap.set(p.user_id, p.full_name.split(" ")[0]);
+        });
+        setProfilesMap(pMap);
+      }
 
       // Fetch release request
       const { data: requestData } = await supabase
