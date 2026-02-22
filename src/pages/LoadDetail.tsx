@@ -2242,7 +2242,7 @@ export default function LoadDetail() {
                                           setEditTransitNotes(update.notes || "");
                                         }}
                                       >
-                                        <Edit2 className="h-3 w-3" />
+                                        <Pencil className="h-3 w-3" />
                                       </Button>
                                       <Button
                                         size="icon"
