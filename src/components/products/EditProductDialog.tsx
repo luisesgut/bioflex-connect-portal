@@ -54,13 +54,13 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
   const [form, setForm] = useState<Partial<Product>>({});
 
-  const { data: dpContacts } = useQuery({
-    queryKey: ["dp-contacts-active"],
+  const { data: externalUsers } = useQuery({
+    queryKey: ["external-users-active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dp_contacts")
-        .select("id, full_name, email")
-        .eq("is_active", true)
+        .from("profiles")
+        .select("id, user_id, full_name, email")
+        .eq("user_type", "external")
         .order("full_name");
       if (error) throw error;
       return data;
@@ -362,17 +362,18 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               <PopoverContent className="w-80 p-0" align="start">
                 <ScrollArea className="h-60">
                   <div className="p-2 space-y-1">
-                    {dpContacts?.map((c) => {
+                    {externalUsers?.map((c) => {
                       const selected = form.dp_sales_csr_names ? form.dp_sales_csr_names.split(", ").filter(Boolean) : [];
-                      const isChecked = selected.includes(c.full_name);
+                      const isChecked = selected.includes(c.full_name || "");
                       return (
                         <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                           <Checkbox
                             checked={isChecked}
                             onCheckedChange={() => {
+                              const name = c.full_name || "";
                               const updated = isChecked
-                                ? selected.filter((n) => n !== c.full_name)
-                                : [...selected, c.full_name];
+                                ? selected.filter((n) => n !== name)
+                                : [...selected, name];
                               setForm({ ...form, dp_sales_csr_names: updated.join(", ") || null });
                             }}
                           />
@@ -380,8 +381,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
                         </label>
                       );
                     })}
-                    {(!dpContacts || dpContacts.length === 0) && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No contacts available. Add them in Settings.</p>
+                    {(!externalUsers || externalUsers.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No external users available.</p>
                     )}
                   </div>
                 </ScrollArea>

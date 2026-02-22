@@ -160,16 +160,16 @@ export function CustomerLocationsManagement() {
     },
   });
 
-  const { data: dpContacts } = useQuery({
-    queryKey: ["dp-contacts-active"],
+  const { data: externalUsers } = useQuery({
+    queryKey: ["external-users-active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dp_contacts")
-        .select("*")
-        .eq("is_active", true)
+        .from("profiles")
+        .select("id, user_id, full_name, email")
+        .eq("user_type", "external")
         .order("full_name");
       if (error) throw error;
-      return data as DPContact[];
+      return data;
     },
   });
 
