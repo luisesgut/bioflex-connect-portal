@@ -43,12 +43,6 @@ interface CustomerLocation {
   created_at: string;
 }
 
-interface DPContact {
-  id: string;
-  full_name: string;
-  email: string;
-  is_active: boolean;
-}
 
 const DAYS = [
   { key: "mon", label: "Mon" },
