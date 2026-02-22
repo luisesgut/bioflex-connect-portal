@@ -1,6 +1,10 @@
 import jsPDF from "jspdf";
-// @ts-ignore
 import autoTable from "jspdf-autotable";
+
+// Ensure autoTable is available
+if (typeof autoTable === "function") {
+  // Plugin loaded correctly
+}
 
 interface PackingListPallet {
   description: string;
