@@ -2343,12 +2343,25 @@ export default function LoadDetail() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "text-sm font-medium leading-none",
-                                step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
-                              )}>
-                                {step.label}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "text-sm font-medium leading-none",
+                                  step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                  {step.label}
+                                </p>
+                                {step.type === "destination" && load.invoice_number && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs gap-1"
+                                    onClick={() => handleDownloadPackingList(step.destinationKey!)}
+                                  >
+                                    <FileDown className="h-3 w-3" />
+                                    PL
+                                  </Button>
+                                )}
+                              </div>
                               {step.type === "departed" && step.date && (
                                 <p className="text-xs text-muted-foreground mt-1">{step.date}</p>
                               )}
