@@ -228,14 +228,15 @@ export default function ShippingLoads() {
   const handleConfirmTransit = async () => {
     if (!transitLoadPending || !transitShipDate) return;
     
-    try {
-      // Update ship date first
-      await supabase
-        .from("shipping_loads")
-        .update({ shipping_date: format(transitShipDate, "yyyy-MM-dd") })
-        .eq("id", transitLoadPending.id);
-    } catch (error) {
-      console.error("Error updating ship date:", error);
+    const { error: shipDateError } = await supabase
+      .from("shipping_loads")
+      .update({ shipping_date: format(transitShipDate, "yyyy-MM-dd") })
+      .eq("id", transitLoadPending.id);
+
+    if (shipDateError) {
+      console.error("Error updating ship date:", shipDateError);
+      toast.error("Error updating ship date");
+      return;
     }
 
     await executeStatusChange(transitLoadPending, "in_transit");

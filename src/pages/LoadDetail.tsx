@@ -1286,19 +1286,21 @@ export default function LoadDetail() {
       setInTransitConfirmOpen(false);
       return;
     }
-    // Update ship date if changed
+    // Update ship date first, then proceed with status change
     if (inTransitShipDate && id) {
-      try {
-        await supabase
-          .from("shipping_loads")
-          .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
-          .eq("id", id);
-      } catch (error) {
-        console.error("Error updating ship date:", error);
+      const { error: shipDateError } = await supabase
+        .from("shipping_loads")
+        .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
+        .eq("id", id);
+      
+      if (shipDateError) {
+        console.error("Error updating ship date:", shipDateError);
+        toast.error("Error updating ship date");
+        return;
       }
     }
     setInTransitConfirmOpen(false);
-    handleUpdateLoadStatus("in_transit");
+    await handleUpdateLoadStatus("in_transit");
   };
 
   const handleUpdateLoadStatus = async (newStatus: string, deliveryDatesData?: DeliveryDateEntry[]) => {
