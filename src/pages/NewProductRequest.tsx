@@ -175,9 +175,9 @@ export default function NewProductRequest() {
           item_type: itemType || null,
           item_description: itemDescription.trim() || null,
           assigned_designer: assignedDesigner || null,
-          dp_sales_csr_names: selectedCsr?.full_name || null,
+          dp_sales_csr_names: csrNames || null,
           tech_spec_filename: techSpecFile?.name || null,
-          status: artworkFiles.length > 0 ? "artwork_uploaded" : techSpecFile ? "specs_submitted" : "specs_submitted",
+          status: artworkFiles.length > 0 ? "artwork_uploaded" : "specs_submitted",
           engineering_status: "pending",
         } as any)
         .select()
