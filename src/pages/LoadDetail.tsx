@@ -2430,7 +2430,87 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* PO Summary for pallets in load */}
+        {/* Invoice Section - In Transit / Delivered */}
+        {(load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Invoice
+              </CardTitle>
+              <CardDescription>
+                Invoice details for this shipment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Invoice Number */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Invoice Number</Label>
+                  {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Enter invoice number"
+                        value={invoiceNumber}
+                        onChange={(e) => setInvoiceNumber(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveInvoiceNumber}
+                        disabled={savingInvoice || !invoiceNumber.trim() || invoiceNumber.trim() === (load.invoice_number || "")}
+                      >
+                        {savingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-mono">{load.invoice_number || "—"}</p>
+                  )}
+                </div>
+
+                {/* Invoice PDF */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Invoice PDF</Label>
+                  <div className="flex items-center gap-2">
+                    {load.invoice_pdf_url ? (
+                      <button
+                        onClick={() => openStorageFile(load.invoice_pdf_url, "release-documents")}
+                        className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-sm"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Invoice PDF
+                      </button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No file uploaded</span>
+                    )}
+                    {isAdmin && (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={handleUploadInvoicePdf}
+                          disabled={uploadingInvoicePdf}
+                        />
+                        <Button variant="outline" size="sm" asChild disabled={uploadingInvoicePdf}>
+                          <span>
+                            {uploadingInvoicePdf ? (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            ) : (
+                              <Plus className="mr-1 h-3 w-3" />
+                            )}
+                            {load.invoice_pdf_url ? "Replace" : "Upload"}
+                          </span>
+                        </Button>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
         {pallets.length > 0 && (
           <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} />
         )}
