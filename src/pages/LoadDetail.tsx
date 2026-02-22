@@ -1554,7 +1554,7 @@ export default function LoadDetail() {
     }
   };
 
-
+  const handleGenerateCustomsDocument = async () => {
     if (!load || pallets.length === 0) {
       toast.error("No pallets in load to generate document");
       return;
