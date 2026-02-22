@@ -251,6 +251,7 @@ export default function LoadDetail() {
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
+  const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
   const [revertingPallets, setRevertingPallets] = useState(false);
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
   const [palletsToReplace, setPalletsToReplace] = useState<Set<string>>(new Set());
