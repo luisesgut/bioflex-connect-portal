@@ -86,6 +86,7 @@ import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
+import { generatePackingList } from "@/utils/generatePackingList";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
@@ -209,7 +210,7 @@ export default function LoadDetail() {
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
-  const { destinationOptions, getDestinationLabel } = useCustomerLocations();
+  const { locations, destinationOptions, getDestinationLabel } = useCustomerLocations();
   const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
   const [pallets, setPallets] = useState<LoadPallet[]>([]);
@@ -247,6 +248,7 @@ export default function LoadDetail() {
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
+  const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, string | null>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [revertingPallets, setRevertingPallets] = useState(false);
@@ -414,15 +416,18 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand")
+          .select("po_number, price_per_thousand, sales_order_number")
           .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
+        const salesMap = new Map<string, string | null>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
           }
+          salesMap.set(po.po_number, po.sales_order_number || null);
         });
         setPoPriceMap(priceMap);
+        setPoSalesOrderMap(salesMap);
       }
 
       // Fetch transit updates history
@@ -507,6 +512,49 @@ export default function LoadDetail() {
     } finally {
       setUploadingInvoicePdf(false);
     }
+  };
+
+  const handleDownloadPackingList = (destinationCode: string) => {
+    if (!load) return;
+    const destPallets = pallets.filter((p) => p.destination === destinationCode);
+    if (destPallets.length === 0) {
+      toast.error("No pallets for this destination");
+      return;
+    }
+    const loc = locations.find((l) => l.code === destinationCode);
+    const destInfo = {
+      name: loc ? (loc.city && loc.state ? `${loc.name}, ${loc.state}` : loc.name) : destinationCode,
+      address: loc?.address || null,
+      city: loc?.city || null,
+      state: loc?.state || null,
+      zip_code: loc?.zip_code || null,
+    };
+    const poInfoMap = new Map<string, { sales_order_number: string | null }>();
+    poSalesOrderMap.forEach((salesOrder, poNumber) => {
+      poInfoMap.set(poNumber, { sales_order_number: salesOrder });
+    });
+    generatePackingList({
+      loadNumber: load.load_number,
+      shippingDate: load.shipping_date,
+      invoiceNumber: load.invoice_number || "",
+      destination: destInfo,
+      pallets: destPallets.map((p) => ({
+        description: p.pallet.description,
+        customer_lot: p.pallet.customer_lot,
+        quantity: p.quantity,
+        release_number: p.release_number,
+        pt_code: p.pallet.pt_code,
+        gross_weight: p.pallet.gross_weight,
+        net_weight: p.pallet.net_weight,
+        pieces: p.pallet.pieces,
+        unit: p.pallet.unit,
+      })),
+      poInfoMap,
+      resolveCustomerPO: (pallet) => {
+        if (pallet.customer_lot) return pallet.customer_lot;
+        return ptCodeToPOMap.get(pallet.pt_code) || "-";
+      },
+    });
   };
 
   // Sort pallets by Customer PO (grouped), then by quantity descending within each group
@@ -2295,12 +2343,25 @@ export default function LoadDetail() {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "text-sm font-medium leading-none",
-                                step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
-                              )}>
-                                {step.label}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "text-sm font-medium leading-none",
+                                  step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                  {step.label}
+                                </p>
+                                {step.type === "destination" && load.invoice_number && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs gap-1"
+                                    onClick={() => handleDownloadPackingList(step.destinationKey!)}
+                                  >
+                                    <FileDown className="h-3 w-3" />
+                                    PL
+                                  </Button>
+                                )}
+                              </div>
                               {step.type === "departed" && step.date && (
                                 <p className="text-xs text-muted-foreground mt-1">{step.date}</p>
                               )}
