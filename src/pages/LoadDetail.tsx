@@ -518,6 +518,46 @@ export default function LoadDetail() {
     }
   };
 
+  const handleUploadPod = async (destination: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingPod(destination);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `pod/${id}/${destination}_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const storagePath = `release-documents:${filePath}`;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ pod_pdf_url: storagePath, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, pod_pdf_url: storagePath });
+        if (error) throw error;
+      }
+
+      toast.success("POD uploaded successfully");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading POD:", error);
+      toast.error("Failed to upload POD");
+    } finally {
+      setUploadingPod(null);
+      // Reset the input so same file can be re-uploaded
+      e.target.value = "";
+    }
+  };
+
   const handleDownloadPackingList = async (destinationCode: string) => {
     if (!load) return;
     const destPallets = pallets.filter((p) => p.destination === destinationCode);
