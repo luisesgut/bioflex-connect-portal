@@ -286,22 +286,6 @@ export default function ShippingLoads() {
     }
   };
 
-  const handleDateChange = async (loadId: string, field: 'shipping_date' | 'estimated_delivery_date', date: Date) => {
-    try {
-      const { error } = await supabase
-        .from("shipping_loads")
-        .update({ [field]: format(date, "yyyy-MM-dd") })
-        .eq("id", loadId);
-
-      if (error) throw error;
-
-      toast.success("Date updated successfully");
-      fetchData();
-    } catch (error) {
-      console.error("Error updating date:", error);
-      toast.error("Failed to update date");
-    }
-  };
 
   // Get release request info for a load
   const getReleaseForLoad = (loadId: string) => {
