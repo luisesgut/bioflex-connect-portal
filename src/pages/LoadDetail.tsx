@@ -278,6 +278,7 @@ export default function LoadDetail() {
     actual_date: string | null;
   }>>([]);
   const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
+  const [uploadingPod, setUploadingPod] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
