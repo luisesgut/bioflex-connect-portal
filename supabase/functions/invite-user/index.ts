@@ -154,7 +154,21 @@ Deno.serve(async (req) => {
 
       // Don't allow deleting yourself
       if (user_id === caller.id) {
-        return new Response(JSON.stringify({ error: "Cannot delete your own account" }), {
+        return new Response(JSON.stringify({ error: "No puedes eliminar tu propia cuenta" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Don't allow deleting the last admin
+      const { data: adminRoles } = await adminClient
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      
+      const isTargetAdmin = adminRoles?.some((r: any) => r.user_id === user_id);
+      if (isTargetAdmin && adminRoles && adminRoles.length <= 1) {
+        return new Response(JSON.stringify({ error: "No se puede eliminar al último administrador del sistema" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
