@@ -1709,12 +1709,89 @@ export default function LoadDetail() {
                 {statusLabels[load.status] || load.status.replace("_", " ")}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
-              Shipping: {format(new Date(load.shipping_date), "MMMM d, yyyy")}
-              {load.estimated_delivery_date && (
-                <> • ETA: {format(new Date(load.estimated_delivery_date), "MMMM d, yyyy")}</>
-              )}
-            </p>
+            <div className="flex items-center gap-4 mt-1 flex-wrap">
+              {/* Ship Date */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="text-muted-foreground">Ship Date:</span>
+                {isAdmin ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(load.shipping_date)}
+                        onSelect={(date) => {
+                          if (date && id) {
+                            supabase
+                              .from("shipping_loads")
+                              .update({ shipping_date: format(date, "yyyy-MM-dd") })
+                              .eq("id", id)
+                              .then(({ error }) => {
+                                if (error) { toast.error("Failed to update ship date"); return; }
+                                toast.success("Ship date updated");
+                                fetchLoadData();
+                              });
+                          }
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <span className="font-medium">{format(new Date(load.shipping_date), "MMM d, yyyy")}</span>
+                )}
+              </div>
+              <span className="text-muted-foreground">•</span>
+              {/* Delivery Date */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="text-muted-foreground">Delivery Date:</span>
+                {isAdmin ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {load.estimated_delivery_date
+                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                          : "Set date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                        onSelect={(date) => {
+                          if (date && id) {
+                            supabase
+                              .from("shipping_loads")
+                              .update({ estimated_delivery_date: format(date, "yyyy-MM-dd") })
+                              .eq("id", id)
+                              .then(({ error }) => {
+                                if (error) { toast.error("Failed to update delivery date"); return; }
+                                toast.success("Delivery date updated");
+                                fetchLoadData();
+                              });
+                          }
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <span className="font-medium">
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                      : "-"}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
@@ -1924,24 +2001,31 @@ export default function LoadDetail() {
               <>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">POs in Load</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">pallets with destination</p>
+                    {(() => {
+                      const uniquePOs = new Set(
+                        pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                      );
+                      return (
+                        <>
+                          <div className="text-2xl font-bold">{uniquePOs.size}</div>
+                          <p className="text-xs text-muted-foreground">purchase orders</p>
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Release #</CardTitle>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">Available Inventory</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{load.release_number || "-"}</div>
-                    <p className="text-xs text-muted-foreground">from customer</p>
+                    <div className="text-2xl font-bold">{availablePallets.length}</div>
+                    <p className="text-xs text-muted-foreground">pallets in inventory</p>
                   </CardContent>
                 </Card>
               </>
