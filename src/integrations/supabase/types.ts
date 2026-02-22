@@ -92,8 +92,8 @@ export type Database = {
             foreignKeyName: "customer_locations_warehouse_manager_id_fkey"
             columns: ["warehouse_manager_id"]
             isOneToOne: false
-            referencedRelation: "dp_contacts"
-            referencedColumns: ["id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
