@@ -327,7 +327,7 @@ export default function LoadDetail() {
           is_on_hold,
           actioned_by,
           actioned_at,
-          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces)
+          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces, is_virtual)
         `)
         .eq("load_id", id);
 
