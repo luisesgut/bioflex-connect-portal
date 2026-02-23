@@ -114,6 +114,7 @@ export default function ShippingLoads() {
   const { getDestinationLabel } = useCustomerLocations();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
+  const [releasedPalletsMap, setReleasedPalletsMap] = useState<Map<string, number>>(new Map());
   const [destinationDatesMap, setDestinationDatesMap] = useState<Map<string, Array<{ destination: string; actual_date: string | null }>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
