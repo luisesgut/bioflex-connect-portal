@@ -248,17 +248,55 @@ export default function ProductRequestDetail() {
   const [feedback, setFeedback] = useState("");
   const [feedbackAction, setFeedbackAction] = useState<'approve' | 'reject' | null>(null);
   
-  // Internal registration
-  const [bionetCode, setBionetCode] = useState("");
-  const [sapCode, setSapCode] = useState("");
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editProductName, setEditProductName] = useState("");
+  const [editItemIdCode, setEditItemIdCode] = useState("");
+  const [editCustomer, setEditCustomer] = useState("");
+  const [editItemType, setEditItemType] = useState("");
+  const [editAssignedDesigner, setEditAssignedDesigner] = useState("");
+  const [editDpSalesCsr, setEditDpSalesCsr] = useState<string[]>([]);
+  const [editItemDescription, setEditItemDescription] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
+  // Dropdown data
+  const [customerOptions, setCustomerOptions] = useState<{ id: string; label: string }[]>([]);
+  const [itemTypeOptions, setItemTypeOptions] = useState<{ id: string; label: string }[]>([]);
+  const [destinyUsers, setDestinyUsers] = useState<{ user_id: string; full_name: string }[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchRequest();
       fetchPCVersions();
       fetchEngineeringProposals();
+      fetchDropdownOptions();
+      fetchDestinyUsers();
     }
   }, [id]);
+
+  const fetchDropdownOptions = async () => {
+    const { data } = await supabase
+      .from("dropdown_options")
+      .select("id, label, category")
+      .in("category", ["final_customer", "item_type"])
+      .eq("is_active", true)
+      .order("sort_order");
+    if (data) {
+      setCustomerOptions(data.filter((d) => d.category === "final_customer"));
+      setItemTypeOptions(data.filter((d) => d.category === "item_type"));
+    }
+  };
+
+  const fetchDestinyUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .eq("user_type", "external")
+      .like("email", "%destinypkg%")
+      .order("full_name");
+    if (data) setDestinyUsers(data as any);
+  };
 
   const fetchRequest = async () => {
     try {
