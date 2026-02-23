@@ -688,7 +688,7 @@ export default function OrderDetail() {
           </div>
 
           {/* Comments Section */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="lg:col-span-1 space-y-4 overflow-visible relative z-10">
             {/* Customer Comments */}
             <POComments
               purchaseOrderId={order.id}
@@ -698,11 +698,13 @@ export default function OrderDetail() {
 
             {/* Internal Notes - Admin Only */}
             {isAdmin && (
-              <POComments
-                purchaseOrderId={order.id}
-                isInternal={true}
-                title="Internal Notes"
-              />
+              <div className="relative z-20">
+                <POComments
+                  purchaseOrderId={order.id}
+                  isInternal={true}
+                  title="Internal Notes"
+                />
+              </div>
             )}
           </div>
         </div>
