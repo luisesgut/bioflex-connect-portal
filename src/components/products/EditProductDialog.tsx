@@ -26,12 +26,24 @@ interface Product {
   tipo_empaque: string | null;
   pt_code: string | null;
   pieces_per_pallet: number | null;
+  piezas_por_paquete: number | null;
+  paquete_por_caja: number | null;
+  piezas_totales_por_caja: number | null;
   print_card: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
+}
+
+interface DestinyProduct {
+  codigoProducto: string | null;
+  TipoEmpaque: string | null;
+  PaquetePorCaja: number | null;
+  PiezasPorPaquete: number | null;
+  PiezasTotalePorCaja: number | null;
+  UnidadesPorTarima: number | null;
 }
 
 interface EditProductDialogProps {
@@ -52,6 +64,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const bfxSpecRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<Partial<Product>>({});
+  const [destinyProductsByCode, setDestinyProductsByCode] = useState<Record<string, DestinyProduct>>({});
 
   const { data: dpContacts } = useQuery({
     queryKey: ["dp-contacts-active"],
@@ -83,10 +96,81 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const getOptions = (category: string) =>
     (dropdownOptions || []).filter((o) => o.category === category);
 
+  const normalizeCode = (value: string | null | undefined) => value?.trim().toUpperCase() || "";
+
+  const parseNullableNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const isMissingTextValue = (value: string | null | undefined) => !value || value.trim() === "" || value.trim() === "0";
+  const isMissingNumericValue = (value: number | null | undefined) => value === null || value === 0;
+
+  const buildFormWithDestinyData = (base: Partial<Product>) => {
+    const record =
+      destinyProductsByCode[normalizeCode(base.pt_code)] ||
+      destinyProductsByCode[normalizeCode(base.customer_item)];
+
+    if (!record) return base;
+
+    const piezasTotalesPorCaja = parseNullableNumber(record.PiezasTotalePorCaja);
+    const unidadesPorTarima = parseNullableNumber(record.UnidadesPorTarima);
+    const piecesPerPallet =
+      unidadesPorTarima !== null && piezasTotalesPorCaja !== null
+        ? unidadesPorTarima * piezasTotalesPorCaja
+        : null;
+
+    return {
+      ...base,
+      tipo_empaque: record.TipoEmpaque,
+      paquete_por_caja: parseNullableNumber(record.PaquetePorCaja),
+      piezas_por_paquete: parseNullableNumber(record.PiezasPorPaquete),
+      piezas_totales_por_caja: piezasTotalesPorCaja,
+      pieces_per_pallet: piecesPerPallet,
+    };
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    if (Object.keys(destinyProductsByCode).length > 0) return;
+
+    let isMounted = true;
+    const loadDestinyProducts = async () => {
+      try {
+        const response = await fetch("/productos_destiny.json");
+        if (!response.ok) throw new Error("Failed to load productos_destiny.json");
+        const raw = (await response.json()) as DestinyProduct[];
+        if (!isMounted) return;
+
+        const mapped = raw.reduce<Record<string, DestinyProduct>>((acc, item) => {
+          const key = normalizeCode(item.codigoProducto);
+          if (key) acc[key] = item;
+          return acc;
+        }, {});
+
+        setDestinyProductsByCode(mapped);
+      } catch (error) {
+        console.error("Error loading productos_destiny.json:", error);
+        toast({
+          title: "Warning",
+          description: "Could not load packaging data from JSON.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadDestinyProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, destinyProductsByCode, toast]);
+
   // Initialize form when product changes
   useEffect(() => {
     if (product && open) {
-      setForm({
+      const initialForm: Partial<Product> = {
         customer_item: product.customer_item,
         item_description: product.item_description,
         customer: product.customer,
@@ -94,20 +178,29 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: product.tipo_empaque,
         pt_code: product.pt_code,
         pieces_per_pallet: product.pieces_per_pallet,
+        piezas_por_paquete: product.piezas_por_paquete,
+        paquete_por_caja: product.paquete_por_caja,
+        piezas_totales_por_caja: product.piezas_totales_por_caja,
         print_card: product.print_card,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
         bfx_spec_url: (product as any).bfx_spec_url || null,
         dp_sales_csr_names: product.dp_sales_csr_names,
         activa: product.activa,
-      });
+      };
+      setForm(buildFormWithDestinyData(initialForm));
     }
-  }, [product, open]);
+  }, [product, open, destinyProductsByCode]);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm((prev) => buildFormWithDestinyData(prev));
+  }, [form.pt_code, form.customer_item, open, destinyProductsByCode]);
 
   // Reset form when product changes
   const resetForm = () => {
     if (product) {
-      setForm({
+      const initialForm: Partial<Product> = {
         customer_item: product.customer_item,
         item_description: product.item_description,
         customer: product.customer,
@@ -115,13 +208,17 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: product.tipo_empaque,
         pt_code: product.pt_code,
         pieces_per_pallet: product.pieces_per_pallet,
+        piezas_por_paquete: product.piezas_por_paquete,
+        paquete_por_caja: product.paquete_por_caja,
+        piezas_totales_por_caja: product.piezas_totales_por_caja,
         print_card: product.print_card,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
         bfx_spec_url: (product as any).bfx_spec_url || null,
         dp_sales_csr_names: product.dp_sales_csr_names,
         activa: product.activa,
-      });
+      };
+      setForm(buildFormWithDestinyData(initialForm));
     }
   };
 
@@ -173,6 +270,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: form.tipo_empaque || null,
         pt_code: form.pt_code || null,
         pieces_per_pallet: form.pieces_per_pallet || null,
+        piezas_por_paquete: form.piezas_por_paquete || null,
+        paquete_por_caja: form.paquete_por_caja || null,
+        piezas_totales_por_caja: form.piezas_totales_por_caja || null,
         print_card: form.print_card || null,
         print_card_url: form.print_card_url || null,
         customer_tech_spec_url: form.customer_tech_spec_url || null,
@@ -242,16 +342,20 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
             <div className="space-y-2">
               <Label>Tipo Empaque</Label>
-              <Select value={form.tipo_empaque || ""} onValueChange={(v) => setForm({ ...form, tipo_empaque: v || null })}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Select tipo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {getOptions("tipo_empaque").map((o) => (
-                    <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isMissingTextValue(form.tipo_empaque) ? (
+                <Select value={form.tipo_empaque || ""} onValueChange={(v) => setForm({ ...form, tipo_empaque: v || null })}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getOptions("tipo_empaque").map((o) => (
+                      <SelectItem key={o.id} value={o.label}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={form.tipo_empaque || ""} readOnly className="bg-muted" />
+              )}
             </div>
           </div>
 
@@ -261,8 +365,47 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               <Input value={form.pt_code || ""} onChange={(e) => setForm({ ...form, pt_code: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>Packages per Box</Label>
+              <Input
+                type="number"
+                value={form.paquete_por_caja ?? ""}
+                readOnly={!isMissingNumericValue(form.paquete_por_caja)}
+                className={!isMissingNumericValue(form.paquete_por_caja) ? "bg-muted" : ""}
+                onChange={(e) => setForm({ ...form, paquete_por_caja: e.target.value ? Number(e.target.value) : null })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Pieces per Package</Label>
+              <Input
+                type="number"
+                value={form.piezas_por_paquete ?? ""}
+                readOnly={!isMissingNumericValue(form.piezas_por_paquete)}
+                className={!isMissingNumericValue(form.piezas_por_paquete) ? "bg-muted" : ""}
+                onChange={(e) => setForm({ ...form, piezas_por_paquete: e.target.value ? Number(e.target.value) : null })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Total Pieces per Box</Label>
+              <Input
+                type="number"
+                value={form.piezas_totales_por_caja ?? ""}
+                readOnly={!isMissingNumericValue(form.piezas_totales_por_caja)}
+                className={!isMissingNumericValue(form.piezas_totales_por_caja) ? "bg-muted" : ""}
+                onChange={(e) => setForm({ ...form, piezas_totales_por_caja: e.target.value ? Number(e.target.value) : null })}
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Pieces per Pallet</Label>
-              <Input type="number" value={form.pieces_per_pallet ?? ""} onChange={(e) => setForm({ ...form, pieces_per_pallet: e.target.value ? Number(e.target.value) : null })} />
+              <Input
+                type="number"
+                value={form.pieces_per_pallet ?? ""}
+                readOnly={!isMissingNumericValue(form.pieces_per_pallet)}
+                className={!isMissingNumericValue(form.pieces_per_pallet) ? "bg-muted" : ""}
+                onChange={(e) => setForm({ ...form, pieces_per_pallet: e.target.value ? Number(e.target.value) : null })}
+              />
             </div>
           </div>
 
