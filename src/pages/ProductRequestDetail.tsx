@@ -298,7 +298,70 @@ export default function ProductRequestDetail() {
     if (data) setDestinyUsers(data as any);
   };
 
-  const fetchRequest = async () => {
+  // Internal registration
+  const [bionetCode, setBionetCode] = useState("");
+  const [sapCode, setSapCode] = useState("");
+
+  const startEditing = () => {
+    if (!request) return;
+    setEditProductName(request.product_name || "");
+    setEditItemIdCode(request.item_id_code || "");
+    setEditCustomer(request.customer || "");
+    setEditItemType(request.item_type || "");
+    setEditAssignedDesigner((request as any).assigned_designer || "");
+    // Parse CSR names back to user IDs
+    const csrNames = (request as any).dp_sales_csr_names || "";
+    if (csrNames) {
+      const ids = destinyUsers
+        .filter((u) => csrNames.includes(u.full_name))
+        .map((u) => u.user_id);
+      setEditDpSalesCsr(ids);
+    } else {
+      setEditDpSalesCsr([]);
+    }
+    setEditItemDescription(request.item_description || "");
+    setEditNotes(request.notes || "");
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+  };
+
+  const saveEdits = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const csrNames = editDpSalesCsr
+        .map((uid) => destinyUsers.find((u) => u.user_id === uid)?.full_name)
+        .filter(Boolean)
+        .join(", ");
+
+      await supabase
+        .from("product_requests")
+        .update({
+          product_name: editProductName.trim(),
+          item_id_code: editItemIdCode.trim() || null,
+          customer: editCustomer || null,
+          item_type: editItemType || null,
+          assigned_designer: editAssignedDesigner || null,
+          dp_sales_csr_names: csrNames || null,
+          item_description: editItemDescription.trim() || null,
+          notes: editNotes.trim() || null,
+        })
+        .eq("id", id);
+
+      toast.success("Product information updated");
+      setIsEditing(false);
+      fetchRequest();
+    } catch (error) {
+      console.error("Error saving:", error);
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
     try {
       const { data, error } = await supabase
         .from('product_requests')
