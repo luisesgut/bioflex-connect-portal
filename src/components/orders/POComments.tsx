@@ -302,7 +302,7 @@ export function POComments({ purchaseOrderId, isInternal, title }: POCommentsPro
   };
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           {isInternal ? (
