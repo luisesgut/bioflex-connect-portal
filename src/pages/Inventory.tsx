@@ -20,12 +20,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
+import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 
 interface SAPInventoryItem {
   id: string;
@@ -68,6 +69,7 @@ export default function Inventory() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [sapUnavailable, setSapUnavailable] = useState(false);
+  const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
@@ -434,18 +436,27 @@ export default function Inventory() {
             )}
           </div>
           {isAdmin && (
-            <Button
-              variant="outline"
-              onClick={() => syncSAPInventory()}
-              disabled={syncing}
-            >
-              {syncing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Sincronizar SAP
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateVirtualOpen(true)}
+              >
+                <Ghost className="mr-2 h-4 w-4" />
+                + Virtual
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => syncSAPInventory()}
+                disabled={syncing}
+              >
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Sincronizar SAP
+              </Button>
+            </div>
           )}
         </div>
 
@@ -551,6 +562,13 @@ export default function Inventory() {
             </Table>
           </div>
         )}
+
+        {/* Create Virtual Pallet Dialog */}
+        <CreateVirtualPalletDialog
+          open={createVirtualOpen}
+          onOpenChange={setCreateVirtualOpen}
+          onCreated={loadFromDB}
+        />
       </div>
     </MainLayout>
   );

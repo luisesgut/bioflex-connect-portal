@@ -267,6 +267,8 @@ export type Database = {
           fecha: string
           gross_weight: number | null
           id: string
+          is_virtual: boolean
+          linked_real_pallet_id: string | null
           net_weight: number | null
           pallet_type: string | null
           pieces: number | null
@@ -286,6 +288,8 @@ export type Database = {
           fecha: string
           gross_weight?: number | null
           id?: string
+          is_virtual?: boolean
+          linked_real_pallet_id?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
@@ -305,6 +309,8 @@ export type Database = {
           fecha?: string
           gross_weight?: number | null
           id?: string
+          is_virtual?: boolean
+          linked_real_pallet_id?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
@@ -316,7 +322,15 @@ export type Database = {
           unit?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inventory_pallets_linked_real_pallet_id_fkey"
+            columns: ["linked_real_pallet_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_pallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       load_comments: {
         Row: {
