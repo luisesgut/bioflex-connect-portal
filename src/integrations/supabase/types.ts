@@ -1430,6 +1430,60 @@ export type Database = {
           },
         ]
       }
+      sap_inventory: {
+        Row: {
+          bfx_order: string | null
+          description: string | null
+          fecha: string | null
+          gross_weight: number | null
+          id: string
+          net_weight: number | null
+          pallet_type: string | null
+          pieces: number | null
+          pt_code: string | null
+          raw_data: Json | null
+          status: string | null
+          stock: number | null
+          synced_at: string | null
+          traceability: string | null
+          unit: string | null
+        }
+        Insert: {
+          bfx_order?: string | null
+          description?: string | null
+          fecha?: string | null
+          gross_weight?: number | null
+          id?: string
+          net_weight?: number | null
+          pallet_type?: string | null
+          pieces?: number | null
+          pt_code?: string | null
+          raw_data?: Json | null
+          status?: string | null
+          stock?: number | null
+          synced_at?: string | null
+          traceability?: string | null
+          unit?: string | null
+        }
+        Update: {
+          bfx_order?: string | null
+          description?: string | null
+          fecha?: string | null
+          gross_weight?: number | null
+          id?: string
+          net_weight?: number | null
+          pallet_type?: string | null
+          pieces?: number | null
+          pt_code?: string | null
+          raw_data?: Json | null
+          status?: string | null
+          stock?: number | null
+          synced_at?: string | null
+          traceability?: string | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
       shipped_pallets: {
         Row: {
           bfx_order: string | null
