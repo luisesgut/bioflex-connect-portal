@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-
+import type { Json } from "@/integrations/supabase/types";
 const SAP_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
 const SAP_TIMEOUT_MS = 30000;
 const INSERT_BATCH_SIZE = 500;
@@ -33,7 +33,7 @@ type SapInventoryInsertRow = {
   pallet_type: string;
   status: string;
   fecha: string;
-  raw_data: unknown;
+  raw_data: Json;
   synced_at: string;
 };
 
@@ -77,7 +77,7 @@ export async function syncSapInventoryFromEndpoint() {
       pallet_type: "CASES",
       status: item.asignadoAentrega === true ? "assigned" : "available",
       fecha: fechaFormatted,
-      raw_data: item,
+      raw_data: JSON.parse(JSON.stringify(item)) as Json,
       synced_at: now,
     };
   });
