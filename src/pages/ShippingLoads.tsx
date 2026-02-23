@@ -127,7 +127,7 @@ export default function ShippingLoads() {
   const [transitLoadPending, setTransitLoadPending] = useState<ShippingLoad | null>(null);
   const fetchData = useCallback(async () => {
     try {
-      const [loadsRes, requestsRes, destDatesRes] = await Promise.all([
+      const [loadsRes, requestsRes, destDatesRes, palletRes] = await Promise.all([
         supabase
           .from("shipping_loads")
           .select("*")
@@ -140,6 +140,9 @@ export default function ShippingLoads() {
           .from("load_destination_dates")
           .select("load_id, destination, actual_date")
           .not("actual_date", "is", null),
+        supabase
+          .from("load_pallets")
+          .select("load_id, is_on_hold, actioned_at"),
       ]);
 
       if (loadsRes.error) throw loadsRes.error;
@@ -147,6 +150,15 @@ export default function ShippingLoads() {
 
       setLoads(loadsRes.data || []);
       setReleaseRequests(requestsRes.data || []);
+
+      // Build released pallets count map
+      const rpMap = new Map<string, number>();
+      (palletRes.data || []).forEach((p) => {
+        if (p.actioned_at && !p.is_on_hold) {
+          rpMap.set(p.load_id, (rpMap.get(p.load_id) || 0) + 1);
+        }
+      });
+      setReleasedPalletsMap(rpMap);
 
       // Build map of load_id -> destination dates with actual_date
       const ddMap = new Map<string, Array<{ destination: string; actual_date: string | null }>>();
