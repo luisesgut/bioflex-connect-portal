@@ -33,7 +33,7 @@ type SapInventoryInsertRow = {
   pallet_type: string;
   status: string;
   fecha: string;
-  raw_data: Record<string, unknown> | null;
+  raw_data: Json;
   synced_at: string;
 };
 
