@@ -124,6 +124,7 @@ interface LoadPallet {
     gross_weight: number | null;
     net_weight: number | null;
     pieces: number | null;
+    is_virtual: boolean;
   };
 }
 
