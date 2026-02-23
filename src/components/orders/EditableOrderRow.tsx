@@ -70,6 +70,7 @@ interface InventoryStats {
   shippedLoadDetails: ShippedLoadDetail[];
   excessStock: ExcessStockDetail | null;
   sapStockAvailable: number | null;
+  sapVerificationLoading: boolean;
 }
 
 interface Order {
@@ -273,8 +274,16 @@ export function EditableOrderRow({
     navigate(`/orders/${order.id}`);
   };
 
+  const renderVerificationLoading = () => (
+    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+      <Loader2 className="h-3 w-3 animate-spin" />
+      Loading...
+    </span>
+  );
+
   // Shared cell renderers for both view and edit modes
   const renderExcessStock = () => (
+    order.inventoryStats.sapVerificationLoading ? renderVerificationLoading() :
     order.inventoryStats.excessStock ? (
       <HoverCard>
         <HoverCardTrigger asChild>
@@ -308,6 +317,7 @@ export function EditableOrderRow({
   );
 
   const renderInFloor = () => (
+    order.inventoryStats.sapVerificationLoading ? renderVerificationLoading() :
     order.inventoryStats.inFloor > 0 && order.inventoryStats.loadDetails.length > 0 ? (
       <HoverCard>
         <HoverCardTrigger asChild>
@@ -346,6 +356,7 @@ export function EditableOrderRow({
   );
 
   const renderShipped = () => (
+    order.inventoryStats.sapVerificationLoading ? renderVerificationLoading() :
     order.inventoryStats.shipped > 0 && order.inventoryStats.shippedLoadDetails.length > 0 ? (
       <HoverCard>
         <HoverCardTrigger asChild>
@@ -392,6 +403,9 @@ export function EditableOrderRow({
   );
 
   const renderPercentProduced = () => (
+    order.inventoryStats.sapVerificationLoading ? (
+      renderVerificationLoading()
+    ) : (
     <div className="flex items-center justify-end gap-2">
       <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
         <div 
@@ -407,6 +421,7 @@ export function EditableOrderRow({
         {order.inventoryStats.percentProduced}%
       </span>
     </div>
+    )
   );
 
   // Build cell map for EDIT mode
@@ -504,8 +519,12 @@ export function EditableOrderRow({
     excess_stock: renderExcessStock(),
     in_floor: renderInFloor(),
     shipped: renderShipped(),
-    pending: order.inventoryStats.pending.toLocaleString(),
-    stock_available: order.inventoryStats.sapStockAvailable !== null
+    pending: order.inventoryStats.sapVerificationLoading
+      ? renderVerificationLoading()
+      : order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapVerificationLoading
+      ? renderVerificationLoading()
+      : order.inventoryStats.sapStockAvailable !== null
       ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
       : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),
@@ -578,8 +597,12 @@ export function EditableOrderRow({
     excess_stock: renderExcessStock(),
     in_floor: renderInFloor(),
     shipped: renderShipped(),
-    pending: order.inventoryStats.pending.toLocaleString(),
-    stock_available: order.inventoryStats.sapStockAvailable !== null
+    pending: order.inventoryStats.sapVerificationLoading
+      ? renderVerificationLoading()
+      : order.inventoryStats.pending.toLocaleString(),
+    stock_available: order.inventoryStats.sapVerificationLoading
+      ? renderVerificationLoading()
+      : order.inventoryStats.sapStockAvailable !== null
       ? <span className="text-sm font-medium">{order.inventoryStats.sapStockAvailable.toLocaleString()}</span>
       : <span className="text-muted-foreground">—</span>,
     percent_produced: renderPercentProduced(),

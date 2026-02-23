@@ -53,6 +53,7 @@ interface InventoryStats {
   shippedLoadDetails: ShippedLoadDetail[];
   excessStock: ExcessStockDetail | null;
   sapStockAvailable: number | null;
+  sapVerificationLoading: boolean;
 }
 
 interface StockVerificationWarehouseDetail {
@@ -422,6 +423,7 @@ export default function Orders() {
           shippedLoadDetails,
           excessStock,
           sapStockAvailable: null,
+          sapVerificationLoading: Boolean(order.sales_order_number && order.sales_order_number.trim() !== "" && order.po_number),
         },
       };
     });
@@ -544,6 +546,7 @@ export default function Orders() {
                   pending: sapData.pending ?? o.inventoryStats.pending,
                   percentProduced: sapData.percentProduced ?? o.inventoryStats.percentProduced,
                   excessStock: sapData.excessStock ?? o.inventoryStats.excessStock,
+                  sapVerificationLoading: false,
                 },
               };
             }
