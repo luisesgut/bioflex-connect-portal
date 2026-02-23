@@ -292,6 +292,11 @@ export default function LoadDetail() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
+  const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
+  const [linkVirtualOpen, setLinkVirtualOpen] = useState(false);
+  const [linkVirtualPalletId, setLinkVirtualPalletId] = useState("");
+  const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
+  const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
