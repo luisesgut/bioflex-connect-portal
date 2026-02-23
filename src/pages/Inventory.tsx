@@ -25,6 +25,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
+import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
 
 interface SAPInventoryItem {
   id: string;
@@ -120,24 +121,7 @@ export default function Inventory() {
     setSapUnavailable(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("sync-sap-inventory");
-
-      if (error) {
-        console.error("SAP sync error:", error);
-        setSapUnavailable(true);
-        toast.warning("SAP no disponible — mostrando último snapshot");
-        await loadFromDB();
-        return;
-      }
-
-      if (data?.error) {
-        console.error("SAP sync returned error:", data.error);
-        setSapUnavailable(true);
-        toast.warning("SAP no disponible — mostrando último snapshot");
-        await loadFromDB();
-        return;
-      }
-
+      const data = await syncSapInventoryFromEndpoint();
       setLastSyncTime(data.synced_at);
       setSapUnavailable(false);
       toast.success(`Inventario sincronizado: ${data.count} registros`);
@@ -154,8 +138,13 @@ export default function Inventory() {
   }, [loadFromDB]);
 
   useEffect(() => {
-    syncSAPInventory();
-  }, [syncSAPInventory]);
+    if (isAdmin) {
+      syncSAPInventory();
+      return;
+    }
+
+    loadFromDB().finally(() => setLoading(false));
+  }, [isAdmin, syncSAPInventory, loadFromDB]);
 
   // Filter toggle function
   const toggleFilter = (filterKey: keyof InventoryFilters, value: string) => {
@@ -444,18 +433,20 @@ export default function Inventory() {
               </div>
             )}
           </div>
-          <Button
-            variant="outline"
-            onClick={() => syncSAPInventory()}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Sincronizar SAP
-          </Button>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => syncSAPInventory()}
+              disabled={syncing}
+            >
+              {syncing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Sincronizar SAP
+            </Button>
+          )}
         </div>
 
         {/* Stats Cards */}

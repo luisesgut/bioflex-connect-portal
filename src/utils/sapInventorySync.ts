@@ -1,9 +1,8 @@
-/**
- * Normal function version (no Edge Function / no Deno.serve).
- * This helper performs a GET to the SAP endpoint and returns normalized rows.
- */
+import { supabase } from "@/integrations/supabase/client";
 
-export const SAP_INVENTORY_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
+const SAP_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
+const SAP_TIMEOUT_MS = 30000;
+const INSERT_BATCH_SIZE = 500;
 
 interface SapEndpointItem {
   fecha?: string | null;
@@ -21,7 +20,7 @@ interface SapEndpointItem {
   asignadoAentrega?: boolean | null;
 }
 
-export interface NormalizedSapInventoryItem {
+type SapInventoryInsertRow = {
   pt_code: string;
   description: string;
   stock: number;
@@ -31,32 +30,33 @@ export interface NormalizedSapInventoryItem {
   traceability: string;
   bfx_order: string | null;
   pieces: number | null;
-  pallet_type: "CASES";
-  status: "available" | "assigned";
+  pallet_type: string;
+  status: string;
   fecha: string;
   raw_data: unknown;
   synced_at: string;
-}
+};
 
-export async function getSapInventory(endpoint = SAP_INVENTORY_ENDPOINT) {
-  const response = await fetch(endpoint, {
-    signal: AbortSignal.timeout(30000),
+export async function syncSapInventoryFromEndpoint() {
+  const sapResponse = await fetch(SAP_ENDPOINT, {
+    signal: AbortSignal.timeout(SAP_TIMEOUT_MS),
   });
 
-  if (!response.ok) {
-    throw new Error(`SAP API unavailable (status: ${response.status})`);
+  if (!sapResponse.ok) {
+    throw new Error(`SAP API unavailable (status: ${sapResponse.status})`);
   }
 
-  const payload = (await response.json()) as SapEndpointItem[];
-  if (!Array.isArray(payload)) {
+  const sapData = (await sapResponse.json()) as SapEndpointItem[];
+  if (!Array.isArray(sapData)) {
     throw new Error("Unexpected SAP response format");
   }
 
   const now = new Date().toISOString();
   const today = now.split("T")[0];
 
-  const rows: NormalizedSapInventoryItem[] = payload.map((item) => {
+  const transformedData: SapInventoryInsertRow[] = sapData.map((item) => {
     let fechaFormatted = today;
+
     if (item.fecha) {
       const d = new Date(item.fecha);
       if (!Number.isNaN(d.getTime())) {
@@ -82,11 +82,31 @@ export async function getSapInventory(endpoint = SAP_INVENTORY_ENDPOINT) {
     };
   });
 
+  let insertedCount = 0;
+
+  for (let i = 0; i < transformedData.length; i += INSERT_BATCH_SIZE) {
+    const batch = transformedData.slice(i, i + INSERT_BATCH_SIZE);
+    const { error: insertError } = await supabase.from("sap_inventory").insert(batch);
+    if (insertError) {
+      throw new Error(`Failed to insert inventory: ${insertError.message}`);
+    }
+    insertedCount += batch.length;
+  }
+
+  // Replace snapshot only after a successful full insert to avoid empty-table windows.
+  const { error: cleanupError } = await supabase
+    .from("sap_inventory")
+    .delete()
+    .neq("id", "00000000-0000-0000-0000-000000000000")
+    .neq("synced_at", now);
+
+  if (cleanupError) {
+    throw new Error(`Failed to cleanup previous snapshot: ${cleanupError.message}`);
+  }
+
   return {
     success: true,
-    count: rows.length,
+    count: insertedCount,
     synced_at: now,
-    rows,
   };
 }
-
