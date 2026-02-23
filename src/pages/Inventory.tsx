@@ -13,28 +13,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, Search, Package, Loader2, FileSpreadsheet, Trash2, Calendar, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 
-interface InventoryPallet {
+interface SAPInventoryItem {
   id: string;
   fecha: string;
   pt_code: string;
@@ -45,11 +37,10 @@ interface InventoryPallet {
   net_weight: number | null;
   traceability: string;
   bfx_order: string | null;
-  customer_lot: string | null;
   pieces: number | null;
   pallet_type: string | null;
-  status: "available" | "assigned" | "shipped";
-  created_at: string;
+  status: string;
+  synced_at: string;
 }
 
 interface InventoryFilters {
@@ -71,12 +62,12 @@ const statusStyles: Record<string, string> = {
 export default function Inventory() {
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
-  const [inventory, setInventory] = useState<InventoryPallet[]>([]);
+  const [inventory, setInventory] = useState<SAPInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [sapUnavailable, setSapUnavailable] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [latestUploadDate, setLatestUploadDate] = useState<string | null>(null);
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
     pt_code: [],
@@ -88,132 +79,83 @@ export default function Inventory() {
   });
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc" | null>("desc");
 
-  const fetchInventory = useCallback(async () => {
+  const loadFromDB = useCallback(async () => {
     try {
-      // Get the latest upload timestamp for display
-      const { data: latestRecord, error: latestError } = await supabase
-        .from("inventory_pallets")
-        .select("created_at")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (latestError) throw latestError;
-
-      if (latestRecord) {
-        setLatestUploadDate(latestRecord.created_at);
-      } else {
-        setLatestUploadDate(null);
-      }
-
-      // Fetch all current inventory
       const { data, error } = await supabase
-        .from("inventory_pallets")
+        .from("sap_inventory")
         .select("*")
         .order("pt_code", { ascending: true });
 
       if (error) throw error;
-      setInventory(data || []);
+
+      const items: SAPInventoryItem[] = (data || []).map((d: any) => ({
+        id: d.id,
+        fecha: d.fecha,
+        pt_code: d.pt_code || "",
+        description: d.description || "",
+        stock: d.stock || 0,
+        unit: d.unit || "MIL",
+        gross_weight: d.gross_weight,
+        net_weight: d.net_weight,
+        traceability: d.traceability || "",
+        bfx_order: d.bfx_order,
+        pieces: d.pieces,
+        pallet_type: d.pallet_type,
+        status: d.status || "available",
+        synced_at: d.synced_at,
+      }));
+
+      setInventory(items);
+
+      if (items.length > 0) {
+        setLastSyncTime(items[0].synced_at);
+      }
     } catch (error) {
-      console.error("Error fetching inventory:", error);
-      toast.error("Failed to load inventory");
-    } finally {
-      setLoading(false);
+      console.error("Error loading inventory from DB:", error);
     }
   }, []);
 
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
+  const syncSAPInventory = useCallback(async () => {
+    setSyncing(true);
+    setSapUnavailable(false);
 
-  const parseExcelDate = (excelDate: any): string => {
-    if (!excelDate) return new Date().toISOString().split("T")[0];
-    // If it's a number (Excel serial date)
-    if (typeof excelDate === "number") {
-      const date = new Date((excelDate - 25569) * 86400 * 1000);
-      return date.toISOString().split("T")[0];
-    }
-    // If it's a string, try to parse it
-    const parsed = new Date(excelDate);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split("T")[0];
-    }
-    return new Date().toISOString().split("T")[0];
-  };
-
-  const getUnitFromPalletType = (palletType: string): string => {
-    const type = (palletType || "").toUpperCase();
-    if (type === "CASES") return "bags";
-    if (type === "ROLLS") return "Impressions";
-    return "MIL";
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const { data, error } = await supabase.functions.invoke("sync-sap-inventory");
 
-      const pallets = jsonData.map((row: any) => {
-        const palletType = row["Pallet"] || "CASES";
-        const stockValue = parseFloat(row["Stock"]) || 0;
-        
-        return {
-          fecha: parseExcelDate(row["Production Date"]),
-          pt_code: row["PT"] || row["Codigo"] || "",
-          description: row["Descripción"] || "",
-          stock: stockValue * 1000, // Multiply by 1000 as values are in thousands
-          unit: getUnitFromPalletType(palletType),
-          gross_weight: parseFloat(row["Peso bruto"]) || null,
-          net_weight: parseFloat(row["Peso neto"]) || null,
-          traceability: row["Trazabilidad"] || "",
-          bfx_order: row["Orden BFX"] || row["Sales Order"] || null,
-          customer_lot: row["Customer PO Number"] || null,
-          pieces: parseInt(row["Piezas"]) || null,
-          pallet_type: palletType,
-          status: "available" as const,
-        };
-      });
+      if (error) {
+        console.error("SAP sync error:", error);
+        setSapUnavailable(true);
+        toast.warning("SAP no disponible — mostrando último snapshot");
+        await loadFromDB();
+        return;
+      }
 
-      // Delete all existing available inventory before inserting new data
-      const { error: deleteError } = await supabase
-        .from("inventory_pallets")
-        .delete()
-        .eq("status", "available");
+      if (data?.error) {
+        console.error("SAP sync returned error:", data.error);
+        setSapUnavailable(true);
+        toast.warning("SAP no disponible — mostrando último snapshot");
+        await loadFromDB();
+        return;
+      }
 
-      if (deleteError) throw deleteError;
-
-      const { error } = await supabase.from("inventory_pallets").insert(pallets);
-
-      if (error) throw error;
-
-      toast.success(`Successfully uploaded ${pallets.length} inventory records (replaced previous inventory)`);
-      setUploadDialogOpen(false);
-      fetchInventory();
-    } catch (error) {
-      console.error("Error uploading inventory:", error);
-      toast.error("Failed to upload inventory file");
+      setLastSyncTime(data.synced_at);
+      setSapUnavailable(false);
+      toast.success(`Inventario sincronizado: ${data.count} registros`);
+      await loadFromDB();
+    } catch (err) {
+      console.error("SAP sync exception:", err);
+      setSapUnavailable(true);
+      toast.warning("SAP no disponible — mostrando último snapshot");
+      await loadFromDB();
     } finally {
-      setUploading(false);
+      setSyncing(false);
+      setLoading(false);
     }
-  };
+  }, [loadFromDB]);
 
-  const handleDeletePallet = async (id: string) => {
-    try {
-      const { error } = await supabase.from("inventory_pallets").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Pallet deleted");
-      fetchInventory();
-    } catch (error) {
-      console.error("Error deleting pallet:", error);
-      toast.error("Failed to delete pallet");
-    }
-  };
+  useEffect(() => {
+    syncSAPInventory();
+  }, [syncSAPInventory]);
 
   // Filter toggle function
   const toggleFilter = (filterKey: keyof InventoryFilters, value: string) => {
@@ -433,7 +375,6 @@ export default function Inventory() {
   // Apply filters to inventory
   const filteredInventory = inventory
     .filter((item) => {
-      // Text search
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesSearch = 
@@ -444,7 +385,6 @@ export default function Inventory() {
         if (!matchesSearch) return false;
       }
 
-      // Column filters
       const dateStr = new Date(item.fecha).toLocaleDateString();
       if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
       if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
@@ -465,68 +405,61 @@ export default function Inventory() {
 
   const availableCount = filteredInventory.filter((i) => i.status === "available").length;
   const assignedCount = filteredInventory.filter((i) => i.status === "assigned").length;
-  const shippedCount = filteredInventory.filter((i) => i.status === "shipped").length;
 
   return (
     <MainLayout>
       <div className="space-y-6">
+        {/* Sync Banner */}
+        {syncing && (
+          <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-300">
+              Sincronizando con SAP...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {sapUnavailable && !syncing && (
+          <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800 dark:text-yellow-300">
+              SAP no disponible — mostrando último snapshot guardado
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{t('page.inventory.title')}</h1>
             <p className="text-muted-foreground">
-              {t('page.inventory.subtitle')}
+              Inventario SAP en tiempo real
             </p>
-            {latestUploadDate && (
+            {lastSyncTime && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
+                <Clock className="h-4 w-4" />
                 <span>
-                  Last updated: {new Date(latestUploadDate).toLocaleString()}
+                  Última sincronización: {new Date(lastSyncTime).toLocaleString()}
                 </span>
               </div>
             )}
           </div>
-          {isAdmin && (
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Inventory
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Upload Inventory File</DialogTitle>
-                  <DialogDescription>
-                    Upload an Excel file (.xlsx) with your daily inventory data.
-                    Expected columns: Production Date, PT, Descripción, Stock, Peso bruto, Peso neto, Trazabilidad, Orden BFX, Customer PO Number, Piezas, Pallet
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                    <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <Input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                      className="max-w-xs mx-auto"
-                    />
-                  </div>
-                  {uploading && (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Processing file...</span>
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
+          <Button
+            variant="outline"
+            onClick={() => syncSAPInventory()}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Sincronizar SAP
+          </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Available</CardTitle>
@@ -544,17 +477,7 @@ export default function Inventory() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{assignedCount}</div>
-              <p className="text-xs text-muted-foreground">assigned to loads</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Shipped</CardTitle>
-              <Package className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{shippedCount}</div>
-              <p className="text-xs text-muted-foreground">pallets shipped</p>
+              <p className="text-xs text-muted-foreground">assigned to delivery</p>
             </CardContent>
           </Card>
         </div>
@@ -591,7 +514,7 @@ export default function Inventory() {
               <p className="text-muted-foreground text-center max-w-sm mt-1">
                 {searchQuery
                   ? "No pallets match your search criteria"
-                  : "Upload your daily inventory file to get started"}
+                  : "No se encontraron registros de inventario SAP"}
               </p>
             </CardContent>
           </Card>
@@ -608,7 +531,6 @@ export default function Inventory() {
                   <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                   <TableHead className="text-right">Pieces</TableHead>
                   <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
-                  {isAdmin && <TableHead className="w-[50px]"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -628,22 +550,10 @@ export default function Inventory() {
                     <TableCell>{item.bfx_order || "-"}</TableCell>
                     <TableCell className="text-right">{item.pieces || "-"}</TableCell>
                     <TableCell>
-                      <Badge className={statusStyles[item.status]} variant="secondary">
+                      <Badge className={statusStyles[item.status] || ""} variant="secondary">
                         {item.status}
                       </Badge>
                     </TableCell>
-                    {isAdmin && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeletePallet(item.id)}
-                          disabled={item.status !== "available"}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    )}
                   </TableRow>
                 ))}
               </TableBody>
