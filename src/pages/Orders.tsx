@@ -55,6 +55,20 @@ interface InventoryStats {
   sapStockAvailable: number | null;
 }
 
+interface StockVerificationWarehouseDetail {
+  lote?: string;
+  cantidad?: number;
+}
+
+interface StockVerificationItem {
+  cantidadSolicitada?: number;
+  cantidadEnviada?: number;
+  cantidadPendiente?: number;
+  porcentajeEnviado?: number;
+  totalStockDisponible?: number;
+  detallesAlmacen?: StockVerificationWarehouseDetail[];
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -427,32 +441,110 @@ export default function Orders() {
               `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number!)}/${encodeURIComponent(order.po_number)}`,
               { method: "GET", headers: { accept: "*/*" } }
             );
-            if (!response.ok) return { poNumber: order.po_number, stockAvailable: null };
+            if (!response.ok) {
+              return {
+                poNumber: order.po_number,
+                stockAvailable: null,
+                inFloor: null,
+                shipped: null,
+                pending: null,
+                percentProduced: null,
+                excessStock: null,
+              };
+            }
             const payload = await response.json();
-            const items = Array.isArray(payload) ? payload : [];
-            const totalStock = items.reduce((sum: number, item: any) => sum + (item.totalStockDisponible || 0), 0);
-            return { poNumber: order.po_number, stockAvailable: totalStock };
+            const items: StockVerificationItem[] = Array.isArray(payload) ? payload : [];
+
+            if (items.length === 0) {
+              return {
+                poNumber: order.po_number,
+                stockAvailable: null,
+                inFloor: null,
+                shipped: null,
+                pending: null,
+                percentProduced: null,
+                excessStock: null,
+              };
+            }
+
+            const totalRequested = items.reduce((sum, item) => sum + (item.cantidadSolicitada || 0), 0);
+            const totalShipped = items.reduce((sum, item) => sum + (item.cantidadEnviada || 0), 0);
+            const totalPending = items.reduce((sum, item) => sum + (item.cantidadPendiente || 0), 0);
+            const totalStock = items.reduce((sum, item) => sum + (item.totalStockDisponible || 0), 0);
+            const totalInFloor = items.reduce((sum, item) => {
+              const lotTotal = (item.detallesAlmacen || []).reduce((lotSum, lot) => lotSum + (lot.cantidad || 0), 0);
+              return sum + lotTotal;
+            }, 0);
+            const percentProduced =
+              totalRequested > 0
+                ? Math.round((totalShipped / totalRequested) * 100)
+                : null;
+            const excessQty = Math.max(0, totalStock - totalPending);
+            const excessLots = items.reduce((sum, item) => sum + (item.detallesAlmacen?.length || 0), 0);
+
+            return {
+              poNumber: order.po_number,
+              stockAvailable: totalStock,
+              inFloor: totalInFloor,
+              shipped: totalShipped,
+              pending: totalPending,
+              percentProduced,
+              excessStock: excessQty > 0 ? { pallet_count: excessLots, total_quantity: excessQty } : null,
+            };
           } catch {
-            return { poNumber: order.po_number, stockAvailable: null };
+            return {
+              poNumber: order.po_number,
+              stockAvailable: null,
+              inFloor: null,
+              shipped: null,
+              pending: null,
+              percentProduced: null,
+              excessStock: null,
+            };
           }
         })
       );
 
-      const sapMap = new Map<string, number | null>();
+      const sapMap = new Map<
+        string,
+        {
+          stockAvailable: number | null;
+          inFloor: number | null;
+          shipped: number | null;
+          pending: number | null;
+          percentProduced: number | null;
+          excessStock: ExcessStockDetail | null;
+        }
+      >();
       sapResults.forEach((result) => {
         if (result.status === "fulfilled" && result.value) {
-          sapMap.set(result.value.poNumber, result.value.stockAvailable);
+          sapMap.set(result.value.poNumber, {
+            stockAvailable: result.value.stockAvailable,
+            inFloor: result.value.inFloor,
+            shipped: result.value.shipped,
+            pending: result.value.pending,
+            percentProduced: result.value.percentProduced,
+            excessStock: result.value.excessStock,
+          });
         }
       });
 
       if (sapMap.size > 0) {
         setOrders((prev) =>
           prev.map((o) => {
-            const sapStock = sapMap.get(o.po_number);
-            if (sapStock !== undefined) {
+            const sapData = sapMap.get(o.po_number);
+            if (sapData !== undefined) {
               return {
                 ...o,
-                inventoryStats: { ...o.inventoryStats, sapStockAvailable: sapStock },
+                inventoryStats: {
+                  ...o.inventoryStats,
+                  sapStockAvailable: sapData.stockAvailable,
+                  inFloor: sapData.inFloor ?? o.inventoryStats.inFloor,
+                  shipped: sapData.shipped ?? o.inventoryStats.shipped,
+                  pending: sapData.pending ?? o.inventoryStats.pending,
+                  percentProduced: sapData.percentProduced ?? o.inventoryStats.percentProduced,
+                  excessStock: sapData.excessStock ?? o.inventoryStats.excessStock,
+                },
               };
             }
             return o;
