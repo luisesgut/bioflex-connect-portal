@@ -17,8 +17,24 @@ import {
   Clock, 
   ExternalLink,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  Pencil,
+  Save,
+  Loader2
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -232,17 +248,119 @@ export default function ProductRequestDetail() {
   const [feedback, setFeedback] = useState("");
   const [feedbackAction, setFeedbackAction] = useState<'approve' | 'reject' | null>(null);
   
-  // Internal registration
-  const [bionetCode, setBionetCode] = useState("");
-  const [sapCode, setSapCode] = useState("");
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editProductName, setEditProductName] = useState("");
+  const [editItemIdCode, setEditItemIdCode] = useState("");
+  const [editCustomer, setEditCustomer] = useState("");
+  const [editItemType, setEditItemType] = useState("");
+  const [editAssignedDesigner, setEditAssignedDesigner] = useState("");
+  const [editDpSalesCsr, setEditDpSalesCsr] = useState<string[]>([]);
+  const [editItemDescription, setEditItemDescription] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
+  // Dropdown data
+  const [customerOptions, setCustomerOptions] = useState<{ id: string; label: string }[]>([]);
+  const [itemTypeOptions, setItemTypeOptions] = useState<{ id: string; label: string }[]>([]);
+  const [destinyUsers, setDestinyUsers] = useState<{ user_id: string; full_name: string }[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchRequest();
       fetchPCVersions();
       fetchEngineeringProposals();
+      fetchDropdownOptions();
+      fetchDestinyUsers();
     }
   }, [id]);
+
+  const fetchDropdownOptions = async () => {
+    const { data } = await supabase
+      .from("dropdown_options")
+      .select("id, label, category")
+      .in("category", ["final_customer", "item_type"])
+      .eq("is_active", true)
+      .order("sort_order");
+    if (data) {
+      setCustomerOptions(data.filter((d) => d.category === "final_customer"));
+      setItemTypeOptions(data.filter((d) => d.category === "item_type"));
+    }
+  };
+
+  const fetchDestinyUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .eq("user_type", "external")
+      .like("email", "%destinypkg%")
+      .order("full_name");
+    if (data) setDestinyUsers(data as any);
+  };
+
+  // Internal registration
+  const [bionetCode, setBionetCode] = useState("");
+  const [sapCode, setSapCode] = useState("");
+
+  const startEditing = () => {
+    if (!request) return;
+    setEditProductName(request.product_name || "");
+    setEditItemIdCode(request.item_id_code || "");
+    setEditCustomer(request.customer || "");
+    setEditItemType(request.item_type || "");
+    setEditAssignedDesigner((request as any).assigned_designer || "");
+    // Parse CSR names back to user IDs
+    const csrNames = (request as any).dp_sales_csr_names || "";
+    if (csrNames) {
+      const ids = destinyUsers
+        .filter((u) => csrNames.includes(u.full_name))
+        .map((u) => u.user_id);
+      setEditDpSalesCsr(ids);
+    } else {
+      setEditDpSalesCsr([]);
+    }
+    setEditItemDescription(request.item_description || "");
+    setEditNotes(request.notes || "");
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+  };
+
+  const saveEdits = async () => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const csrNames = editDpSalesCsr
+        .map((uid) => destinyUsers.find((u) => u.user_id === uid)?.full_name)
+        .filter(Boolean)
+        .join(", ");
+
+      await supabase
+        .from("product_requests")
+        .update({
+          product_name: editProductName.trim(),
+          item_id_code: editItemIdCode.trim() || null,
+          customer: editCustomer || null,
+          item_type: editItemType || null,
+          assigned_designer: editAssignedDesigner || null,
+          dp_sales_csr_names: csrNames || null,
+          item_description: editItemDescription.trim() || null,
+          notes: editNotes.trim() || null,
+        })
+        .eq("id", id);
+
+      toast.success("Product information updated");
+      setIsEditing(false);
+      fetchRequest();
+    } catch (error) {
+      console.error("Error saving:", error);
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -483,246 +601,191 @@ export default function ProductRequestDetail() {
           <div className="lg:col-span-2 space-y-6">
             {/* Product Information */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Product Information</CardTitle>
+                {!isEditing ? (
+                  <Button variant="outline" size="sm" onClick={startEditing}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={cancelEditing} disabled={saving}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={saveEdits} disabled={saving}>
+                      {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                      Save
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label className="text-muted-foreground">Product Name</Label>
-                    <p className="font-medium">{request.product_name || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Item / Destiny ID</Label>
-                    <p className="font-medium">{request.item_id_code || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Customer (Final Customer)</Label>
-                    <p className="font-medium">{request.customer || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Item Type</Label>
-                    <p className="font-medium">{request.item_type || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Assigned Designer</Label>
-                    <p className="font-medium">{(request as any).assigned_designer_name || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">DP Sales / CSR</Label>
-                    <p className="font-medium">{(request as any).dp_sales_csr_names || '-'}</p>
-                  </div>
-                </div>
-                {request.item_description && (
-                  <div>
-                    <Label className="text-muted-foreground">Item Description</Label>
-                    <p className="font-medium">{request.item_description}</p>
-                  </div>
-                )}
-                
-                <Separator />
-                
-                <Separator />
-                
-                <div>
-                  <Label className="text-muted-foreground mb-2 block">Dimensions (inches / cm)</Label>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {request.width_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Width</p>
-                        <p className="font-medium">{request.width_inches}" / {request.width_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.length_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Length</p>
-                        <p className="font-medium">{request.length_inches}" / {request.length_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.gusset_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Gusset</p>
-                        <p className="font-medium">{request.gusset_inches}" / {request.gusset_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.zipper_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Zipper</p>
-                        <p className="font-medium">{request.zipper_inches}" / {request.zipper_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.lip_front_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Lip Front</p>
-                        <p className="font-medium">{request.lip_front_inches}" / {request.lip_front_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.lip_back_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Lip Back</p>
-                        <p className="font-medium">{request.lip_back_inches}" / {request.lip_back_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.flip_size_inches && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Flip Size</p>
-                        <p className="font-medium">{request.flip_size_inches}" / {request.flip_size_cm?.toFixed(2)} cm</p>
-                      </div>
-                    )}
-                    {request.thickness_value && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Thickness</p>
-                        <p className="font-medium">{request.thickness_value} {request.thickness_unit}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {request.film_type && (
-                    <div>
-                      <Label className="text-muted-foreground">Film Type</Label>
-                      <p className="font-medium">{request.film_type}</p>
-                    </div>
-                  )}
-                  {request.seal_type && (
-                    <div>
-                      <Label className="text-muted-foreground">Seal Type</Label>
-                      <p className="font-medium">{request.seal_type}</p>
-                    </div>
-                  )}
-                  {request.extrusion_type && (
-                    <div>
-                      <Label className="text-muted-foreground">Extrusion Type</Label>
-                      <p className="font-medium">{request.extrusion_type}</p>
-                    </div>
-                  )}
-                  {request.clarity_grade && (
-                    <div>
-                      <Label className="text-muted-foreground">Clarity Grade</Label>
-                      <p className="font-medium">{request.clarity_grade}</p>
-                    </div>
-                  )}
-                </div>
-
-                {(request.vents_count || request.vent_size) && (
+                {!isEditing ? (
                   <>
-                    <Separator />
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      {request.vents_count && (
-                        <div>
-                          <Label className="text-muted-foreground">Vents Count</Label>
-                          <p className="font-medium">{request.vents_count}</p>
-                        </div>
-                      )}
-                      {request.vent_size && (
-                        <div>
-                          <Label className="text-muted-foreground">Vent Size</Label>
-                          <p className="font-medium">{request.vent_size}</p>
-                        </div>
-                      )}
-                      {request.vents_across !== null && request.vents_across !== undefined && (
-                        <div>
-                          <Label className="text-muted-foreground">Vents Across</Label>
-                          <p className="font-medium">{request.vents_across}</p>
-                        </div>
-                      )}
-                      {request.vents_down !== null && request.vents_down !== undefined && (
-                        <div>
-                          <Label className="text-muted-foreground">Vents Down</Label>
-                          <p className="font-medium">{request.vents_down}</p>
-                        </div>
-                      )}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-muted-foreground">Product Name</Label>
+                        <p className="font-medium">{request.product_name || '-'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Item / Destiny ID</Label>
+                        <p className="font-medium">{request.item_id_code || '-'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Customer (Final Customer)</Label>
+                        <p className="font-medium">{request.customer || '-'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Item Type</Label>
+                        <p className="font-medium">{request.item_type || '-'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Assigned Designer</Label>
+                        <p className="font-medium">{(request as any).assigned_designer_name || '-'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">DP Sales / CSR</Label>
+                        <p className="font-medium">{(request as any).dp_sales_csr_names || '-'}</p>
+                      </div>
                     </div>
+                    {request.item_description && (
+                      <div>
+                        <Label className="text-muted-foreground">Item Description</Label>
+                        <p className="font-medium">{request.item_description}</p>
+                      </div>
+                    )}
+                    {request.notes && (
+                      <div>
+                        <Label className="text-muted-foreground">Design Notes</Label>
+                        <p className="font-medium whitespace-pre-wrap">{request.notes}</p>
+                      </div>
+                    )}
                   </>
-                )}
-
-                {(request.bags_per_case || request.cases_per_pallet || request.pallet_size) && (
+                ) : (
                   <>
-                    <Separator />
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      {request.bags_per_case && (
-                        <div>
-                          <Label className="text-muted-foreground">Bags per Case</Label>
-                          <p className="font-medium">{request.bags_per_case}</p>
-                        </div>
-                      )}
-                      {request.cases_per_pallet && (
-                        <div>
-                          <Label className="text-muted-foreground">Cases per Pallet</Label>
-                          <p className="font-medium">{request.cases_per_pallet}</p>
-                        </div>
-                      )}
-                      {request.pallet_size && (
-                        <div>
-                          <Label className="text-muted-foreground">Pallet Size</Label>
-                          <p className="font-medium">{request.pallet_size}</p>
-                        </div>
-                      )}
-                      {request.box_color && (
-                        <div>
-                          <Label className="text-muted-foreground">Box Color</Label>
-                          <p className="font-medium">{request.box_color}</p>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {request.pms_colors && request.pms_colors.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <Label className="text-muted-foreground mb-2 block">PMS Colors</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {request.pms_colors.map((color, index) => (
-                          <Badge key={index} variant="secondary">{color}</Badge>
-                        ))}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_product_name">Product Name *</Label>
+                        <Input
+                          id="edit_product_name"
+                          value={editProductName}
+                          onChange={(e) => setEditProductName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit_item_id">Item / Destiny ID</Label>
+                        <Input
+                          id="edit_item_id"
+                          value={editItemIdCode}
+                          onChange={(e) => setEditItemIdCode(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Customer (Final Customer)</Label>
+                        <Select value={editCustomer} onValueChange={setEditCustomer}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customerOptions.map((opt) => (
+                              <SelectItem key={opt.id} value={opt.label}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Item Type</Label>
+                        <Select value={editItemType} onValueChange={setEditItemType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select item type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {itemTypeOptions.map((opt) => (
+                              <SelectItem key={opt.id} value={opt.label}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Assigned Designer</Label>
+                        <Select value={editAssignedDesigner} onValueChange={setEditAssignedDesigner}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select designer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {destinyUsers.map((u) => (
+                              <SelectItem key={u.user_id} value={u.user_id}>
+                                {u.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  </>
-                )}
-
-                {(request.eye_mark || request.upc_number || request.language || request.country_of_origin) && (
-                  <>
-                    <Separator />
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      {request.eye_mark && (
-                        <div>
-                          <Label className="text-muted-foreground">Eye Mark</Label>
-                          <p className="font-medium">{request.eye_mark}</p>
-                        </div>
-                      )}
-                      {request.upc_number && (
-                        <div>
-                          <Label className="text-muted-foreground">UPC Number</Label>
-                          <p className="font-medium">{request.upc_number}</p>
-                        </div>
-                      )}
-                      {request.language && (
-                        <div>
-                          <Label className="text-muted-foreground">Language</Label>
-                          <p className="font-medium">{request.language}</p>
-                        </div>
-                      )}
-                      {request.country_of_origin && (
-                        <div>
-                          <Label className="text-muted-foreground">Country of Origin</Label>
-                          <p className="font-medium">{request.country_of_origin}</p>
-                        </div>
-                      )}
+                    <div className="space-y-2">
+                      <Label>DP Sales / CSR</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between font-normal"
+                          >
+                            {editDpSalesCsr.length > 0
+                              ? destinyUsers
+                                  .filter((u) => editDpSalesCsr.includes(u.user_id))
+                                  .map((u) => u.full_name)
+                                  .join(", ")
+                              : "Select DP Sales/CSR"}
+                            <span className="ml-2 opacity-50">▼</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-2" align="start">
+                          <div className="space-y-1 max-h-60 overflow-y-auto">
+                            {destinyUsers.map((u) => (
+                              <label
+                                key={u.user_id}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+                              >
+                                <Checkbox
+                                  checked={editDpSalesCsr.includes(u.user_id)}
+                                  onCheckedChange={(checked) => {
+                                    setEditDpSalesCsr((prev) =>
+                                      checked
+                                        ? [...prev, u.user_id]
+                                        : prev.filter((uid) => uid !== u.user_id)
+                                    );
+                                  }}
+                                />
+                                {u.full_name}
+                              </label>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                  </>
-                )}
-
-                {request.notes && (
-                  <>
-                    <Separator />
-                    <div>
-                      <Label className="text-muted-foreground">Notes</Label>
-                      <p className="font-medium whitespace-pre-wrap">{request.notes}</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_item_description">Item Description</Label>
+                      <Textarea
+                        id="edit_item_description"
+                        value={editItemDescription}
+                        onChange={(e) => setEditItemDescription(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_notes">Design Notes</Label>
+                      <Textarea
+                        id="edit_notes"
+                        value={editNotes}
+                        onChange={(e) => setEditNotes(e.target.value)}
+                        rows={3}
+                      />
                     </div>
                   </>
                 )}
