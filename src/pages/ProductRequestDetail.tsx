@@ -17,8 +17,24 @@ import {
   Clock, 
   ExternalLink,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  Pencil,
+  Save,
+  Loader2
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAdmin } from "@/hooks/useAdmin";
