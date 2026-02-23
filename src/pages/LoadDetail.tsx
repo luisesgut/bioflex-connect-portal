@@ -3131,36 +3131,49 @@ export default function LoadDetail() {
                 <CardTitle>Pallets in Load</CardTitle>
                 <CardDescription>
                   Pallets selected for this load
+                  {pallets.some(p => p.pallet.is_virtual) && (
+                    <span className="ml-2 text-purple-600 dark:text-purple-400 font-medium">
+                      • {pallets.filter(p => p.pallet.is_virtual).length} virtual
+                    </span>
+                  )}
                 </CardDescription>
               </div>
-              {isAdmin && selectedPalletsToDelete.size > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" disabled={deletingPallets}>
-                      {deletingPallets ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="mr-2 h-4 w-4" />
-                      )}
-                      Remove ({selectedPalletsToDelete.size})
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will remove {selectedPalletsToDelete.size} pallet(s) from this load.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Remove
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Button variant="outline" size="sm" onClick={() => setCreateVirtualOpen(true)}>
+                    <Ghost className="mr-2 h-4 w-4" />
+                    + Virtual
+                  </Button>
+                )}
+                {isAdmin && selectedPalletsToDelete.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                        {deletingPallets ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Remove ({selectedPalletsToDelete.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will remove {selectedPalletsToDelete.size} pallet(s) from this load.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedPallets} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Remove
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border overflow-auto">
@@ -3179,12 +3192,14 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
+                      {isAdmin && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedAllPallets.map((pallet, index) => (
                       <TableRow key={pallet.id} className={cn(
-                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border",
+                        pallet.pallet.is_virtual && "bg-purple-50/50 dark:bg-purple-950/20"
                       )}>
                         {isAdmin && (
                           <TableCell>
@@ -3194,10 +3209,42 @@ export default function LoadDetail() {
                             />
                           </TableCell>
                         )}
-                        {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                        {isAdmin && (
+                          <TableCell className="font-mono">
+                            <div className="flex items-center gap-1.5">
+                              {pallet.pallet.pt_code}
+                              {pallet.pallet.is_virtual && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                                  <Ghost className="h-3 w-3 mr-0.5" />
+                                  Virtual
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            {pallet.pallet.is_virtual && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400"
+                                onClick={() => {
+                                  setLinkVirtualPalletId(pallet.pallet_id);
+                                  setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                  setLinkLoadPalletId(pallet.id);
+                                  setLinkVirtualOpen(true);
+                                }}
+                              >
+                                <Link2 className="h-3.5 w-3.5 mr-1" />
+                                Link
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
