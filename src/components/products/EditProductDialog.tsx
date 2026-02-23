@@ -374,56 +374,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               <Input
                 type="number"
                 value={form.unidades_por_tarima ?? ""}
-                readOnly={!isMissingNumericValue(form.unidades_por_tarima)}
-                className={!isMissingNumericValue(form.unidades_por_tarima) ? "bg-muted" : ""}
                 onChange={(e) => setForm({ ...form, unidades_por_tarima: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-2">
-              <Label>Packages per Box</Label>
-              <Input
-                type="number"
-                value={form.paquete_por_caja ?? ""}
-                readOnly={!isMissingNumericValue(form.paquete_por_caja)}
-                className={!isMissingNumericValue(form.paquete_por_caja) ? "bg-muted" : ""}
-                onChange={(e) => setForm({ ...form, paquete_por_caja: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-          </div>
-
-          <div className={`grid gap-4 ${isMissingNumericValue(form.piezas_por_paquete) ? "grid-cols-2" : "grid-cols-3"}`}>
-            {!isMissingNumericValue(form.piezas_por_paquete) && (
-              <div className="space-y-2">
-                <Label>Pieces per Package</Label>
-                <Input
-                  type="number"
-                  value={form.piezas_por_paquete ?? ""}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Total Pieces per Box</Label>
-              <Input
-                type="number"
-                value={form.piezas_totales_por_caja ?? ""}
-                readOnly={!isMissingNumericValue(form.piezas_totales_por_caja)}
-                className={!isMissingNumericValue(form.piezas_totales_por_caja) ? "bg-muted" : ""}
-                onChange={(e) => setForm({ ...form, piezas_totales_por_caja: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Pieces per Pallet</Label>
-              <Input
-                type="number"
-                value={form.pieces_per_pallet ?? ""}
-                readOnly={!isMissingNumericValue(form.pieces_per_pallet)}
-                className={!isMissingNumericValue(form.pieces_per_pallet) ? "bg-muted" : ""}
-                onChange={(e) => setForm({ ...form, pieces_per_pallet: e.target.value ? Number(e.target.value) : null })}
               />
             </div>
           </div>
