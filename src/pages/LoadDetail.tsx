@@ -67,6 +67,8 @@ import {
   Truck,
   Pencil,
   DollarSign,
+  Ghost,
+  Link2,
 } from "lucide-react";
 import {
   AlertDialog,
