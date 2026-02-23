@@ -94,6 +94,8 @@ import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
 import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
+import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
+import { LinkVirtualPalletDialog } from "@/components/inventory/LinkVirtualPalletDialog";
 
 interface InventoryFilters {
   fecha: string[];
