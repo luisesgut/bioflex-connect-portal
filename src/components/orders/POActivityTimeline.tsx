@@ -190,14 +190,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
         }
       }
 
-      // 4. Find loads associated with this PO (via sales_order_number or po_number in pallets)
-      // First, get load IDs from load_pallets that match our PO
-      const matchConditions = [];
-      if (order.sales_order_number) {
-        matchConditions.push(`bfx_order.eq.${order.sales_order_number}`);
-      }
-      matchConditions.push(`customer_lot.eq.${order.po_number}`);
-
+      // 4. Find released pallets associated with this PO
       // Get inventory pallets that match this PO
       let inventoryQuery = supabase
         .from("inventory_pallets")
@@ -213,37 +206,81 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
       const palletIds = matchingPallets?.map(p => p.id) || [];
 
       if (palletIds.length > 0) {
-        // Get load_pallets for these inventory pallets
+        // Get ONLY released load_pallets (actioned and not on hold)
         const { data: loadPallets } = await supabase
           .from("load_pallets")
-          .select("load_id")
-          .in("pallet_id", palletIds);
+          .select("load_id, pallet_id, quantity, actioned_at, is_on_hold, destination")
+          .in("pallet_id", palletIds)
+          .not("actioned_at", "is", null)
+          .eq("is_on_hold", false);
 
-        const loadIds = [...new Set(loadPallets?.map(lp => lp.load_id) || [])];
+        if (loadPallets && loadPallets.length > 0) {
+          // Group released pallets by load_id
+          const loadGroupMap = new Map<string, { count: number; totalVolume: number; destinations: Set<string>; earliestAction: string }>();
+          for (const lp of loadPallets) {
+            const existing = loadGroupMap.get(lp.load_id);
+            if (existing) {
+              existing.count++;
+              existing.totalVolume += Number(lp.quantity) || 0;
+              if (lp.destination) existing.destinations.add(lp.destination);
+              if (lp.actioned_at && lp.actioned_at < existing.earliestAction) {
+                existing.earliestAction = lp.actioned_at;
+              }
+            } else {
+              const dests = new Set<string>();
+              if (lp.destination) dests.add(lp.destination);
+              loadGroupMap.set(lp.load_id, {
+                count: 1,
+                totalVolume: Number(lp.quantity) || 0,
+                destinations: dests,
+                earliestAction: lp.actioned_at!,
+              });
+            }
+          }
 
-        if (loadIds.length > 0) {
-          // Get shipping loads
+          const loadIds = [...loadGroupMap.keys()];
+
+          // Get shipping loads info
           const { data: loads } = await supabase
             .from("shipping_loads")
-            .select("*")
+            .select("id, load_number, status, shipping_date, created_at")
             .in("id", loadIds)
             .order("created_at", { ascending: true });
 
+          // Get destination actual dates for delivered loads
+          const { data: destDates } = await supabase
+            .from("load_destination_dates")
+            .select("load_id, destination, actual_date")
+            .in("load_id", loadIds)
+            .not("actual_date", "is", null);
+
+          const destDatesByLoad = new Map<string, Array<{ destination: string; actual_date: string }>>();
+          if (destDates) {
+            for (const dd of destDates) {
+              const arr = destDatesByLoad.get(dd.load_id) || [];
+              arr.push({ destination: dd.destination, actual_date: dd.actual_date! });
+              destDatesByLoad.set(dd.load_id, arr);
+            }
+          }
+
           if (loads) {
             for (const load of loads) {
-              // Load created/assembling
+              const group = loadGroupMap.get(load.id);
+              if (!group) continue;
+
+              // Released pallets event
               timelineEvents.push({
-                id: `load-created-${load.id}`,
+                id: `load-released-${load.id}`,
                 type: "load_created",
-                title: "Added to Shipping Load",
-                description: `Product added to load ${load.load_number}`,
-                timestamp: load.created_at,
-                status: "info",
-                icon: "package",
+                title: "Pallets Released",
+                description: `${group.count} pallet${group.count !== 1 ? "s" : ""} released in Load ${load.load_number} — ${group.totalVolume.toLocaleString()} total volume`,
+                timestamp: group.earliestAction,
+                status: "approved",
+                icon: "check",
                 metadata: { load_number: load.load_number },
               });
 
-              // Load shipped (in_transit)
+              // Load shipped
               if (load.status === "in_transit" || load.status === "delivered") {
                 timelineEvents.push({
                   id: `load-shipped-${load.id}`,
@@ -253,25 +290,29 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
                   timestamp: load.shipping_date,
                   status: "info",
                   icon: "truck",
-                  metadata: { 
-                    load_number: load.load_number,
-                    last_city: load.last_reported_city,
-                  },
+                  metadata: { load_number: load.load_number },
                 });
               }
 
-              // Load delivered
-              if (load.status === "delivered" && load.estimated_delivery_date) {
-                timelineEvents.push({
-                  id: `load-delivered-${load.id}`,
-                  type: "load_delivered",
-                  title: "Load Delivered",
-                  description: `Load ${load.load_number} was delivered`,
-                  timestamp: load.estimated_delivery_date,
-                  status: "approved",
-                  icon: "check",
-                  metadata: { load_number: load.load_number },
-                });
+              // Delivery per destination (actual dates only)
+              if (load.status === "delivered" || load.status === "in_transit") {
+                const destinations = destDatesByLoad.get(load.id) || [];
+                // Only show destinations relevant to this PO's pallets
+                const poDestinations = group.destinations;
+                const relevantDests = destinations.filter(d => poDestinations.has(d.destination));
+                
+                for (const dest of relevantDests) {
+                  timelineEvents.push({
+                    id: `load-dest-delivered-${load.id}-${dest.destination}`,
+                    type: "load_delivered",
+                    title: "Delivered",
+                    description: `Load ${load.load_number} arrived at ${dest.destination}`,
+                    timestamp: dest.actual_date,
+                    status: "approved",
+                    icon: "check",
+                    metadata: { load_number: load.load_number },
+                  });
+                }
               }
             }
           }
@@ -281,7 +322,8 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
       // Also check shipped_pallets for historical data
       let shippedQuery = supabase
         .from("shipped_pallets")
-        .select("*, shipping_loads:load_id(load_number, status, shipping_date, estimated_delivery_date)");
+        .select("*, shipping_loads:load_id(id, load_number, status, shipping_date)")
+        .not("destination", "is", null);
 
       if (order.sales_order_number) {
         shippedQuery = shippedQuery.or(`bfx_order.eq.${order.sales_order_number},customer_lot.eq.${order.po_number}`);
@@ -292,41 +334,61 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
       const { data: shippedPallets } = await shippedQuery;
 
       if (shippedPallets) {
-        // Group by load_id to avoid duplicates
-        const loadMap = new Map<string, typeof shippedPallets[0]>();
+        // Group by load_id
+        const shippedLoadMap = new Map<string, { count: number; totalVolume: number; destinations: Set<string>; shippedAt: string; load: any }>();
         for (const sp of shippedPallets) {
-          if (!loadMap.has(sp.load_id)) {
-            loadMap.set(sp.load_id, sp);
+          const existing = shippedLoadMap.get(sp.load_id);
+          if (existing) {
+            existing.count++;
+            existing.totalVolume += Number(sp.quantity) || 0;
+            if (sp.destination) existing.destinations.add(sp.destination);
+          } else {
+            const dests = new Set<string>();
+            if (sp.destination) dests.add(sp.destination);
+            shippedLoadMap.set(sp.load_id, {
+              count: 1,
+              totalVolume: Number(sp.quantity) || 0,
+              destinations: dests,
+              shippedAt: sp.shipped_at,
+              load: sp.shipping_loads,
+            });
           }
         }
 
-        for (const [loadId, sp] of loadMap) {
-          // Check if we already added events for this load
+        for (const [loadId, group] of shippedLoadMap) {
           const alreadyHasLoad = timelineEvents.some(e => e.id.includes(loadId));
-          if (!alreadyHasLoad && sp.shipping_loads) {
-            const load = sp.shipping_loads as any;
-            
+          if (!alreadyHasLoad && group.load) {
             timelineEvents.push({
-              id: `shipped-load-${loadId}`,
-              type: "load_shipped",
-              title: "Load Shipped",
-              description: `Load ${load.load_number} shipped`,
-              timestamp: sp.shipped_at,
-              status: "info",
-              icon: "truck",
-              metadata: { load_number: load.load_number },
+              id: `shipped-released-${loadId}`,
+              type: "load_created",
+              title: "Pallets Released",
+              description: `${group.count} pallet${group.count !== 1 ? "s" : ""} released in Load ${group.load.load_number} — ${group.totalVolume.toLocaleString()} total volume`,
+              timestamp: group.shippedAt,
+              status: "approved",
+              icon: "check",
+              metadata: { load_number: group.load.load_number },
             });
 
-            if (sp.delivery_date) {
+            // Check for delivery dates per destination from shipped_pallets
+            const deliveredByDest = new Map<string, string>();
+            for (const sp of shippedPallets) {
+              if (sp.load_id === loadId && sp.destination && sp.delivery_date) {
+                if (!deliveredByDest.has(sp.destination) || sp.delivery_date > deliveredByDest.get(sp.destination)!) {
+                  deliveredByDest.set(sp.destination, sp.delivery_date);
+                }
+              }
+            }
+
+            for (const [dest, date] of deliveredByDest) {
               timelineEvents.push({
-                id: `shipped-delivered-${loadId}`,
+                id: `shipped-dest-delivered-${loadId}-${dest}`,
                 type: "load_delivered",
-                title: "Load Delivered",
-                description: `Load ${load.load_number} delivered`,
-                timestamp: sp.delivery_date,
+                title: "Delivered",
+                description: `Load ${group.load.load_number} arrived at ${dest}`,
+                timestamp: date,
                 status: "approved",
                 icon: "check",
-                metadata: { load_number: load.load_number },
+                metadata: { load_number: group.load.load_number },
               });
             }
           }
