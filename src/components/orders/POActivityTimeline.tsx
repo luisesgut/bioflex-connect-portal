@@ -207,24 +207,26 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
 
       if (palletIds.length > 0) {
         // Get ONLY released load_pallets (actioned and not on hold)
+        // Get released load_pallets (has release_number and not on hold)
         const { data: loadPallets } = await supabase
           .from("load_pallets")
-          .select("load_id, pallet_id, quantity, actioned_at, is_on_hold, destination")
+          .select("load_id, pallet_id, quantity, actioned_at, is_on_hold, destination, release_number, created_at")
           .in("pallet_id", palletIds)
-          .not("actioned_at", "is", null)
+          .not("release_number", "is", null)
           .eq("is_on_hold", false);
 
         if (loadPallets && loadPallets.length > 0) {
           // Group released pallets by load_id
           const loadGroupMap = new Map<string, { count: number; totalVolume: number; destinations: Set<string>; earliestAction: string }>();
           for (const lp of loadPallets) {
+            const timestamp = lp.actioned_at || lp.created_at;
             const existing = loadGroupMap.get(lp.load_id);
             if (existing) {
               existing.count++;
               existing.totalVolume += Number(lp.quantity) || 0;
               if (lp.destination) existing.destinations.add(lp.destination);
-              if (lp.actioned_at && lp.actioned_at < existing.earliestAction) {
-                existing.earliestAction = lp.actioned_at;
+              if (timestamp && timestamp < existing.earliestAction) {
+                existing.earliestAction = timestamp;
               }
             } else {
               const dests = new Set<string>();
@@ -233,7 +235,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
                 count: 1,
                 totalVolume: Number(lp.quantity) || 0,
                 destinations: dests,
-                earliestAction: lp.actioned_at!,
+                earliestAction: timestamp,
               });
             }
           }
