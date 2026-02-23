@@ -562,6 +562,13 @@ export default function Inventory() {
             </Table>
           </div>
         )}
+
+        {/* Create Virtual Pallet Dialog */}
+        <CreateVirtualPalletDialog
+          open={createVirtualOpen}
+          onOpenChange={setCreateVirtualOpen}
+          onCreated={loadFromDB}
+        />
       </div>
     </MainLayout>
   );
