@@ -436,18 +436,27 @@ export default function Inventory() {
             )}
           </div>
           {isAdmin && (
-            <Button
-              variant="outline"
-              onClick={() => syncSAPInventory()}
-              disabled={syncing}
-            >
-              {syncing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Sincronizar SAP
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateVirtualOpen(true)}
+              >
+                <Ghost className="mr-2 h-4 w-4" />
+                + Virtual
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => syncSAPInventory()}
+                disabled={syncing}
+              >
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Sincronizar SAP
+              </Button>
+            </div>
           )}
         </div>
 
