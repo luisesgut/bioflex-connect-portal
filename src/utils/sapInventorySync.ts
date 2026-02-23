@@ -104,6 +104,58 @@ export async function syncSapInventoryFromEndpoint() {
     throw new Error(`Failed to cleanup previous snapshot: ${cleanupError.message}`);
   }
 
+  // ── Also sync into inventory_pallets so load assembly (FK) works ──
+  // Get IDs of pallets currently assigned to loads (don't touch those)
+  const { data: assignedPallets } = await supabase
+    .from("load_pallets")
+    .select("pallet_id");
+  const assignedIds = new Set((assignedPallets || []).map((p) => p.pallet_id));
+
+  // Delete unassigned inventory_pallets to refresh with SAP data
+  // First get all inventory_pallets ids
+  const { data: allInvPallets } = await supabase
+    .from("inventory_pallets")
+    .select("id");
+  const unassignedIds = (allInvPallets || [])
+    .map((p) => p.id)
+    .filter((pid) => !assignedIds.has(pid));
+
+  if (unassignedIds.length > 0) {
+    for (let i = 0; i < unassignedIds.length; i += INSERT_BATCH_SIZE) {
+      const batch = unassignedIds.slice(i, i + INSERT_BATCH_SIZE);
+      await supabase
+        .from("inventory_pallets")
+        .delete()
+        .in("id", batch);
+    }
+  }
+
+  // Insert available SAP items into inventory_pallets
+  const availableSapItems = transformedData.filter((item) => item.status === "available");
+  const inventoryRows = availableSapItems.map((item) => ({
+    pt_code: item.pt_code,
+    description: item.description,
+    stock: item.stock,
+    unit: item.unit,
+    gross_weight: item.gross_weight,
+    net_weight: item.net_weight,
+    traceability: item.traceability,
+    bfx_order: item.bfx_order,
+    pieces: item.pieces ? Math.round(item.pieces) : null,
+    pallet_type: item.pallet_type,
+    status: "available" as const,
+    fecha: item.fecha,
+  }));
+
+  for (let i = 0; i < inventoryRows.length; i += INSERT_BATCH_SIZE) {
+    const batch = inventoryRows.slice(i, i + INSERT_BATCH_SIZE);
+    const { error: invInsertError } = await supabase.from("inventory_pallets").insert(batch);
+    if (invInsertError) {
+      console.error("Failed to sync inventory_pallets:", invInsertError.message);
+      // Non-fatal: sap_inventory is the source of truth, this is for load assembly compatibility
+    }
+  }
+
   return {
     success: true,
     count: insertedCount,
