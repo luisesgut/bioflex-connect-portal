@@ -69,6 +69,7 @@ export default function Inventory() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [sapUnavailable, setSapUnavailable] = useState(false);
+  const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
