@@ -37,6 +37,7 @@ interface Product {
   tipo_empaque: string | null;
   pt_code: string | null;
   pieces_per_pallet: number | null;
+  unidades_por_tarima: number | null;
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
@@ -141,7 +142,7 @@ export default function Products() {
     const [productsRes, requestsRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
+        .select("id, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
         .order("customer_item"),
       supabase
         .from("product_requests")

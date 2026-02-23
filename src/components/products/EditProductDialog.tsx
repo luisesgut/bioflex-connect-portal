@@ -27,6 +27,7 @@ interface Product {
   tipo_empaque: string | null;
   pt_code: string | null;
   pieces_per_pallet: number | null;
+  unidades_por_tarima: number | null;
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
@@ -125,6 +126,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     return {
       ...base,
       tipo_empaque: record.TipoEmpaque,
+      unidades_por_tarima: parseNullableNumber(record.UnidadesPorTarima),
       paquete_por_caja: parseNullableNumber(record.PaquetePorCaja),
       piezas_por_paquete: parseNullableNumber(record.PiezasPorPaquete),
       piezas_totales_por_caja: piezasTotalesPorCaja,
@@ -179,6 +181,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: product.tipo_empaque,
         pt_code: product.pt_code,
         pieces_per_pallet: product.pieces_per_pallet,
+        unidades_por_tarima: product.unidades_por_tarima,
         piezas_por_paquete: product.piezas_por_paquete,
         paquete_por_caja: product.paquete_por_caja,
         piezas_totales_por_caja: product.piezas_totales_por_caja,
@@ -209,6 +212,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: product.tipo_empaque,
         pt_code: product.pt_code,
         pieces_per_pallet: product.pieces_per_pallet,
+        unidades_por_tarima: product.unidades_por_tarima,
         piezas_por_paquete: product.piezas_por_paquete,
         paquete_por_caja: product.paquete_por_caja,
         piezas_totales_por_caja: product.piezas_totales_por_caja,
@@ -270,6 +274,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         tipo_empaque: form.tipo_empaque || null,
         pt_code: form.pt_code || null,
         pieces_per_pallet: form.pieces_per_pallet || null,
+        unidades_por_tarima: form.unidades_por_tarima || null,
         piezas_por_paquete: form.piezas_por_paquete || null,
         paquete_por_caja: form.paquete_por_caja || null,
         piezas_totales_por_caja: form.piezas_totales_por_caja || null,
@@ -365,6 +370,19 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               <Input value={form.pt_code || ""} onChange={(e) => setForm({ ...form, pt_code: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>Units per Pallet</Label>
+              <Input
+                type="number"
+                value={form.unidades_por_tarima ?? ""}
+                readOnly={!isMissingNumericValue(form.unidades_por_tarima)}
+                className={!isMissingNumericValue(form.unidades_por_tarima) ? "bg-muted" : ""}
+                onChange={(e) => setForm({ ...form, unidades_por_tarima: e.target.value ? Number(e.target.value) : null })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
               <Label>Packages per Box</Label>
               <Input
                 type="number"
@@ -376,17 +394,18 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Pieces per Package</Label>
-              <Input
-                type="number"
-                value={form.piezas_por_paquete ?? ""}
-                readOnly={!isMissingNumericValue(form.piezas_por_paquete)}
-                className={!isMissingNumericValue(form.piezas_por_paquete) ? "bg-muted" : ""}
-                onChange={(e) => setForm({ ...form, piezas_por_paquete: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
+          <div className={`grid gap-4 ${isMissingNumericValue(form.piezas_por_paquete) ? "grid-cols-2" : "grid-cols-3"}`}>
+            {!isMissingNumericValue(form.piezas_por_paquete) && (
+              <div className="space-y-2">
+                <Label>Pieces per Package</Label>
+                <Input
+                  type="number"
+                  value={form.piezas_por_paquete ?? ""}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Total Pieces per Box</Label>
               <Input
