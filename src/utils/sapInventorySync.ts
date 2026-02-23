@@ -77,7 +77,7 @@ export async function syncSapInventoryFromEndpoint() {
       pallet_type: "CASES",
       status: item.asignadoAentrega === true ? "assigned" : "available",
       fecha: fechaFormatted,
-      raw_data: item,
+      raw_data: item as Record<string, unknown>,
       synced_at: now,
     };
   });

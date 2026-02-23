@@ -33,8 +33,6 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "priority", label: "Priority", defaultWidth: 100, minWidth: 80, filterable: true },
   { id: "customer_delivery", label: "Customer Delivery", defaultWidth: 150, minWidth: 100, sortable: true, filterable: true },
   { id: "bioflex_delivery", label: "Bioflex Delivery", defaultWidth: 150, minWidth: 100, sortable: true, filterable: true },
-  { id: "excess_stock", label: "Excess Stock", adminOnly: true, align: "right", defaultWidth: 110, minWidth: 80 },
-  { id: "in_floor", label: "In Floor", align: "right", defaultWidth: 90, minWidth: 70 },
   { id: "shipped", label: "Shipped", align: "right", defaultWidth: 90, minWidth: 70 },
   { id: "pending", label: "Pending", align: "right", defaultWidth: 90, minWidth: 70 },
   { id: "stock_available", label: "Stock Available", align: "right", defaultWidth: 120, minWidth: 80 },
