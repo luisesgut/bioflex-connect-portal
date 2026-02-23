@@ -20,12 +20,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
+import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 
 interface SAPInventoryItem {
   id: string;
