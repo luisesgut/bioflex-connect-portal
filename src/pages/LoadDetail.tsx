@@ -3756,6 +3756,23 @@ export default function LoadDetail() {
           open={addDestinationDialogOpen}
           onOpenChange={setAddDestinationDialogOpen}
         />
+
+        {/* Create Virtual Pallet Dialog */}
+        <CreateVirtualPalletDialog
+          open={createVirtualOpen}
+          onOpenChange={setCreateVirtualOpen}
+          onCreated={fetchLoadData}
+        />
+
+        {/* Link Virtual Pallet Dialog */}
+        <LinkVirtualPalletDialog
+          open={linkVirtualOpen}
+          onOpenChange={setLinkVirtualOpen}
+          virtualPalletId={linkVirtualPalletId}
+          virtualPtCode={linkVirtualPtCode}
+          loadPalletId={linkLoadPalletId}
+          onLinked={fetchLoadData}
+        />
       </div>
     </MainLayout>
   );
