@@ -30,6 +30,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 
 interface Product {
   id: string;
+  codigo_producto?: string | null;
   customer_item: string | null;
   item_description: string | null;
   customer: string | null;
@@ -47,6 +48,16 @@ interface Product {
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
+}
+
+interface DestinyProduct {
+  codigoProducto: string | null;
+  printCard: string | null;
+  TipoEmpaque: string | null;
+  UnidadesPorTarima: number | null;
+  PaquetePorCaja: number | null;
+  PiezasPorPaquete: number | null;
+  PiezasTotalePorCaja: number | null;
 }
 
 interface ProductRequest {
@@ -119,6 +130,15 @@ function getStatusBadgeVariant(status: string) {
   }
 }
 
+const normalizeCode = (value: string | null | undefined) => value?.trim().toUpperCase() || "";
+const parseNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const isMissingText = (value: string | null | undefined) => !value || value.trim() === "" || value.trim() === "0";
+const isMissingNumber = (value: number | null | undefined) => value === null || value === 0;
+
 export default function Products() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -139,22 +159,66 @@ export default function Products() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [productsRes, requestsRes] = await Promise.all([
+    const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
+        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
         .order("customer_item"),
       supabase
         .from("product_requests")
         .select("id, product_name, customer, item_description, item_type, status, engineering_status, design_status, created_at, updated_at, pieces_per_pallet, customer_item_code")
         .neq("status", "completed")
         .order("created_at", { ascending: false }),
+      fetch("/productos_destiny.json")
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Failed to load productos_destiny.json");
+          return res.json() as Promise<DestinyProduct[]>;
+        })
+        .catch((error) => {
+          console.error("Error loading productos_destiny.json in Products page:", error);
+          return [] as DestinyProduct[];
+        }),
     ]);
 
     if (productsRes.error) {
       toast({ title: "Error", description: "Failed to fetch products", variant: "destructive" });
     } else {
-      setProducts(productsRes.data || []);
+      const destinyByCode = (destinyRes || []).reduce<Record<string, DestinyProduct>>((acc, item) => {
+        const key = normalizeCode(item.codigoProducto);
+        if (key) acc[key] = item;
+        return acc;
+      }, {});
+
+      const syncedProducts = (productsRes.data || []).map((product) => {
+        const lookupCode =
+          normalizeCode(product.pt_code) ||
+          normalizeCode(product.codigo_producto) ||
+          normalizeCode(product.customer_item);
+        const destiny = destinyByCode[lookupCode];
+        if (!destiny) return product;
+
+        const piezasTotalesPorCaja = parseNullableNumber(destiny.PiezasTotalePorCaja);
+        const unidadesPorTarima = parseNullableNumber(destiny.UnidadesPorTarima);
+        const piecesPerPalletFromJson =
+          unidadesPorTarima !== null && piezasTotalesPorCaja !== null
+            ? unidadesPorTarima * piezasTotalesPorCaja
+            : null;
+
+        return {
+          ...product,
+          pt_code: isMissingText(product.pt_code) ? destiny.codigoProducto : product.pt_code,
+          codigo_producto: isMissingText(product.codigo_producto) ? destiny.codigoProducto : product.codigo_producto,
+          print_card: isMissingText(product.print_card) ? destiny.printCard : product.print_card,
+          tipo_empaque: isMissingText(product.tipo_empaque) ? destiny.TipoEmpaque : product.tipo_empaque,
+          unidades_por_tarima: isMissingNumber(product.unidades_por_tarima) ? unidadesPorTarima : product.unidades_por_tarima,
+          paquete_por_caja: isMissingNumber(product.paquete_por_caja) ? parseNullableNumber(destiny.PaquetePorCaja) : product.paquete_por_caja,
+          piezas_por_paquete: isMissingNumber(product.piezas_por_paquete) ? parseNullableNumber(destiny.PiezasPorPaquete) : product.piezas_por_paquete,
+          piezas_totales_por_caja: isMissingNumber(product.piezas_totales_por_caja) ? piezasTotalesPorCaja : product.piezas_totales_por_caja,
+          pieces_per_pallet: isMissingNumber(product.pieces_per_pallet) ? piecesPerPalletFromJson : product.pieces_per_pallet,
+        };
+      });
+
+      setProducts(syncedProducts);
     }
 
     if (requestsRes.error) {
@@ -334,6 +398,8 @@ export default function Products() {
                         <FileText className="h-4 w-4" />
                         {product.print_card || "View"}
                       </button>
+                    ) : product.print_card ? (
+                      <span className="font-mono text-muted-foreground">{product.print_card}</span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
