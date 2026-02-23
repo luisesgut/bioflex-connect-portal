@@ -87,17 +87,17 @@ export function POComments({ purchaseOrderId, isInternal, title }: POCommentsPro
     const seenIds = new Set<string>();
 
     if (isInternal) {
-      // Internal chat: only BFX (internal) users — all team members
-      const { data: teamData } = await supabase
-        .from("team_members")
-        .select("user_id, full_name")
-        .eq("is_active", true);
+      // Internal chat: all BFX (internal) users
+      const { data: internalProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .eq("user_type", "internal");
 
-      if (teamData) {
-        teamData.forEach((t) => {
-          if (!seenIds.has(t.user_id)) {
-            seenIds.add(t.user_id);
-            users.push({ id: t.user_id, name: t.full_name });
+      if (internalProfiles) {
+        internalProfiles.forEach((p) => {
+          if (!seenIds.has(p.user_id)) {
+            seenIds.add(p.user_id);
+            users.push({ id: p.user_id, name: p.full_name || p.email || "User" });
           }
         });
       }
