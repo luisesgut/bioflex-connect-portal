@@ -31,5 +31,9 @@ jobs:
           robocopy $sourcePath $destinationPath /MIR /V /NP /XF web.config
 
           # 3. Traductor de códigos para GitHub
-          if ($lastexitcode -le 1) { exit 0 } else { exit $lastexitcode }
+          if ($lastexitcode -lt 8) { 
+              exit 0 
+          } else { 
+              exit $lastexitcode 
+          }
         shell: powershell
