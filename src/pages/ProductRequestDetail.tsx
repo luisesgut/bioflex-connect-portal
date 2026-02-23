@@ -362,6 +362,7 @@ export default function ProductRequestDetail() {
     }
   };
 
+  const fetchRequest = async () => {
     try {
       const { data, error } = await supabase
         .from('product_requests')
