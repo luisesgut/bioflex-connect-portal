@@ -114,6 +114,7 @@ export default function ShippingLoads() {
   const { getDestinationLabel } = useCustomerLocations();
   const [loads, setLoads] = useState<ShippingLoad[]>([]);
   const [releaseRequests, setReleaseRequests] = useState<ReleaseRequest[]>([]);
+  const [releasedPalletsMap, setReleasedPalletsMap] = useState<Map<string, number>>(new Map());
   const [destinationDatesMap, setDestinationDatesMap] = useState<Map<string, Array<{ destination: string; actual_date: string | null }>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,7 +127,7 @@ export default function ShippingLoads() {
   const [transitLoadPending, setTransitLoadPending] = useState<ShippingLoad | null>(null);
   const fetchData = useCallback(async () => {
     try {
-      const [loadsRes, requestsRes, destDatesRes] = await Promise.all([
+      const [loadsRes, requestsRes, destDatesRes, palletRes] = await Promise.all([
         supabase
           .from("shipping_loads")
           .select("*")
@@ -139,6 +140,9 @@ export default function ShippingLoads() {
           .from("load_destination_dates")
           .select("load_id, destination, actual_date")
           .not("actual_date", "is", null),
+        supabase
+          .from("load_pallets")
+          .select("load_id, is_on_hold, actioned_at"),
       ]);
 
       if (loadsRes.error) throw loadsRes.error;
@@ -146,6 +150,15 @@ export default function ShippingLoads() {
 
       setLoads(loadsRes.data || []);
       setReleaseRequests(requestsRes.data || []);
+
+      // Build released pallets count map
+      const rpMap = new Map<string, number>();
+      (palletRes.data || []).forEach((p) => {
+        if (p.actioned_at && !p.is_on_hold) {
+          rpMap.set(p.load_id, (rpMap.get(p.load_id) || 0) + 1);
+        }
+      });
+      setReleasedPalletsMap(rpMap);
 
       // Build map of load_id -> destination dates with actual_date
       const ddMap = new Map<string, Array<{ destination: string; actual_date: string | null }>>();
@@ -389,6 +402,7 @@ export default function ShippingLoads() {
               <TableHead>Ship Date</TableHead>
               <TableHead>Delivery Date</TableHead>
               <TableHead className="text-center">Pallets</TableHead>
+              <TableHead className="text-center">Released</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -417,6 +431,18 @@ export default function ShippingLoads() {
                       : "-"}
                   </TableCell>
                   <TableCell className="text-center">{load.total_pallets}</TableCell>
+                  <TableCell className="text-center">
+                    {(() => {
+                      const released = releasedPalletsMap.get(load.id) || 0;
+                      const isPending = load.status === "pending_release" || load.status === "approved" || load.status === "on_hold";
+                      if (!isPending && released === 0) return "-";
+                      return (
+                        <span className={released === load.total_pallets ? "text-emerald-600 font-medium" : ""}>
+                          {released} / {load.total_pallets}
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {isAdmin ? (
                       <Select
