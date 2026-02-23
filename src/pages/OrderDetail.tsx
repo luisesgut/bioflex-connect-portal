@@ -709,21 +709,17 @@ export default function OrderDetail() {
           </div>
         </div>
 
-        {/* Activity Timeline - Full width below the grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <POActivityTimeline
-              order={{
-                id: order.id,
-                po_number: order.po_number,
-                sales_order_number: order.sales_order_number,
-                created_at: order.created_at,
-                status: order.status,
-                is_hot_order: order.is_hot_order,
-              }}
-            />
-          </div>
-        </div>
+        {/* Activity Timeline - Full width below */}
+        <POActivityTimeline
+          order={{
+            id: order.id,
+            po_number: order.po_number,
+            sales_order_number: order.sales_order_number,
+            created_at: order.created_at,
+            status: order.status,
+            is_hot_order: order.is_hot_order,
+          }}
+        />
 
         {/* Edit Order Dialog */}
         {isAdmin && order && (
