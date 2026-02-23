@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -66,13 +67,13 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const [form, setForm] = useState<Partial<Product>>({});
   const [destinyProductsByCode, setDestinyProductsByCode] = useState<Record<string, DestinyProduct>>({});
 
-  const { data: dpContacts } = useQuery({
-    queryKey: ["dp-contacts-active"],
+  const { data: externalUsers } = useQuery({
+    queryKey: ["external-users-active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("dp_contacts")
-        .select("id, full_name, email")
-        .eq("is_active", true)
+        .from("profiles")
+        .select("id, user_id, full_name, email")
+        .eq("user_type", "external")
         .order("full_name");
       if (error) throw error;
       return data;
@@ -239,8 +240,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
       return null;
     }
-    const { data: urlData } = supabase.storage.from("print-cards").getPublicUrl(path);
-    return urlData.publicUrl;
+    return `print-cards:${path}`;
   };
 
   const handleFileUpload = async (
@@ -361,7 +361,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>PT Number</Label>
+              <Label>PT Code</Label>
               <Input value={form.pt_code || ""} onChange={(e) => setForm({ ...form, pt_code: e.target.value })} />
             </div>
             <div className="space-y-2">
@@ -418,9 +418,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>PC PDF</Label>
             <div className="flex items-center gap-2">
               {form.print_card_url && (
-                <a href={form.print_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => pcFileRef.current?.click()} disabled={uploadingPC}>
                 <Upload className="h-4 w-4 mr-1" />
@@ -443,9 +443,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>Customer Spec Sheet (PDF)</Label>
             <div className="flex items-center gap-2">
               {form.customer_tech_spec_url && (
-                <a href={form.customer_tech_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.customer_tech_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => customerSpecRef.current?.click()} disabled={uploadingCustomerSpec}>
                 <Upload className="h-4 w-4 mr-1" />
@@ -468,9 +468,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             <Label>BFX Spec Sheet (PDF)</Label>
             <div className="flex items-center gap-2">
               {form.bfx_spec_url && (
-                <a href={form.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <button onClick={() => openStorageFile(form.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
-                </a>
+                </button>
               )}
               <Button type="button" variant="outline" size="sm" onClick={() => bfxSpecRef.current?.click()} disabled={uploadingBFXSpec}>
                 <Upload className="h-4 w-4 mr-1" />
@@ -505,17 +505,18 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               <PopoverContent className="w-80 p-0" align="start">
                 <ScrollArea className="h-60">
                   <div className="p-2 space-y-1">
-                    {dpContacts?.map((c) => {
+                    {externalUsers?.map((c) => {
                       const selected = form.dp_sales_csr_names ? form.dp_sales_csr_names.split(", ").filter(Boolean) : [];
-                      const isChecked = selected.includes(c.full_name);
+                      const isChecked = selected.includes(c.full_name || "");
                       return (
                         <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                           <Checkbox
                             checked={isChecked}
                             onCheckedChange={() => {
+                              const name = c.full_name || "";
                               const updated = isChecked
-                                ? selected.filter((n) => n !== c.full_name)
-                                : [...selected, c.full_name];
+                                ? selected.filter((n) => n !== name)
+                                : [...selected, name];
                               setForm({ ...form, dp_sales_csr_names: updated.join(", ") || null });
                             }}
                           />
@@ -523,8 +524,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
                         </label>
                       );
                     })}
-                    {(!dpContacts || dpContacts.length === 0) && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No contacts available. Add them in Settings.</p>
+                    {(!externalUsers || externalUsers.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No external users available.</p>
                     )}
                   </div>
                 </ScrollArea>

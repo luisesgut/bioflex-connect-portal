@@ -18,11 +18,11 @@ import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminProducts from "./pages/AdminProducts";
-
+import Users from "./pages/Users";
 import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
-import ReleaseRequests from "./pages/ReleaseRequests";
+
 
 import ProductRequests from "./pages/ProductRequests";
 import NewProductRequest from "./pages/NewProductRequest";
@@ -52,11 +52,12 @@ const App = () => (
                 
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
                 
                 <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
                 <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
-                <Route path="/release-requests" element={<ProtectedRoute><ReleaseRequests /></ProtectedRoute>} />
+                <Route path="/release-requests" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />

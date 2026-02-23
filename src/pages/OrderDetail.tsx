@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -12,6 +13,7 @@ import {
   XCircle,
   CheckCircle2,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { cn } from "@/lib/utils";
 
 
@@ -120,6 +123,7 @@ export default function OrderDetail() {
   const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
 
   useEffect(() => {
@@ -335,16 +339,29 @@ export default function OrderDetail() {
               Created on {formatDateTime(order.created_at)}
             </p>
           </div>
-          {isAdmin && order.status !== "closed" && (
-            <Button
-              variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={handleCloseOrder}
-              disabled={closing}
-            >
-              {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
-              Close Order
-            </Button>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit PO
+                </Button>
+              )}
+              {order.status !== "closed" && (
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  onClick={handleCloseOrder}
+                  disabled={closing}
+                >
+                  {closing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <XCircle className="h-4 w-4 mr-1" />}
+                  Close Order
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -383,14 +400,14 @@ export default function OrderDetail() {
                   </div>
                   {isAdmin && (
                     <div>
-                      <label className="text-sm text-muted-foreground">PT Number</label>
+                      <label className="text-sm text-muted-foreground">PT Code</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.pt_code || "—"}</p>
+                        <p className="font-medium">{order.product?.codigo_producto || order.product?.pt_code || "—"}</p>
                         {order.product?.bfx_spec_url && (
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.bfx_spec_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             BFX Spec
@@ -412,7 +429,7 @@ export default function OrderDetail() {
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => window.open(order.product!.print_card_url!, "_blank")}
+                            onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             PC PDF
@@ -427,7 +444,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => window.open(order.product!.customer_tech_spec_url!, "_blank")}
+                        onClick={() => openStorageFile(order.product!.customer_tech_spec_url!, 'print-cards')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1 inline" />
                         View Spec Sheet
@@ -436,12 +453,6 @@ export default function OrderDetail() {
                       <p className="font-medium">—</p>
                     )}
                   </div>
-                  {isAdmin && (
-                    <div>
-                      <label className="text-sm text-muted-foreground">PT Code (SAP)</label>
-                      <p className="font-medium">{order.product?.codigo_producto || "—"}</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -499,7 +510,7 @@ export default function OrderDetail() {
                       <Button
                         variant="link"
                         className="p-0 h-auto"
-                        onClick={() => window.open(order.pdf_url!, "_blank")}
+                        onClick={() => openStorageFile(order.pdf_url!, 'ncr-attachments')}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         View PDF
@@ -709,6 +720,16 @@ export default function OrderDetail() {
             }}
           />
         </div>
+
+        {/* Edit Order Dialog */}
+        {isAdmin && order && (
+          <EditOrderDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            order={order}
+            onSaved={fetchOrderDetails}
+          />
+        )}
       </div>
     </MainLayout>
   );

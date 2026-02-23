@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,12 @@ interface DropdownOption {
   sort_order: number;
 }
 
+interface CapacityRecord {
+  id: string;
+  item_type: string;
+  weekly_capacity: number;
+}
+
 export function DropdownOptionsManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -38,6 +44,7 @@ export function DropdownOptionsManagement() {
     item_type: "",
     tipo_empaque: "",
   });
+  const [capacityEdits, setCapacityEdits] = useState<Record<string, number>>({});
 
   const { data: options, isLoading } = useQuery({
     queryKey: ["dropdown-options"],
@@ -51,6 +58,62 @@ export function DropdownOptionsManagement() {
       return data as DropdownOption[];
     },
   });
+
+  const { data: capacities } = useQuery({
+    queryKey: ["production-capacity"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("production_capacity")
+        .select("*");
+      if (error) throw error;
+      return data as CapacityRecord[];
+    },
+  });
+
+  // Build a map of item_type -> weekly_capacity
+  const capacityMap: Record<string, number> = {};
+  (capacities || []).forEach((c) => {
+    capacityMap[c.item_type] = c.weekly_capacity;
+  });
+
+  const getCapacityValue = (label: string): number => {
+    if (label in capacityEdits) return capacityEdits[label];
+    return capacityMap[label] ?? 0;
+  };
+
+  const handleCapacityChange = (label: string, value: number) => {
+    setCapacityEdits((prev) => ({ ...prev, [label]: value }));
+  };
+
+  const saveCapacity = async (label: string) => {
+    const value = getCapacityValue(label);
+    const existing = (capacities || []).find((c) => c.item_type === label);
+    if (existing) {
+      const { error } = await supabase
+        .from("production_capacity")
+        .update({ weekly_capacity: value })
+        .eq("id", existing.id);
+      if (error) {
+        toast({ title: "Error saving capacity", variant: "destructive" });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from("production_capacity")
+        .upsert({ item_type: label, weekly_capacity: value }, { onConflict: "item_type" });
+      if (error) {
+        toast({ title: "Error saving capacity", variant: "destructive" });
+        return;
+      }
+    }
+    setCapacityEdits((prev) => {
+      const next = { ...prev };
+      delete next[label];
+      return next;
+    });
+    queryClient.invalidateQueries({ queryKey: ["production-capacity"] });
+    toast({ title: "Capacity saved" });
+  };
 
   const addMutation = useMutation({
     mutationFn: async ({ category, label }: { category: string; label: string }) => {
@@ -75,12 +138,15 @@ export function DropdownOptionsManagement() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, label }: { id: string; label: string }) => {
       const { error } = await supabase.from("dropdown_options").delete().eq("id", id);
       if (error) throw error;
+      // Also delete capacity for this item type if exists
+      await supabase.from("production_capacity").delete().eq("item_type", label);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dropdown-options"] });
+      queryClient.invalidateQueries({ queryKey: ["production-capacity"] });
       toast({ title: "Option deleted" });
     },
   });
@@ -104,7 +170,7 @@ export function DropdownOptionsManagement() {
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">Product Dropdown Options</h2>
           <p className="text-sm text-muted-foreground">
-            Manage options for Final Customer, Item Type, and Tipo Empaque
+            Manage options for Final Customer, Item Type (with weekly capacity), and Tipo Empaque
           </p>
         </div>
       </div>
@@ -154,16 +220,41 @@ export function DropdownOptionsManagement() {
                 {getOptionsForCategory(cat.key).map((opt) => (
                   <div
                     key={opt.id}
-                    className="flex items-center justify-between rounded-lg border px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border px-3 py-2 gap-3"
                   >
                     <span
-                      className={`text-sm ${
+                      className={`text-sm flex-shrink-0 ${
                         opt.is_active ? "text-foreground" : "text-muted-foreground line-through"
                       }`}
                     >
                       {opt.label}
                     </span>
-                    <div className="flex items-center gap-3">
+
+                    {/* Weekly Capacity inline for item_type */}
+                    {cat.key === "item_type" && (
+                      <div className="flex items-center gap-2 flex-1 justify-end mr-2">
+                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Capacity/wk</Label>
+                        <Input
+                          type="number"
+                          className="w-32 h-8 text-sm"
+                          value={getCapacityValue(opt.label) || ""}
+                          onChange={(e) =>
+                            handleCapacityChange(opt.label, parseInt(e.target.value) || 0)
+                          }
+                          onBlur={() => {
+                            if (opt.label in capacityEdits) {
+                              saveCapacity(opt.label);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveCapacity(opt.label);
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <div className="flex items-center gap-1.5">
                         <Label className="text-xs text-muted-foreground">Active</Label>
                         <Switch
@@ -177,7 +268,7 @@ export function DropdownOptionsManagement() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(opt.id)}
+                        onClick={() => deleteMutation.mutate({ id: opt.id, label: opt.label })}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>

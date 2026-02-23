@@ -6,9 +6,11 @@ import { ProductionWeeksChart } from '@/components/dashboard/ProductionWeeksChar
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from '@/hooks/useLanguage';
 import { startOfWeek, endOfWeek, subMonths, format } from 'date-fns';
 
 export default function Dashboard() {
+  const { t } = useLanguage();
   const [stats, setStats] = useState({
     activeOrders: 0,
     hotOrders: 0,
@@ -60,15 +62,9 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="animate-fade-in">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">Overview of your purchase order activity.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('page.dashboard.title')}</h1>
+            <p className="mt-1 text-muted-foreground">{t('page.dashboard.subtitle')}</p>
           </div>
-          <Link to="/orders/new">
-            <Button variant="accent" size="lg" className="gap-2">
-              <FileText className="h-5 w-5" />
-              Create New PO
-            </Button>
-          </Link>
         </div>
 
         {/* Stats Grid */}

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.extract-product-specs]
 verify_jwt = false
+
+[functions.invite-user]
+verify_jwt = false

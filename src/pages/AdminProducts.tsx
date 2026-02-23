@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -482,14 +483,10 @@ export default function AdminProducts() {
       uploadedCount++;
 
       // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('print-cards')
-        .getPublicUrl(filePath);
-
-      // Update product with file URL
+      // Update product with file path (signed URLs generated on display)
       const { error: updateError } = await supabase
         .from('products')
-        .update({ print_card_url: urlData.publicUrl })
+        .update({ print_card_url: `print-cards:${filePath}` })
         .eq('id', matchingProduct.id);
 
       if (updateError) {
@@ -867,15 +864,13 @@ export default function AdminProducts() {
                         </TableCell>
                         <TableCell className="bg-green-500/5">
                           {product.print_card_url ? (
-                            <a 
-                              href={product.print_card_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-primary hover:underline"
+                            <button
+                              onClick={() => openStorageFile(product.print_card_url, 'print-cards')}
+                              className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
                             >
                               <FileText className="h-4 w-4" />
                               View
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}

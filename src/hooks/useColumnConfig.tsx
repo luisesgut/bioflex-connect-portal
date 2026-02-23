@@ -37,6 +37,7 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "in_floor", label: "In Floor", align: "right", defaultWidth: 90, minWidth: 70 },
   { id: "shipped", label: "Shipped", align: "right", defaultWidth: 90, minWidth: 70 },
   { id: "pending", label: "Pending", align: "right", defaultWidth: 90, minWidth: 70 },
+  { id: "stock_available", label: "Stock Available", align: "right", defaultWidth: 120, minWidth: 80 },
   { id: "percent_produced", label: "% Produced", align: "right", defaultWidth: 120, minWidth: 90 },
   { id: "actions", label: "Actions", align: "right", defaultWidth: 120, minWidth: 80, fixed: true },
 ];

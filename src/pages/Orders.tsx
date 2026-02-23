@@ -21,6 +21,7 @@ import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface LoadDetail {
   load_number: string;
@@ -51,6 +52,7 @@ interface InventoryStats {
   loadDetails: LoadDetail[];
   shippedLoadDetails: ShippedLoadDetail[];
   excessStock: ExcessStockDetail | null;
+  sapStockAvailable: number | null;
 }
 
 interface Order {
@@ -103,6 +105,7 @@ const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped
 export default function Orders() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,7 +154,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
-        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto)
+        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `)
       .order("created_at", { ascending: false });
 
@@ -372,7 +375,7 @@ export default function Orders() {
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       const productSkuForInventory = order.products?.sku || null;
       const excessStock = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
-      const productPtCode = (order.products as any)?.codigo_producto || null;
+      const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
 
       return {
         id: order.id,
@@ -404,11 +407,59 @@ export default function Orders() {
           loadDetails,
           shippedLoadDetails,
           excessStock,
+          sapStockAvailable: null,
         },
       };
     });
     setOrders(formattedOrders);
     setLoading(false);
+
+    // Fetch SAP stock verification data for all orders with sales_order_number
+    const ordersWithSO = formattedOrders.filter(
+      (o) => o.sales_order_number && o.sales_order_number.trim() !== ""
+    );
+
+    if (ordersWithSO.length > 0) {
+      const sapResults = await Promise.allSettled(
+        ordersWithSO.map(async (order) => {
+          try {
+            const response = await fetch(
+              `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number!)}/${encodeURIComponent(order.po_number)}`,
+              { method: "GET", headers: { accept: "*/*" } }
+            );
+            if (!response.ok) return { poNumber: order.po_number, stockAvailable: null };
+            const payload = await response.json();
+            const items = Array.isArray(payload) ? payload : [];
+            const totalStock = items.reduce((sum: number, item: any) => sum + (item.totalStockDisponible || 0), 0);
+            return { poNumber: order.po_number, stockAvailable: totalStock };
+          } catch {
+            return { poNumber: order.po_number, stockAvailable: null };
+          }
+        })
+      );
+
+      const sapMap = new Map<string, number | null>();
+      sapResults.forEach((result) => {
+        if (result.status === "fulfilled" && result.value) {
+          sapMap.set(result.value.poNumber, result.value.stockAvailable);
+        }
+      });
+
+      if (sapMap.size > 0) {
+        setOrders((prev) =>
+          prev.map((o) => {
+            const sapStock = sapMap.get(o.po_number);
+            if (sapStock !== undefined) {
+              return {
+                ...o,
+                inventoryStats: { ...o.inventoryStats, sapStockAvailable: sapStock },
+              };
+            }
+            return o;
+          })
+        );
+      }
+    }
   };
 
   useEffect(() => {
@@ -627,10 +678,10 @@ export default function Orders() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Purchase Orders
+              {t('page.orders.title')}
             </h1>
             <p className="mt-1 text-muted-foreground">
-              Create and manage your purchase orders
+              {t('page.orders.subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-3">

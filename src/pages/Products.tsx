@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Package, Loader2, FileText, ChevronDown, X, ExternalLink, Pencil } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Product {
   id: string;
@@ -61,7 +63,7 @@ interface ProductRequest {
   customer_item_code: string | null;
 }
 
-type TabValue = "active" | "inactive" | "in_process";
+type TabValue = "active" | "in_process";
 
 interface Filters {
   customer_item: string[];
@@ -118,6 +120,7 @@ function getStatusBadgeVariant(status: string) {
 
 export default function Products() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const { isAdmin } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
@@ -161,10 +164,8 @@ export default function Products() {
     setLoading(false);
   };
 
-  // Filtered products based on tab
-  const tabProducts = products.filter((p) =>
-    activeTab === "active" ? p.activa !== false : p.activa === false
-  );
+  // Filtered products (only active)
+  const tabProducts = products.filter((p) => p.activa !== false);
 
   // Get unique values for filters from tabProducts
   const getUniqueValues = (key: keyof Product) => {
@@ -297,7 +298,7 @@ export default function Products() {
               <ColumnFilterHeader label="Final Customer" filterKey="customer" options={getUniqueValues("customer")} />
               <ColumnFilterHeader label="Item Type" filterKey="item_type" options={getUniqueValues("item_type")} />
               {isAdmin && <ColumnFilterHeader label="Tipo Empaque" filterKey="tipo_empaque" options={getUniqueValues("tipo_empaque")} />}
-              {isAdmin && <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">PT Number</th>}
+              {isAdmin && <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">PT Code</th>}
               <ColumnFilterHeader label="Pieces/Pallet" filterKey="pieces_per_pallet" options={getUniqueValues("pieces_per_pallet")} className="text-right" />
               {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">PC</th>}
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Customer Spec</th>
@@ -328,10 +329,10 @@ export default function Products() {
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     {product.print_card_url ? (
-                      <a href={product.print_card_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         {product.print_card || "View"}
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -339,10 +340,10 @@ export default function Products() {
                 )}
                 <td className="px-4 py-3 text-center">
                   {product.customer_tech_spec_url ? (
-                    <a href={product.customer_tech_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                    <button onClick={() => openStorageFile(product.customer_tech_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                       <ExternalLink className="h-4 w-4" />
                       View
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
@@ -350,10 +351,10 @@ export default function Products() {
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
                     {product.bfx_spec_url ? (
-                      <a href={product.bfx_spec_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         View
-                      </a>
+                      </button>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -471,8 +472,8 @@ export default function Products() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Products</h1>
-            <p className="mt-1 text-muted-foreground">Manage your product catalog and new product requests</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t('page.products.title')}</h1>
+            <p className="mt-1 text-muted-foreground">{t('page.products.subtitle')}</p>
           </div>
           <Button variant="accent" className="gap-2" onClick={() => navigate("/products/new")}>
             <Plus className="h-5 w-5" />
@@ -487,12 +488,6 @@ export default function Products() {
               Active
               <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
                 {products.filter((p) => p.activa !== false).length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="inactive">
-              Inactive
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                {products.filter((p) => p.activa === false).length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="in_process">

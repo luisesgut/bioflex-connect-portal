@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileText, Package, Truck, CheckCircle2, XCircle, Clock, AlertTriangle, Flame, Calendar, ArrowRightLeft, Ban, ShieldAlert, RefreshCw } from "lucide-react";
+import { Loader2, FileText, Package, Truck, CheckCircle2, XCircle, Clock, AlertTriangle, Flame, Calendar, ArrowRightLeft, Ban, ShieldAlert, RefreshCw, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ interface TimelineEvent {
   description: string;
   timestamp: string;
   status?: "pending" | "approved" | "rejected" | "info";
-  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield" | "status";
+  icon: "file" | "check" | "truck" | "package" | "clock" | "alert" | "flame" | "change" | "cancel" | "shield" | "status" | "edit";
   metadata?: Record<string, string | number | null>;
 }
 
@@ -49,6 +49,7 @@ const iconMap = {
   cancel: Ban,
   shield: ShieldAlert,
   status: RefreshCw,
+  edit: Pencil,
 };
 
 const statusColors = {
@@ -126,15 +127,20 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
           const oldLabel = statusLabels[change.old_status || ""] || change.old_status || "Unknown";
           const newLabel = statusLabels[change.new_status] || change.new_status;
           
+          // Detect if this is an edit event (same status, notes starting with "PO edited:")
+          const isEditEvent = change.old_status === change.new_status && change.notes?.startsWith("PO edited:");
+
           timelineEvents.push({
             id: `status-change-${change.id}`,
             type: "status_change",
-            title: "Status Changed",
-            description: `Status updated from "${oldLabel}" to "${newLabel}"`,
+            title: isEditEvent ? "PO Edited" : "Status Changed",
+            description: isEditEvent
+              ? (change.notes?.replace("PO edited: ", "") || "Order details were modified")
+              : `Status updated from "${oldLabel}" to "${newLabel}"`,
             timestamp: change.changed_at,
             status: "info",
-            icon: "status",
-            metadata: change.notes ? { reason: change.notes } : undefined,
+            icon: isEditEvent ? "edit" : "status",
+            metadata: !isEditEvent && change.notes ? { reason: change.notes } : undefined,
           });
         }
       }

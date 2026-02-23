@@ -14,41 +14,88 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_profiles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string | null
+          user_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_type?: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_type?: string
+        }
+        Relationships: []
+      }
       customer_locations: {
         Row: {
           address: string | null
           city: string | null
-          code: Database["public"]["Enums"]["customer_location"]
+          code: string
           created_at: string
           id: string
           is_active: boolean
           name: string
+          reception_hours: string | null
           state: string | null
+          warehouse_manager_id: string | null
           zip_code: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
-          code: Database["public"]["Enums"]["customer_location"]
+          code: string
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
+          reception_hours?: string | null
           state?: string | null
+          warehouse_manager_id?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string | null
           city?: string | null
-          code?: Database["public"]["Enums"]["customer_location"]
+          code?: string
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          reception_hours?: string | null
           state?: string | null
+          warehouse_manager_id?: string | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customer_locations_warehouse_manager_id_fkey"
+            columns: ["warehouse_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       dp_contacts: {
         Row: {
@@ -306,11 +353,54 @@ export type Database = {
           },
         ]
       }
+      load_destination_dates: {
+        Row: {
+          actual_date: string | null
+          created_at: string
+          destination: string
+          estimated_date: string | null
+          id: string
+          load_id: string
+          pod_pdf_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_date?: string | null
+          created_at?: string
+          destination: string
+          estimated_date?: string | null
+          id?: string
+          load_id: string
+          pod_pdf_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_date?: string | null
+          created_at?: string
+          destination?: string
+          estimated_date?: string | null
+          id?: string
+          load_id?: string
+          pod_pdf_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_destination_dates_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       load_pallets: {
         Row: {
+          actioned_at: string | null
+          actioned_by: string | null
           created_at: string
           delivery_date: string | null
-          destination: Database["public"]["Enums"]["customer_location"] | null
+          destination: string | null
           id: string
           is_on_hold: boolean
           load_id: string
@@ -320,9 +410,11 @@ export type Database = {
           release_pdf_url: string | null
         }
         Insert: {
+          actioned_at?: string | null
+          actioned_by?: string | null
           created_at?: string
           delivery_date?: string | null
-          destination?: Database["public"]["Enums"]["customer_location"] | null
+          destination?: string | null
           id?: string
           is_on_hold?: boolean
           load_id: string
@@ -332,9 +424,11 @@ export type Database = {
           release_pdf_url?: string | null
         }
         Update: {
+          actioned_at?: string | null
+          actioned_by?: string | null
           created_at?: string
           delivery_date?: string | null
-          destination?: Database["public"]["Enums"]["customer_location"] | null
+          destination?: string | null
           id?: string
           is_on_hold?: boolean
           load_id?: string
@@ -689,6 +783,7 @@ export type Database = {
           design_reviewed_at: string | null
           design_reviewed_by: string | null
           design_status: string | null
+          dp_sales_csr_names: string | null
           engineering_notes: string | null
           engineering_reviewed_at: string | null
           engineering_reviewed_by: string | null
@@ -773,6 +868,7 @@ export type Database = {
           design_reviewed_at?: string | null
           design_reviewed_by?: string | null
           design_status?: string | null
+          dp_sales_csr_names?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
@@ -857,6 +953,7 @@ export type Database = {
           design_reviewed_at?: string | null
           design_reviewed_by?: string | null
           design_status?: string | null
+          dp_sales_csr_names?: string | null
           engineering_notes?: string | null
           engineering_reviewed_at?: string | null
           engineering_reviewed_by?: string | null
@@ -1103,32 +1200,90 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_permissions: {
+        Row: {
+          can_edit: boolean | null
+          can_view: boolean | null
+          created_at: string | null
+          id: string
+          module: string
+          profile_id: string
+        }
+        Insert: {
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module: string
+          profile_id: string
+        }
+        Update: {
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "access_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          access_profile_id: string | null
+          company: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          invitation_status: string
+          phone: string | null
           updated_at: string
           user_id: string
+          user_type: string | null
         }
         Insert: {
+          access_profile_id?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          invitation_status?: string
+          phone?: string | null
           updated_at?: string
           user_id: string
+          user_type?: string | null
         }
         Update: {
+          access_profile_id?: string | null
+          company?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          invitation_status?: string
+          phone?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_access_profile_id_fkey"
+            columns: ["access_profile_id"]
+            isOneToOne: false
+            referencedRelation: "access_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_orders: {
         Row: {
@@ -1337,10 +1492,13 @@ export type Database = {
           border_crossed: boolean | null
           created_at: string
           created_by: string
+          cross_border_actual_date: string | null
           documents_sent: boolean | null
           estimated_delivery_date: string | null
           eta_cross_border: string | null
           id: string
+          invoice_number: string | null
+          invoice_pdf_url: string | null
           last_reported_city: string | null
           load_number: string
           notes: string | null
@@ -1356,10 +1514,13 @@ export type Database = {
           border_crossed?: boolean | null
           created_at?: string
           created_by: string
+          cross_border_actual_date?: string | null
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
           id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
           last_reported_city?: string | null
           load_number: string
           notes?: string | null
@@ -1375,10 +1536,13 @@ export type Database = {
           border_crossed?: boolean | null
           created_at?: string
           created_by?: string
+          cross_border_actual_date?: string | null
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
           id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
           last_reported_city?: string | null
           load_number?: string
           notes?: string | null

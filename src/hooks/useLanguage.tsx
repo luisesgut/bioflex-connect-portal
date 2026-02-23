@@ -27,7 +27,37 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.admin': 'Admin',
     'nav.customerView': 'Customer View',
     'nav.adminView': 'Admin View',
-    
+    'nav.users': 'Users',
+    'nav.customerPortal': 'Customer Portal',
+
+    // Page titles & subtitles
+    'page.dashboard.title': 'Dashboard',
+    'page.dashboard.subtitle': 'Overview of your purchase order activity.',
+    'page.products.title': 'Products',
+    'page.products.subtitle': 'Manage your product catalog and new product requests',
+    'page.orders.title': 'Purchase Orders',
+    'page.orders.subtitle': 'Manage and track your purchase orders',
+    'page.createOrder.title': 'Create Purchase Order',
+    'page.createOrder.subtitle': 'Submit a new purchase order',
+    'page.shippingLoads.title': 'Shipping Loads',
+    'page.shippingLoads.subtitle': 'Manage truck loads, releases, and shipment tracking',
+    'page.shippedPallets.title': 'Shipped Pallets History',
+    'page.shippedPallets.subtitle': 'Track and search all shipped pallets',
+    'page.users.title': 'User Management',
+    'page.users.subtitle': 'Manage platform users and access profiles',
+    'page.inventory.title': 'Inventory',
+    'page.inventory.subtitle': 'Manage production inventory and pallets',
+    'page.releaseRequests.title': 'Release Requests',
+    'page.releaseRequests.subtitle': 'Review and respond to shipment release requests',
+    'page.nonConformance.title': 'Non-Conformance Reports',
+    'page.nonConformance.subtitle': 'Submit and track quality issues with previous orders',
+    'page.changeRequests.title': 'Change Requests',
+    'page.changeRequests.subtitle': 'Track and manage order change requests',
+    'page.newProductRequest.title': 'New Product Request',
+    'page.newProductRequest.subtitle': 'Submit a new product for registration',
+    'page.settings.title': 'Settings',
+    'page.settings.subtitle': 'Manage your account and notification preferences',
+
     // Common actions
     'action.delete': 'Delete',
     'action.edit': 'Edit',
@@ -40,7 +70,7 @@ const translations: Record<Language, Record<string, string>> = {
     'action.add': 'Add',
     'action.saving': 'Saving...',
     'action.saveAssignments': 'Save Assignments',
-    
+
     // Product Requests
     'productRequests.title': 'New Product Requests',
     'productRequests.subtitle': 'Manage new product onboarding and approvals',
@@ -70,7 +100,7 @@ const translations: Record<Language, Record<string, string>> = {
     'productRequests.notAssigned': 'Not assigned',
     'productRequests.assignmentSaved': 'Assignment saved successfully',
     'productRequests.assignmentError': 'Failed to save assignment',
-    
+
     // Table headers
     'table.productName': 'Product Name',
     'table.customer': 'Customer',
@@ -83,7 +113,7 @@ const translations: Record<Language, Record<string, string>> = {
     'table.role': 'Role',
     'table.engineeringStatus': 'Engineering Status',
     'table.designStatus': 'Design Status',
-    
+
     // Status labels
     'status.draft': 'Draft',
     'status.specsSubmitted': 'Specs Submitted',
@@ -99,7 +129,7 @@ const translations: Record<Language, Record<string, string>> = {
     'status.pending': 'Pending',
     'status.approved': 'Approved',
     'status.inReview': 'In Review',
-    
+
     // Settings
     'settings.title': 'Settings',
     'settings.subtitle': 'Manage your account and notification preferences',
@@ -107,7 +137,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.languageDesc': 'Choose your preferred language',
     'settings.english': 'English',
     'settings.spanish': 'Spanish',
-    
+
     // Team Management
     'teamManagement.title': 'Team Management',
     'teamManagement.subtitle': 'Manage engineers, designers, and other team members',
@@ -125,7 +155,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teamManagement.memberUpdatedDesc': 'Team member has been updated successfully',
     'teamManagement.memberDeleted': 'Member Deleted',
     'teamManagement.memberDeletedDesc': 'Team member has been removed',
-    
+
     // Team Roles
     'teamRoles.engineering_leader': 'Engineering Leader',
     'teamRoles.engineer': 'Engineer',
@@ -133,19 +163,19 @@ const translations: Record<Language, Record<string, string>> = {
     'teamRoles.designer': 'Designer',
     'teamRoles.sales_rep': 'Sales Rep',
     'teamRoles.customer_service': 'Customer Service',
-    
+
     // Common
     'common.loading': 'Loading',
     'common.cancel': 'Cancel',
     'common.save': 'Save',
     'common.add': 'Add',
     'common.actions': 'Actions',
-    
+
     // User info
     'user.admin': 'Admin',
     'user.customer': 'Customer',
     'user.viewingAsCustomer': 'Viewing as Customer',
-    
+
     // Product Lines
     'productLine.sello_lateral': 'Side Seal Bag',
     'productLine.sello_lateral.desc': 'Side seal bags with optional zipper',
@@ -175,7 +205,37 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.admin': 'Admin',
     'nav.customerView': 'Vista Cliente',
     'nav.adminView': 'Vista Admin',
-    
+    'nav.users': 'Usuarios',
+    'nav.customerPortal': 'Portal de Cliente',
+
+    // Page titles & subtitles
+    'page.dashboard.title': 'Panel',
+    'page.dashboard.subtitle': 'Resumen de la actividad de órdenes de compra.',
+    'page.products.title': 'Productos',
+    'page.products.subtitle': 'Administra tu catálogo de productos y solicitudes de nuevos productos',
+    'page.orders.title': 'Órdenes de Compra',
+    'page.orders.subtitle': 'Administra y da seguimiento a tus órdenes de compra',
+    'page.createOrder.title': 'Crear Orden de Compra',
+    'page.createOrder.subtitle': 'Enviar una nueva orden de compra',
+    'page.shippingLoads.title': 'Cargas de Envío',
+    'page.shippingLoads.subtitle': 'Administra cargas, liberaciones y seguimiento de envíos',
+    'page.shippedPallets.title': 'Historial de Tarimas Enviadas',
+    'page.shippedPallets.subtitle': 'Busca y da seguimiento a todas las tarimas enviadas',
+    'page.users.title': 'Gestión de Usuarios',
+    'page.users.subtitle': 'Administra usuarios y perfiles de acceso de la plataforma',
+    'page.inventory.title': 'Inventario',
+    'page.inventory.subtitle': 'Administra el inventario de producción y tarimas',
+    'page.releaseRequests.title': 'Solicitudes de Liberación',
+    'page.releaseRequests.subtitle': 'Revisa y responde solicitudes de liberación de envío',
+    'page.nonConformance.title': 'Reportes de No Conformidad',
+    'page.nonConformance.subtitle': 'Envía y da seguimiento a problemas de calidad en pedidos anteriores',
+    'page.changeRequests.title': 'Solicitudes de Cambio',
+    'page.changeRequests.subtitle': 'Da seguimiento y administra solicitudes de cambio de órdenes',
+    'page.newProductRequest.title': 'Nueva Alta de Producto',
+    'page.newProductRequest.subtitle': 'Enviar un nuevo producto para registro',
+    'page.settings.title': 'Configuración',
+    'page.settings.subtitle': 'Administra tu cuenta y preferencias de notificación',
+
     // Common actions
     'action.delete': 'Eliminar',
     'action.edit': 'Editar',
@@ -188,7 +248,7 @@ const translations: Record<Language, Record<string, string>> = {
     'action.add': 'Agregar',
     'action.saving': 'Guardando...',
     'action.saveAssignments': 'Guardar Asignaciones',
-    
+
     // Product Requests
     'productRequests.title': 'Altas de Producto',
     'productRequests.subtitle': 'Gestiona las altas de nuevos productos y aprobaciones',
@@ -218,7 +278,7 @@ const translations: Record<Language, Record<string, string>> = {
     'productRequests.notAssigned': 'Sin asignar',
     'productRequests.assignmentSaved': 'Asignación guardada correctamente',
     'productRequests.assignmentError': 'Error al guardar la asignación',
-    
+
     // Table headers
     'table.productName': 'Nombre del Producto',
     'table.customer': 'Cliente',
@@ -231,7 +291,7 @@ const translations: Record<Language, Record<string, string>> = {
     'table.role': 'Rol',
     'table.engineeringStatus': 'Estado Ingeniería',
     'table.designStatus': 'Estado Diseño',
-    
+
     // Status labels
     'status.draft': 'Borrador',
     'status.specsSubmitted': 'Especificaciones Enviadas',
@@ -247,7 +307,7 @@ const translations: Record<Language, Record<string, string>> = {
     'status.pending': 'Pendiente',
     'status.approved': 'Aprobado',
     'status.inReview': 'En Revisión',
-    
+
     // Settings
     'settings.title': 'Configuración',
     'settings.subtitle': 'Administra tu cuenta y preferencias de notificación',
@@ -255,7 +315,7 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.languageDesc': 'Elige tu idioma preferido',
     'settings.english': 'Inglés',
     'settings.spanish': 'Español',
-    
+
     // Team Management
     'teamManagement.title': 'Gestión de Equipo',
     'teamManagement.subtitle': 'Administra ingenieros, diseñadores y otros miembros del equipo',
@@ -273,7 +333,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teamManagement.memberUpdatedDesc': 'El miembro del equipo ha sido actualizado exitosamente',
     'teamManagement.memberDeleted': 'Miembro Eliminado',
     'teamManagement.memberDeletedDesc': 'El miembro del equipo ha sido removido',
-    
+
     // Team Roles
     'teamRoles.engineering_leader': 'Líder de Ingeniería',
     'teamRoles.engineer': 'Ingeniero',
@@ -281,19 +341,19 @@ const translations: Record<Language, Record<string, string>> = {
     'teamRoles.designer': 'Diseñador',
     'teamRoles.sales_rep': 'Representante de Ventas',
     'teamRoles.customer_service': 'Servicio al Cliente',
-    
+
     // Common
     'common.loading': 'Cargando',
     'common.cancel': 'Cancelar',
     'common.save': 'Guardar',
     'common.add': 'Agregar',
     'common.actions': 'Acciones',
-    
+
     // User info
     'user.admin': 'Administrador',
     'user.customer': 'Cliente',
     'user.viewingAsCustomer': 'Viendo como Cliente',
-    
+
     // Product Lines
     'productLine.sello_lateral': 'Sello Lateral',
     'productLine.sello_lateral.desc': 'Bolsas de sello lateral con zipper opcional',

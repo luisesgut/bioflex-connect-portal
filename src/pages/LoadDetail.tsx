@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,11 @@ import {
   Info,
   Pause,
   Scale,
+  Undo2,
+  Clock,
+  Truck,
+  Pencil,
+  DollarSign,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -77,11 +83,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
+import { generatePackingList } from "@/utils/generatePackingList";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
+import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
 
 interface InventoryFilters {
   fecha: string[];
@@ -100,6 +110,8 @@ interface LoadPallet {
   release_number: string | null;
   release_pdf_url: string | null;
   is_on_hold: boolean;
+  actioned_by: string | null;
+  actioned_at: string | null;
   pallet: {
     pt_code: string;
     description: string;
@@ -125,6 +137,14 @@ interface ShippingLoad {
   release_number: string | null;
   release_pdf_url: string | null;
   notes: string | null;
+  eta_cross_border: string | null;
+  last_reported_city: string | null;
+  documents_sent: boolean | null;
+  border_crossed: boolean | null;
+  transit_notes: string | null;
+  cross_border_actual_date: string | null;
+  invoice_number: string | null;
+  invoice_pdf_url: string | null;
 }
 
 interface DeliveryDateEntry {
@@ -185,19 +205,15 @@ const statusLabels: Record<string, string> = {
   delivered: "Delivered",
 };
 
-const destinations = [
-  { value: "tbd", label: "TBD" },
-  { value: "salinas", label: "Salinas, CA" },
-  { value: "bakersfield", label: "Bakersfield, CA" },
-  { value: "coachella", label: "Coachella, CA" },
-  { value: "yuma", label: "Yuma, AZ" },
-];
+// destinations now come from useCustomerLocations hook
 
 export default function LoadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
+  const { locations, destinationOptions, getDestinationLabel } = useCustomerLocations();
+  const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
   const [pallets, setPallets] = useState<LoadPallet[]>([]);
   const [releaseRequest, setReleaseRequest] = useState<ReleaseRequest | null>(null);
@@ -227,10 +243,61 @@ export default function LoadDetail() {
   const [deliveryDates, setDeliveryDates] = useState<DeliveryDateEntry[]>([]);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [inTransitConfirmOpen, setInTransitConfirmOpen] = useState(false);
+  const [inTransitShipDate, setInTransitShipDate] = useState<Date | undefined>(undefined);
   const [activePOsWithInventory, setActivePOsWithInventory] = useState<ActivePOWithInventory[]>([]);
   const [productsMap, setProductsMap] = useState<Map<string, { pieces_per_pallet: number | null }>>(new Map());
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
+  const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
+  const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
+  const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
+  const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
+  const [profilesMap, setProfilesMap] = useState<Map<string, string>>(new Map());
+  const [revertingPallets, setRevertingPallets] = useState(false);
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [palletsToReplace, setPalletsToReplace] = useState<Set<string>>(new Set());
+  const [replaceSelectedPalletIds, setReplaceSelectedPalletIds] = useState<Set<string>>(new Set());
+  const [replacingPallets, setReplacingPallets] = useState(false);
+  const [replaceInventorySearch, setReplaceInventorySearch] = useState("");
+  const [transitUpdates, setTransitUpdates] = useState<Array<{
+    id: string;
+    last_reported_city: string | null;
+    eta_cross_border: string | null;
+    notes: string | null;
+    created_at: string;
+  }>>([]);
+  const [newCityUpdate, setNewCityUpdate] = useState("");
+  const [newTransitNotes, setNewTransitNotes] = useState("");
+  const [savingTransitUpdate, setSavingTransitUpdate] = useState(false);
+  const [editingTransitUpdate, setEditingTransitUpdate] = useState<string | null>(null);
+  const [editTransitCity, setEditTransitCity] = useState("");
+  const [editTransitNotes, setEditTransitNotes] = useState("");
+  const [destinationDates, setDestinationDates] = useState<Array<{
+    id?: string;
+    load_id: string;
+    destination: string;
+    estimated_date: string | null;
+    actual_date: string | null;
+    pod_pdf_url?: string | null;
+  }>>([]);
+  const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
+  const [uploadingPod, setUploadingPod] = useState<string | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [savingInvoice, setSavingInvoice] = useState(false);
+  const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
+
+  // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
+  const resolveCustomerPO = (pallet: LoadPallet): string => {
+    if (pallet.pallet.customer_lot) return pallet.pallet.customer_lot;
+    return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
+  };
+
+  const getFirstNames = (csrNames: string | undefined): string => {
+    if (!csrNames) return "-";
+    return csrNames.split(",").map(n => n.trim().split(" ")[0]).join(", ");
+  };
 
   const fetchLoadData = useCallback(async () => {
     if (!id) return;
@@ -257,12 +324,29 @@ export default function LoadDetail() {
           release_number,
           release_pdf_url,
           is_on_hold,
+          actioned_by,
+          actioned_at,
           pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces)
         `)
         .eq("load_id", id);
 
       if (palletsError) throw palletsError;
-      setPallets((palletsData as any) || []);
+      const typedPallets = (palletsData as any) || [];
+      setPallets(typedPallets);
+
+      // Fetch profiles for actioned_by users
+      const actionedUserIds = [...new Set(typedPallets.map((p: any) => p.actioned_by).filter(Boolean))] as string[];
+      if (actionedUserIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", actionedUserIds);
+        const pMap = new Map<string, string>();
+        (profilesData || []).forEach((p: any) => {
+          if (p.user_id && p.full_name) pMap.set(p.user_id, p.full_name.split(" ")[0]);
+        });
+        setProfilesMap(pMap);
+      }
 
       // Fetch release request
       const { data: requestData } = await supabase
@@ -301,42 +385,115 @@ export default function LoadDetail() {
         .select(`
           po_number,
           quantity,
-          product:products(codigo_producto, name, pieces_per_pallet)
+          product:products(codigo_producto, pt_code, name, pieces_per_pallet)
         `)
-        .in("status", ["pending", "confirmed", "in_production"]);
+        .in("status", ["pending", "confirmed", "accepted", "in_production"]);
 
       // Build products map for pieces_per_pallet validation
       const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
       (activePOs || []).forEach((po: any) => {
-        if (po.product?.codigo_producto) {
-          prodMap.set(po.product.codigo_producto, {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode) {
+          prodMap.set(ptCode, {
             pieces_per_pallet: po.product.pieces_per_pallet || null
           });
         }
       });
       setProductsMap(prodMap);
 
-      // Match POs with available inventory by PT code
+      // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
-        if (!po.product?.codigo_producto) return;
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code || "";
+        const matchingPallets = ptCode ? filteredPallets.filter(p => p.pt_code === ptCode) : [];
         
-        const ptCode = po.product.codigo_producto;
-        const matchingPallets = filteredPallets.filter(p => p.pt_code === ptCode);
-        
-        if (matchingPallets.length > 0) {
-          poInventoryData.push({
-            po_number: po.po_number,
-            product_pt_code: ptCode,
-            product_description: po.product.name || "",
-            total_quantity: po.quantity,
-            pieces_per_pallet: po.product.pieces_per_pallet,
-            inventory_pallets: matchingPallets.length,
-            inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
-          });
-        }
+        poInventoryData.push({
+          po_number: po.po_number,
+          product_pt_code: ptCode,
+          product_description: po.product?.name || "",
+          total_quantity: po.quantity,
+          pieces_per_pallet: po.product?.pieces_per_pallet || null,
+          inventory_pallets: matchingPallets.length,
+          inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
+        });
       });
       setActivePOsWithInventory(poInventoryData);
+
+      // Build pt_code -> po_number map for Customer PO fallback
+      const ptToPO = new Map<string, string>();
+      (activePOs || []).forEach((po: any) => {
+        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        if (ptCode && !ptToPO.has(ptCode)) {
+          ptToPO.set(ptCode, po.po_number);
+        }
+      });
+      setPtCodeToPOMap(ptToPO);
+
+      // Fetch PO prices for load value calculation
+      // Collect PO numbers from customer_lot OR pt_code->PO fallback
+      const loadPOSet = new Set<string>();
+      (palletsData as any || []).forEach((p: any) => {
+        if (p.pallet?.customer_lot) {
+          loadPOSet.add(p.pallet.customer_lot);
+        } else if (p.pallet?.pt_code) {
+          const mappedPO = ptToPO.get(p.pallet.pt_code);
+          if (mappedPO) loadPOSet.add(mappedPO);
+        }
+      });
+      const loadPONumbers = Array.from(loadPOSet);
+      if (loadPONumbers.length > 0) {
+        const { data: priceData } = await supabase
+          .from("purchase_orders")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item)")
+          .in("po_number", loadPONumbers);
+        const priceMap = new Map<string, number>();
+        const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
+        (priceData || []).forEach((po: any) => {
+          if (po.price_per_thousand) {
+            priceMap.set(po.po_number, po.price_per_thousand);
+          }
+          salesMap.set(po.po_number, {
+            sales_order_number: po.sales_order_number || null,
+            customer_item: po.product?.customer_item || null,
+          });
+        });
+        setPoPriceMap(priceMap);
+        setPoSalesOrderMap(salesMap);
+      }
+
+      // Fetch products CSR map by pt_code
+      const ptCodesInLoad = [...new Set((palletsData as any || []).map((p: any) => p.pallet?.pt_code).filter(Boolean))];
+      if (ptCodesInLoad.length > 0) {
+        const { data: csrProducts } = await supabase
+          .from("products")
+          .select("codigo_producto, pt_code, dp_sales_csr_names")
+          .or(ptCodesInLoad.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
+        const csrMap = new Map<string, string>();
+        (csrProducts || []).forEach((p: any) => {
+          if (p.dp_sales_csr_names) {
+            if (p.codigo_producto) csrMap.set(p.codigo_producto, p.dp_sales_csr_names);
+            if (p.pt_code) csrMap.set(p.pt_code, p.dp_sales_csr_names);
+          }
+        });
+        setPtCodeToCsrMap(csrMap);
+      }
+
+      // Fetch transit updates history
+      const { data: transitData } = await supabase
+        .from("transit_updates")
+        .select("id, last_reported_city, eta_cross_border, notes, created_at")
+        .eq("load_id", id)
+        .order("created_at", { ascending: false });
+
+      setTransitUpdates(transitData || []);
+
+      // Fetch destination dates
+      const { data: destDatesData } = await supabase
+        .from("load_destination_dates")
+        .select("*")
+        .eq("load_id", id);
+
+      setDestinationDates(destDatesData || []);
 
     } catch (error) {
       console.error("Error fetching load data:", error);
@@ -350,21 +507,179 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
+  // Sync invoice number from load data
+  useEffect(() => {
+    if (load?.invoice_number) {
+      setInvoiceNumber(load.invoice_number);
+    }
+  }, [load?.invoice_number]);
+
+  const handleSaveInvoiceNumber = async () => {
+    if (!id || !invoiceNumber.trim()) return;
+    setSavingInvoice(true);
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({ invoice_number: invoiceNumber.trim() })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Invoice number saved");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving invoice number:", error);
+      toast.error("Failed to save invoice number");
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
+  const handleUploadInvoicePdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingInvoicePdf(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `invoices/${id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const storagePath = `release-documents:${filePath}`;
+      const { error: updateError } = await supabase
+        .from("shipping_loads")
+        .update({ invoice_pdf_url: storagePath })
+        .eq("id", id);
+      if (updateError) throw updateError;
+
+      toast.success("Invoice PDF uploaded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading invoice PDF:", error);
+      toast.error("Failed to upload invoice PDF");
+    } finally {
+      setUploadingInvoicePdf(false);
+    }
+  };
+
+  const handleUploadPod = async (destination: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingPod(destination);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `pod/${id}/${destination}_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const storagePath = `release-documents:${filePath}`;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ pod_pdf_url: storagePath, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, pod_pdf_url: storagePath });
+        if (error) throw error;
+      }
+
+      toast.success("POD uploaded successfully");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading POD:", error);
+      toast.error("Failed to upload POD");
+    } finally {
+      setUploadingPod(null);
+      // Reset the input so same file can be re-uploaded
+      e.target.value = "";
+    }
+  };
+
+  const handleDownloadPackingList = async (destinationCode: string) => {
+    if (!load) return;
+    const destPallets = pallets.filter((p) => p.destination === destinationCode);
+    if (destPallets.length === 0) {
+      toast.error("No pallets for this destination");
+      return;
+    }
+    const loc = locations.find((l) => l.code === destinationCode);
+    const destInfo = {
+      name: loc ? (loc.city && loc.state ? `${loc.name}, ${loc.state}` : loc.name) : destinationCode,
+      address: loc?.address || null,
+      city: loc?.city || null,
+      state: loc?.state || null,
+      zip_code: loc?.zip_code || null,
+    };
+    const poInfoMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
+    poSalesOrderMap.forEach((info, poNumber) => {
+      poInfoMap.set(poNumber, info);
+    });
+    await generatePackingList({
+      loadNumber: load.load_number,
+      shippingDate: load.shipping_date,
+      invoiceNumber: load.invoice_number || "",
+      destination: destInfo,
+      pallets: destPallets.map((p) => ({
+        description: p.pallet.description,
+        customer_lot: p.pallet.customer_lot,
+        quantity: p.quantity,
+        release_number: p.release_number,
+        pt_code: p.pallet.pt_code,
+        gross_weight: p.pallet.gross_weight,
+        net_weight: p.pallet.net_weight,
+        pieces: p.pallet.pieces,
+        unit: p.pallet.unit,
+      })),
+      poInfoMap,
+      resolveCustomerPO: (pallet) => {
+        if (pallet.customer_lot) return pallet.customer_lot;
+        return ptCodeToPOMap.get(pallet.pt_code) || "-";
+      },
+    });
+  };
+
+  // Sort pallets by Customer PO (grouped), then by quantity descending within each group
+  const sortByPOAndQuantity = useCallback((palletList: LoadPallet[]): LoadPallet[] => {
+    return [...palletList].sort((a, b) => {
+      const poA = resolveCustomerPO(a);
+      const poB = resolveCustomerPO(b);
+      if (poA !== poB) return poA.localeCompare(poB);
+      return b.quantity - a.quantity;
+    });
+  }, [ptCodeToPOMap]);
+
+  // Check if a pallet is the first of a new PO group
+  const isFirstOfGroup = useCallback((sortedList: LoadPallet[], index: number): boolean => {
+    if (index === 0) return false;
+    const currentPO = resolveCustomerPO(sortedList[index]);
+    const prevPO = resolveCustomerPO(sortedList[index - 1]);
+    return currentPO !== prevPO;
+  }, [ptCodeToPOMap]);
+
   // Computed values for pallet categories
   const releasedPallets = useMemo(() => 
-    pallets.filter((p) => p.release_number || p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.release_number || p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const onHoldPallets = useMemo(() => 
-    pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => p.is_on_hold && !p.release_number && !p.release_pdf_url)), 
+    [pallets, sortByPOAndQuantity]
   );
   
   const pendingReleasePallets = useMemo(() => 
-    pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold), 
-    [pallets]
+    sortByPOAndQuantity(pallets.filter((p) => !p.release_number && !p.release_pdf_url && !p.is_on_hold)), 
+    [pallets, sortByPOAndQuantity]
   );
+
+  const sortedAllPallets = useMemo(() => sortByPOAndQuantity(pallets), [pallets, sortByPOAndQuantity]);
 
   // Calculate total gross weight
   const totalGrossWeight = useMemo(() => {
@@ -934,6 +1249,219 @@ export default function LoadDetail() {
     }
   };
 
+  // Toggle selection for released pallets (revert)
+  const toggleReleasedPallet = (palletId: string) => {
+    setSelectedReleasedPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllReleasedPallets = () => {
+    if (selectedReleasedPallets.size === releasedPallets.length) {
+      setSelectedReleasedPallets(new Set());
+    } else {
+      setSelectedReleasedPallets(new Set(releasedPallets.map((p) => p.id)));
+    }
+  };
+
+  // Toggle selection for on-hold pallets
+  const toggleOnHoldPallet = (palletId: string) => {
+    setSelectedOnHoldPallets((prev) => {
+      const newSet = new Set(prev);
+      newSet.has(palletId) ? newSet.delete(palletId) : newSet.add(palletId);
+      return newSet;
+    });
+  };
+
+  const toggleAllOnHoldPallets = () => {
+    if (selectedOnHoldPallets.size === onHoldPallets.length) {
+      setSelectedOnHoldPallets(new Set());
+    } else {
+      setSelectedOnHoldPallets(new Set(onHoldPallets.map((p) => p.id)));
+    }
+  };
+
+  // Revert released pallets back to pending
+  const handleRevertToPending = async () => {
+    if (selectedReleasedPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedReleasedPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ release_number: null, release_pdf_url: null, destination: "tbd", is_on_hold: false, actioned_by: null, actioned_at: null })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) reverted to pending`);
+      setSelectedReleasedPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
+  // Revert on-hold pallets back to pending
+  const handleRevertOnHoldToPending = async () => {
+    if (selectedOnHoldPallets.size === 0) return;
+    setRevertingPallets(true);
+    try {
+      const palletIds = Array.from(selectedOnHoldPallets);
+      const { error } = await supabase
+        .from("load_pallets")
+        .update({ is_on_hold: false, actioned_by: null, actioned_at: null })
+        .in("id", palletIds);
+
+      if (error) throw error;
+      toast.success(`${palletIds.length} pallet(s) moved back to pending`);
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error reverting on-hold pallets:", error);
+      toast.error("Failed to revert pallets");
+    } finally {
+      setRevertingPallets(false);
+    }
+  };
+
+  // Delete pallets from pending or on-hold during release phase
+  const handleDeleteReleasePhasePallets = async (palletIds: Set<string>) => {
+    if (palletIds.size === 0) return;
+    setDeletingPallets(true);
+    try {
+      const palletsToRemove = pallets.filter((p) => palletIds.has(p.id));
+      const loadPalletIds = palletsToRemove.map((p) => p.id);
+      const inventoryPalletIds = palletsToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      const newTotal = Math.max(0, (load?.total_pallets || 0) - palletsToRemove.length);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`${palletsToRemove.length} pallet(s) removed from load`);
+      setSelectedPalletsForRelease(new Set());
+      setSelectedOnHoldPallets(new Set());
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting pallets:", error);
+      toast.error("Failed to remove pallets");
+    } finally {
+      setDeletingPallets(false);
+    }
+  };
+
+  // Handle opening replace dialog (without deleting on-hold pallets first)
+  const handleOpenReplaceDialog = () => {
+    setPalletsToReplace(new Set(selectedOnHoldPallets));
+    setReplaceSelectedPalletIds(new Set());
+    setReplaceInventorySearch("");
+    setReplaceDialogOpen(true);
+  };
+
+  // Filter available pallets for replace dialog
+  const replaceFilteredPallets = useMemo(() => {
+    let result = availablePallets;
+    if (replaceInventorySearch.trim()) {
+      const search = replaceInventorySearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.pt_code.toLowerCase().includes(search) ||
+          p.description.toLowerCase().includes(search) ||
+          p.traceability.toLowerCase().includes(search) ||
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+      );
+    }
+    return result;
+  }, [availablePallets, replaceInventorySearch]);
+
+  // Active POs with stock for replace dialog
+  const replacePOSummary = useMemo(() => {
+    return activePOsWithInventory
+      .filter((po) => po.inventory_pallets > 0)
+      .sort((a, b) => b.inventory_pallets - a.inventory_pallets);
+  }, [activePOsWithInventory]);
+
+  // Confirm replacement: add new pallets, then remove on-hold ones
+  const handleConfirmReplace = async () => {
+    if (replaceSelectedPalletIds.size === 0 || !id) {
+      toast.error("Please select at least one replacement pallet");
+      return;
+    }
+
+    setReplacingPallets(true);
+    try {
+      // 1. Add replacement pallets
+      const palletsToAdd = availablePallets.filter((p) => replaceSelectedPalletIds.has(p.id));
+      const insertData = palletsToAdd.map((p) => ({
+        load_id: id,
+        pallet_id: p.id,
+        quantity: p.stock,
+        destination: "tbd" as const,
+      }));
+
+      const { error: insertError } = await supabase.from("load_pallets").insert(insertData);
+      if (insertError) throw insertError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "assigned" })
+        .in("id", palletsToAdd.map((p) => p.id));
+
+      // 2. Now remove on-hold pallets
+      const onHoldToRemove = pallets.filter((p) => palletsToReplace.has(p.id));
+      const loadPalletIds = onHoldToRemove.map((p) => p.id);
+      const inventoryPalletIds = onHoldToRemove.map((p) => p.pallet_id);
+
+      const { error: deleteError } = await supabase
+        .from("load_pallets")
+        .delete()
+        .in("id", loadPalletIds);
+
+      if (deleteError) throw deleteError;
+
+      await supabase
+        .from("inventory_pallets")
+        .update({ status: "available", release_date: null })
+        .in("id", inventoryPalletIds);
+
+      // 3. Update total pallets count (added - removed)
+      const netChange = palletsToAdd.length - onHoldToRemove.length;
+      const newTotal = Math.max(0, (load?.total_pallets || 0) + netChange);
+      await supabase.from("shipping_loads").update({ total_pallets: newTotal }).eq("id", id);
+
+      toast.success(`Replaced ${onHoldToRemove.length} pallet(s) with ${palletsToAdd.length} new pallet(s)`);
+      setReplaceDialogOpen(false);
+      setSelectedOnHoldPallets(new Set());
+      setPalletsToReplace(new Set());
+      setReplaceSelectedPalletIds(new Set());
+      fetchLoadData();
+    } catch (error: any) {
+      console.error("Error replacing pallets:", error);
+      if (error.code === "23505") {
+        toast.error("Some pallets are already in the load");
+      } else {
+        toast.error("Failed to replace pallets");
+      }
+    } finally {
+      setReplacingPallets(false);
+    }
+  };
+
   // Get unique destinations from pallets for delivery date dialog
   const uniqueDestinations = useMemo(() => {
     const dests = pallets
@@ -968,7 +1496,12 @@ export default function LoadDetail() {
     return { valid: true, message: "" };
   };
 
-  const handleStatusChange = (newStatus: string) => {
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === "pending_release" && pallets.length === 0) {
+      toast.error("Please add pallets to the load before changing to Pending Release");
+      return;
+    }
+
     if (newStatus === "delivered") {
       const initialDates = uniqueDestinations.map((dest) => ({
         destination: dest,
@@ -983,21 +1516,56 @@ export default function LoadDetail() {
         toast.error(validation.message);
         return;
       }
+      setInTransitShipDate(new Date(load!.shipping_date));
       setInTransitConfirmOpen(true);
+    } else if (newStatus === "pending_release" && user) {
+      // Create release request if transitioning to pending_release and none exists
+      try {
+        const { data: existing } = await supabase
+          .from("release_requests")
+          .select("id")
+          .eq("load_id", id!)
+          .limit(1)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("release_requests").insert({
+            load_id: id!,
+            requested_by: user.id,
+            status: "pending",
+          });
+        }
+      } catch (error) {
+        console.error("Error creating release request:", error);
+      }
+      handleUpdateLoadStatus(newStatus);
     } else {
       handleUpdateLoadStatus(newStatus);
     }
   };
 
-  const handleConfirmInTransit = () => {
+  const handleConfirmInTransit = async () => {
     const validation = validateForInTransit();
     if (!validation.valid) {
       toast.error(validation.message);
       setInTransitConfirmOpen(false);
       return;
     }
+    // Update ship date first, then proceed with status change
+    if (inTransitShipDate && id) {
+      const { error: shipDateError } = await supabase
+        .from("shipping_loads")
+        .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
+        .eq("id", id);
+      
+      if (shipDateError) {
+        console.error("Error updating ship date:", shipDateError);
+        toast.error("Error updating ship date");
+        return;
+      }
+    }
     setInTransitConfirmOpen(false);
-    handleUpdateLoadStatus("in_transit");
+    await handleUpdateLoadStatus("in_transit");
   };
 
   const handleUpdateLoadStatus = async (newStatus: string, deliveryDatesData?: DeliveryDateEntry[]) => {
@@ -1093,6 +1661,157 @@ export default function LoadDetail() {
       return;
     }
     handleUpdateLoadStatus("delivered", deliveryDates);
+  };
+
+  const handleAddTransitUpdate = async () => {
+    if (!newCityUpdate.trim() && !newTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    if (!id || !user) return;
+
+    setSavingTransitUpdate(true);
+    try {
+      const updateData: any = {
+        load_id: id,
+        updated_by: user.id,
+      };
+      if (newCityUpdate.trim()) updateData.last_reported_city = newCityUpdate.trim();
+      if (newTransitNotes.trim()) updateData.notes = newTransitNotes.trim();
+
+      const { error: insertError } = await supabase.from("transit_updates").insert(updateData);
+      if (insertError) throw insertError;
+
+      if (newCityUpdate.trim()) {
+        await supabase
+          .from("shipping_loads")
+          .update({ last_reported_city: newCityUpdate.trim() })
+          .eq("id", id);
+      }
+
+      toast.success("Transit update recorded");
+      setNewCityUpdate("");
+      setNewTransitNotes("");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving transit update:", error);
+      toast.error("Failed to save transit update");
+    } finally {
+      setSavingTransitUpdate(false);
+    }
+  };
+
+  const handleEditTransitUpdate = async (updateId: string) => {
+    if (!editTransitCity.trim() && !editTransitNotes.trim()) {
+      toast.error("Please enter a city or notes");
+      return;
+    }
+    try {
+      const updateData: any = {
+        last_reported_city: editTransitCity.trim() || null,
+        notes: editTransitNotes.trim() || null,
+      };
+      const { error } = await supabase.from("transit_updates").update(updateData).eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update modified");
+      setEditingTransitUpdate(null);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error editing transit update:", error);
+      toast.error("Failed to edit update");
+    }
+  };
+
+  const handleDeleteTransitUpdate = async (updateId: string) => {
+    try {
+      const { error } = await supabase.from("transit_updates").delete().eq("id", updateId);
+      if (error) throw error;
+      toast.success("Update deleted");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error deleting transit update:", error);
+      toast.error("Failed to delete update");
+    }
+  };
+
+  const handleSaveDestinationDate = async (destination: string, field: "estimated_date" | "actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate(destination + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const existing = destinationDates.find((d) => d.destination === destination);
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .update({ [field]: dateStr, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("load_destination_dates")
+          .insert({ load_id: id, destination, [field]: dateStr });
+        if (error) throw error;
+      }
+
+      // If setting actual_date on a destination, update pallets with that destination as delivered
+      if (field === "actual_date" && dateStr) {
+        await supabase
+          .from("load_pallets")
+          .update({ delivery_date: dateStr })
+          .eq("load_id", id)
+          .eq("destination", destination as any);
+
+        // Check if ALL destinations now have actual dates - if so, mark load as delivered
+        const updatedDates = destinationDates.map((d) =>
+          d.destination === destination ? { ...d, actual_date: dateStr } : d
+        );
+        if (!existing) updatedDates.push({ load_id: id, destination, estimated_date: null, actual_date: dateStr });
+
+        const allDests = [...new Set(pallets.filter((p) => p.destination && p.destination !== "tbd").map((p) => p.destination!))];
+        const allDelivered = allDests.every((dest) => updatedDates.find((d) => d.destination === dest)?.actual_date);
+
+        if (allDelivered && allDests.length > 0) {
+          await supabase
+            .from("shipping_loads")
+            .update({ status: "delivered" })
+            .eq("id", id);
+          toast.success("All destinations delivered! Load marked as delivered.");
+        }
+      }
+
+      toast.success(`${field === "estimated_date" ? "ETA" : "Delivery date"} updated`);
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving destination date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
+  };
+
+  const handleSaveCrossBorderDate = async (field: "eta_cross_border" | "cross_border_actual_date", date: Date | null) => {
+    if (!id) return;
+    setSavingDestDate("cross_border_" + field);
+    try {
+      const dateStr = date ? format(date, "yyyy-MM-dd") : null;
+      const updateData: any = { [field]: dateStr };
+      if (field === "cross_border_actual_date" && dateStr) {
+        updateData.border_crossed = true;
+      }
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update(updateData)
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(field === "eta_cross_border" ? "Border ETA updated" : "Border crossing date recorded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving cross border date:", error);
+      toast.error("Failed to save date");
+    } finally {
+      setSavingDestDate(null);
+    }
   };
 
   const handleGenerateCustomsDocument = async () => {
@@ -1212,45 +1931,107 @@ export default function LoadDetail() {
                 {statusLabels[load.status] || load.status.replace("_", " ")}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
-              Shipping: {format(new Date(load.shipping_date), "MMMM d, yyyy")}
-              {load.estimated_delivery_date && (
-                <> • ETA: {format(new Date(load.estimated_delivery_date), "MMMM d, yyyy")}</>
-              )}
-            </p>
+            <div className="flex items-center gap-4 mt-1 flex-wrap">
+              {/* Ship Date */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="text-muted-foreground">Ship Date:</span>
+                {isAdmin ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={new Date(load.shipping_date)}
+                        onSelect={(date) => {
+                          if (date && id) {
+                            supabase
+                              .from("shipping_loads")
+                              .update({ shipping_date: format(date, "yyyy-MM-dd") })
+                              .eq("id", id)
+                              .then(({ error }) => {
+                                if (error) { toast.error("Failed to update ship date"); return; }
+                                toast.success("Ship date updated");
+                                fetchLoadData();
+                              });
+                          }
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <span className="font-medium">{format(new Date(load.shipping_date), "MMM d, yyyy")}</span>
+                )}
+              </div>
+              <span className="text-muted-foreground">•</span>
+              {/* Delivery Date */}
+              <div className="flex items-center gap-1.5 text-sm">
+                <span className="text-muted-foreground">Delivery Date:</span>
+                {isAdmin ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {load.estimated_delivery_date
+                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                          : "Set date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                        onSelect={(date) => {
+                          if (date && id) {
+                            supabase
+                              .from("shipping_loads")
+                              .update({ estimated_delivery_date: format(date, "yyyy-MM-dd") })
+                              .eq("id", id)
+                              .then(({ error }) => {
+                                if (error) { toast.error("Failed to update delivery date"); return; }
+                                toast.success("Delivery date updated");
+                                fetchLoadData();
+                              });
+                          }
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <span className="font-medium">
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                      : "-"}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
-            {isAdmin && load.status !== "assembling" && load.status !== "delivered" && (
+            {isAdmin && load.status !== "delivered" && (
               <Select
                 value={load.status}
                 onValueChange={handleStatusChange}
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Change status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {load.status === "pending_release" && (
-                    <SelectItem value="approved">Released</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved") && (
-                    <SelectItem value="in_transit">In Transit</SelectItem>
-                  )}
-                  {(load.status === "pending_release" || load.status === "approved" || load.status === "in_transit") && (
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                  )}
+                  <SelectItem value="assembling">Assembling</SelectItem>
+                  <SelectItem value="pending_release">Pending Release</SelectItem>
+                  <SelectItem value="in_transit">In Transit</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-            {isAdmin && load.status === "assembling" && pallets.length > 0 && (
-              <Button onClick={handleSendReleaseRequest} disabled={sendingRelease}>
-                {sendingRelease ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                Send for Release
-              </Button>
             )}
             {isAdmin && (load.status === "in_transit" || load.status === "delivered") && pallets.length > 0 && (
               <Button variant="outline" onClick={handleGenerateCustomsDocument}>
@@ -1290,99 +2071,694 @@ export default function LoadDetail() {
         </div>
 
         {/* Load Summary Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pallets.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {pallets.length >= 24 && pallets.length <= 30
-                  ? "Full load"
-                  : pallets.length < 24
-                  ? `${24 - pallets.length} more for full load`
-                  : "Over capacity"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
-              <Scale className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
-              <p className="text-xs text-muted-foreground">
-                {totalGrossWeight > 20000 ? (
-                  <span className="text-destructive">Over weight limit!</span>
-                ) : (
-                  `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
-                )}
-              </p>
-            </CardContent>
-          </Card>
-          {isReleasePhase && (
-            <>
+        {(load.status === "in_transit" || load.status === "delivered") ? (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">in this load</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">POs in Load</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const uniquePOs = new Set(
+                    pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                  );
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">{uniquePOs.size}</div>
+                      <p className="text-xs text-muted-foreground">purchase orders</p>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Days in Transit</CardTitle>
+                <Truck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {differenceInDays(new Date(), new Date(load.shipping_date))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  since {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                </p>
+              </CardContent>
+            </Card>
+            {isAdmin ? (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
-                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Load Value</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
-                    <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
-                    <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
-                  </div>
+                  {(() => {
+                    let totalValue = 0;
+                    pallets.forEach((p) => {
+                      const poNumber = p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code);
+                      const price = poNumber ? poPriceMap.get(poNumber) : undefined;
+                      if (price) {
+                        totalValue += (p.quantity / 1000) * price;
+                      }
+                    });
+                    return (
+                      <>
+                        <div className="text-2xl font-bold">
+                          ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">USD total</p>
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
+            ) : (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Ship Date</CardTitle>
+                  <CardTitle className="text-sm font-medium">Estimated Delivery</CardTitle>
                   <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{format(new Date(load.shipping_date), "MMM d")}</div>
+                  <div className="text-2xl font-bold">
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "MMM d")
+                      : "-"}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Estimated departure
+                    {load.estimated_delivery_date
+                      ? format(new Date(load.estimated_delivery_date), "yyyy")
+                      : "No ETA set"}
                   </p>
                 </CardContent>
               </Card>
-            </>
-          )}
-          {!isReleasePhase && (
-            <>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Destinations</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {pallets.filter((p) => p.destination && p.destination !== "tbd").length} / {pallets.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">pallets with destination</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Release #</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{load.release_number || "-"}</div>
-                  <p className="text-xs text-muted-foreground">from customer</p>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Pallets</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pallets.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {pallets.length >= 24 && pallets.length <= 30
+                    ? "Full load"
+                    : pallets.length < 24
+                    ? `${24 - pallets.length} more for full load`
+                    : "Over capacity"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gross Weight</CardTitle>
+                <Scale className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalGrossWeight.toLocaleString()} kg</div>
+                <p className="text-xs text-muted-foreground">
+                  {totalGrossWeight > 20000 ? (
+                    <span className="text-destructive">Over weight limit!</span>
+                  ) : (
+                    `${(20000 - totalGrossWeight).toLocaleString()} kg capacity remaining`
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+            {isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Pallet Status</CardTitle>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge className="bg-green-100 text-green-800">{releasedPallets.length} Released</Badge>
+                      <Badge className="bg-yellow-100 text-yellow-800">{pendingReleasePallets.length} Pending</Badge>
+                      <Badge className="bg-red-100 text-red-800">{onHoldPallets.length} On Hold</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Destinations</CardTitle>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const dests = [...new Set(
+                        pallets
+                          .filter((p) => p.destination && p.destination !== "tbd")
+                          .map((p) => getDestinationLabel(p.destination))
+                      )];
+                      return dests.length > 0 ? (
+                        <ul className="space-y-1">
+                          {dests.map((dest) => (
+                            <li key={dest} className="text-sm font-medium flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                              {dest}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No destinations assigned</p>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            {!isReleasePhase && (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">POs in Load</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const uniquePOs = new Set(
+                        pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                      );
+                      return (
+                        <>
+                          <div className="text-2xl font-bold">{uniquePOs.size}</div>
+                          <p className="text-xs text-muted-foreground">purchase orders</p>
+                        </>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Available Inventory</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{availablePallets.length}</div>
+                    <p className="text-xs text-muted-foreground">pallets in inventory</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* PO Summary for pallets in load */}
+        {/* Transit Timeline - Courier Style */}
+        {(load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Shipment Tracking
+              </CardTitle>
+              <CardDescription>
+                Track this load's journey from BFX to destination
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const destEntries = [...new Map(
+                  pallets
+                    .filter((p) => p.destination && p.destination !== "tbd")
+                    .map((p) => {
+                      const destDateEntry = destinationDates.find((d) => d.destination === p.destination);
+                      return [p.destination!, { 
+                        destination: p.destination!, 
+                        label: getDestinationLabel(p.destination),
+                        estimated_date: destDateEntry?.estimated_date || null,
+                        actual_date: destDateEntry?.actual_date || null,
+                        pod_pdf_url: destDateEntry?.pod_pdf_url || null,
+                      }] as const;
+                    })
+                ).values()];
+
+                const hasBorderCrossed = load.border_crossed;
+                const hasCity = !!load.last_reported_city;
+                const latestCityUpdate = transitUpdates.find((u) => u.last_reported_city);
+                const crossBorderActualDate = load.cross_border_actual_date;
+
+                const DatePickerInline = ({ value, onChange, placeholder, saving }: { value: string | null; onChange: (date: Date | null) => void; placeholder: string; saving: boolean }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-7 px-2 text-xs gap-1",
+                          !value && "text-muted-foreground"
+                        )}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarIcon className="h-3 w-3" />}
+                        {value ? format(new Date(value), "MMM d, yyyy") : placeholder}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={value ? new Date(value) : undefined}
+                        onSelect={(date) => onChange(date || null)}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                );
+
+                interface TimelineStepData {
+                  label: string;
+                  sublabel?: string;
+                  date?: string;
+                  completed: boolean;
+                  active: boolean;
+                  type: "departed" | "city" | "cross_border" | "destination";
+                  destinationKey?: string;
+                  estimatedDate?: string | null;
+                  actualDate?: string | null;
+                  podPdfUrl?: string | null;
+                }
+
+                const steps: TimelineStepData[] = [];
+
+                // Step 1: Departed BFX
+                steps.push({
+                  label: "Departed BFX",
+                  date: format(new Date(load.shipping_date), "MMM d, yyyy"),
+                  completed: true,
+                  active: false,
+                  type: "departed",
+                });
+
+                // Step 2: Last Reported City
+                steps.push({
+                  label: load.last_reported_city || "In Transit",
+                  sublabel: hasCity && latestCityUpdate
+                    ? `Updated: ${format(new Date(latestCityUpdate.created_at), "MMM d, yyyy h:mm a")}`
+                    : "Awaiting update",
+                  completed: hasBorderCrossed || false,
+                  active: hasCity && !hasBorderCrossed,
+                  type: "city",
+                });
+
+                // Step 3: Cross Border
+                steps.push({
+                  label: "Cross Border",
+                  completed: hasBorderCrossed || false,
+                  active: hasCity && !hasBorderCrossed,
+                  type: "cross_border",
+                  estimatedDate: load.eta_cross_border,
+                  actualDate: crossBorderActualDate,
+                });
+
+                // Steps 4+: Each destination
+                destEntries.forEach((dest) => {
+                  const isDelivered = !!dest.actual_date;
+                  steps.push({
+                    label: dest.label,
+                    completed: isDelivered,
+                    active: (hasBorderCrossed || false) && !isDelivered,
+                    type: "destination",
+                    destinationKey: dest.destination,
+                    estimatedDate: dest.estimated_date,
+                    actualDate: dest.actual_date,
+                    podPdfUrl: dest.pod_pdf_url,
+                  });
+                });
+
+                return (
+                  <div className="space-y-6">
+                    {/* Timeline */}
+                    <div className="relative flex flex-col gap-0 pl-4">
+                      {steps.map((step, idx) => {
+                        const isLast = idx === steps.length - 1;
+                        return (
+                          <div key={idx} className="relative flex items-start gap-4 pb-6">
+                            {!isLast && (
+                              <div
+                                className={cn(
+                                  "absolute left-[7px] top-[20px] w-0.5 h-[calc(100%-8px)]",
+                                  step.completed ? "bg-primary" : "bg-border"
+                                )}
+                              />
+                            )}
+                            <div
+                              className={cn(
+                                "relative z-10 flex items-center justify-center rounded-full shrink-0",
+                                step.completed
+                                  ? "h-4 w-4 bg-primary"
+                                  : step.active
+                                  ? "h-4 w-4 border-2 border-primary bg-background"
+                                  : "h-4 w-4 border-2 border-muted-foreground/30 bg-background"
+                              )}
+                            >
+                              {step.completed && (
+                                <span className="text-primary-foreground text-[10px]">✓</span>
+                              )}
+                              {step.active && (
+                                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "text-sm font-medium leading-none",
+                                  step.completed ? "text-foreground" : step.active ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                  {step.label}
+                                </p>
+                                {step.type === "destination" && load.invoice_number && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs gap-1"
+                                    onClick={() => handleDownloadPackingList(step.destinationKey!)}
+                                  >
+                                    <FileDown className="h-3 w-3" />
+                                    PL
+                                  </Button>
+                                )}
+                              </div>
+                              {step.type === "departed" && step.date && (
+                                <p className="text-xs text-muted-foreground mt-1">{step.date}</p>
+                              )}
+                              {step.type === "city" && step.sublabel && (
+                                <p className="text-xs text-muted-foreground mt-1">{step.sublabel}</p>
+                              )}
+                              {step.type === "cross_border" && isAdmin && load.status === "in_transit" && (
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  <DatePickerInline
+                                    value={step.estimatedDate || null}
+                                    onChange={(date) => handleSaveCrossBorderDate("eta_cross_border", date)}
+                                    placeholder="Set ETA"
+                                    saving={savingDestDate === "cross_border_eta_cross_border"}
+                                  />
+                                  <DatePickerInline
+                                    value={step.actualDate || null}
+                                    onChange={(date) => handleSaveCrossBorderDate("cross_border_actual_date", date)}
+                                    placeholder="Set actual date"
+                                    saving={savingDestDate === "cross_border_cross_border_actual_date"}
+                                  />
+                                </div>
+                              )}
+                              {step.type === "cross_border" && (!isAdmin || load.status !== "in_transit") && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {step.actualDate
+                                    ? `Crossed: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
+                                    : step.estimatedDate
+                                    ? `ETA: ${format(new Date(step.estimatedDate), "MMM d, yyyy")}`
+                                    : "ETA pending"}
+                                </p>
+                              )}
+                              {step.type === "destination" && isAdmin && load.status === "in_transit" && (
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  <DatePickerInline
+                                    value={step.estimatedDate || null}
+                                    onChange={(date) => handleSaveDestinationDate(step.destinationKey!, "estimated_date", date)}
+                                    placeholder="Set ETA"
+                                    saving={savingDestDate === step.destinationKey + "estimated_date"}
+                                  />
+                                  <DatePickerInline
+                                    value={step.actualDate || null}
+                                    onChange={(date) => handleSaveDestinationDate(step.destinationKey!, "actual_date", date)}
+                                    placeholder="Set delivery date"
+                                    saving={savingDestDate === step.destinationKey + "actual_date"}
+                                  />
+                                </div>
+                              )}
+                              {step.type === "destination" && (!isAdmin || load.status !== "in_transit") && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {step.actualDate
+                                    ? `Delivered: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
+                                    : step.estimatedDate
+                                    ? `ETA: ${format(new Date(step.estimatedDate), "MMM d, yyyy")}`
+                                    : "ETA pending"}
+                                </p>
+                              )}
+                              {/* POD (Proof of Delivery) */}
+                              {step.type === "destination" && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {step.podPdfUrl ? (
+                                    <button
+                                      onClick={() => openStorageFile(step.podPdfUrl, "release-documents")}
+                                      className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-xs"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      View POD
+                                    </button>
+                                  ) : null}
+                                  {isAdmin && (
+                                    <label className="cursor-pointer">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        onChange={(e) => handleUploadPod(step.destinationKey!, e)}
+                                        disabled={uploadingPod === step.destinationKey}
+                                      />
+                                      <Button variant="outline" size="sm" asChild className="h-6 px-2 text-xs gap-1" disabled={uploadingPod === step.destinationKey}>
+                                        <span>
+                                          {uploadingPod === step.destinationKey ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                          ) : (
+                                            <Plus className="h-3 w-3" />
+                                          )}
+                                          {step.podPdfUrl ? "Replace POD" : "Upload POD"}
+                                        </span>
+                                      </Button>
+                                    </label>
+                                  )}
+                                  {!isAdmin && !step.podPdfUrl && (
+                                    <span className="text-xs text-muted-foreground italic">No POD uploaded</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Add Transit Update Form (Admin only, in_transit only) */}
+                    {isAdmin && load.status === "in_transit" && (
+                      <div className="border-t pt-4 space-y-3">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Add Transit Update
+                        </h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Last Reported City</Label>
+                            <Input
+                              placeholder="e.g. Monterrey, NL"
+                              value={newCityUpdate}
+                              onChange={(e) => setNewCityUpdate(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Notes (optional)</Label>
+                            <Input
+                              placeholder="e.g. Waiting at customs"
+                              value={newTransitNotes}
+                              onChange={(e) => setNewTransitNotes(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={handleAddTransitUpdate}
+                          disabled={savingTransitUpdate || (!newCityUpdate.trim() && !newTransitNotes.trim())}
+                        >
+                          {savingTransitUpdate ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="mr-2 h-4 w-4" />
+                          )}
+                          Record Update
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Transit Updates History */}
+                    {transitUpdates.length > 0 && (
+                      <div className="border-t pt-4 space-y-3">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Update History
+                        </h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {transitUpdates.map((update) => (
+                            <div key={update.id} className="flex items-start gap-3 text-sm border-l-2 border-muted pl-3 py-1">
+                              {editingTransitUpdate === update.id ? (
+                                <div className="flex-1 space-y-2">
+                                  <Input
+                                    value={editTransitCity}
+                                    onChange={(e) => setEditTransitCity(e.target.value)}
+                                    placeholder="City"
+                                    className="h-8 text-sm"
+                                  />
+                                  <Input
+                                    value={editTransitNotes}
+                                    onChange={(e) => setEditTransitNotes(e.target.value)}
+                                    placeholder="Notes"
+                                    className="h-8 text-sm"
+                                  />
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="default" className="h-7 text-xs" onClick={() => handleEditTransitUpdate(update.id)}>
+                                      Save
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingTransitUpdate(null)}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex-1 min-w-0">
+                                    {update.last_reported_city && (
+                                      <p className="font-medium text-foreground">{update.last_reported_city}</p>
+                                    )}
+                                    {update.notes && (
+                                      <p className="text-muted-foreground text-xs">{update.notes}</p>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    {format(new Date(update.created_at), "MMM d, h:mm a")}
+                                  </span>
+                                  {isAdmin && (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => {
+                                          setEditingTransitUpdate(update.id);
+                                          setEditTransitCity(update.last_reported_city || "");
+                                          setEditTransitNotes(update.notes || "");
+                                        }}
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                        onClick={() => handleDeleteTransitUpdate(update.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Invoice Section - In Transit / Delivered */}
+        {(load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Invoice
+              </CardTitle>
+              <CardDescription>
+                Invoice details for this shipment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {/* Invoice Number */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Invoice Number</Label>
+                  {isAdmin ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder="Enter invoice number"
+                        value={invoiceNumber}
+                        onChange={(e) => setInvoiceNumber(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveInvoiceNumber}
+                        disabled={savingInvoice || !invoiceNumber.trim() || invoiceNumber.trim() === (load.invoice_number || "")}
+                      >
+                        {savingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-mono">{load.invoice_number || "—"}</p>
+                  )}
+                </div>
+
+                {/* Invoice PDF */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Invoice PDF</Label>
+                  <div className="flex items-center gap-2">
+                    {load.invoice_pdf_url ? (
+                      <button
+                        onClick={() => openStorageFile(load.invoice_pdf_url, "release-documents")}
+                        className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-sm"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Invoice PDF
+                      </button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No file uploaded</span>
+                    )}
+                    {isAdmin && (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={handleUploadInvoicePdf}
+                          disabled={uploadingInvoicePdf}
+                        />
+                        <Button variant="outline" size="sm" asChild disabled={uploadingInvoicePdf}>
+                          <span>
+                            {uploadingInvoicePdf ? (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            ) : (
+                              <Plus className="mr-1 h-3 w-3" />
+                            )}
+                            {load.invoice_pdf_url ? "Replace" : "Upload"}
+                          </span>
+                        </Button>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} />
+          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
@@ -1390,14 +2766,44 @@ export default function LoadDetail() {
           <>
             {/* Released Pallets */}
             <Card className="border-green-200 dark:border-green-900">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CardTitle>Released Pallets ({releasedPallets.length})</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Pallets that have been approved for shipping
+                  </CardDescription>
                 </div>
-                <CardDescription>
-                  Pallets that have been approved for shipping
-                </CardDescription>
+                {isAdmin && selectedReleasedPallets.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={revertingPallets}>
+                        {revertingPallets ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Undo2 className="mr-2 h-4 w-4" />
+                        )}
+                        Revert to Pending ({selectedReleasedPallets.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will clear the release number, PDF and destination for {selectedReleasedPallets.size} pallet(s) and move them back to pending.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRevertToPending}>
+                          Revert
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </CardHeader>
               <CardContent>
                 {releasedPallets.length === 0 ? (
@@ -1410,55 +2816,58 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
+                                onCheckedChange={toggleAllReleasedPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                           <TableHead>Destination</TableHead>
+                          <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {releasedPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-green-50/50 dark:bg-green-950/20">
+                        {releasedPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-green-50/50 dark:bg-green-950/20",
+                            isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
+                          )}>
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedReleasedPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleReleasedPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                             <TableCell>
-                              {canEditPallets ? (
-                                <Select
-                                  value={pallet.destination || "tbd"}
-                                  onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                                >
-                                  <SelectTrigger className="w-[130px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {destinations.map((dest) => (
-                                      <SelectItem key={dest.value} value={dest.value}>
-                                        {dest.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                destinations.find((d) => d.value === pallet.destination)?.label || "TBD"
-                              )}
+                              {getDestinationLabel(pallet.destination)}
                             </TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                             <TableCell>
                               {pallet.release_pdf_url ? (
-                                <a
-                                  href={pallet.release_pdf_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline flex items-center gap-1"
+                                <button
+                                  onClick={() => openStorageFile(pallet.release_pdf_url, 'release-documents')}
+                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
                                 >
                                   <FileText className="h-4 w-4" />
                                   View
-                                </a>
+                                </button>
                               ) : (
                                 "-"
                               )}
@@ -1485,6 +2894,30 @@ export default function LoadDetail() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
+                  {isAdmin && selectedPalletsForRelease.size > 0 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove ({selectedPalletsForRelease.size})
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove {selectedPalletsForRelease.size} pallet(s) from this load and return them to inventory.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedPalletsForRelease)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Remove
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   {selectedPalletsForRelease.size > 0 && (
                     <Button 
                       onClick={() => setReleaseDialogOpen(true)}
@@ -1516,15 +2949,18 @@ export default function LoadDetail() {
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          <TableHead>Destination</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingReleasePallets.map((pallet) => (
+                        {pendingReleasePallets.map((pallet, index) => (
                           <TableRow 
                             key={pallet.id} 
-                            className={selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}
+                            className={cn(
+                              selectedPalletsForRelease.has(pallet.id) ? "bg-yellow-50 dark:bg-yellow-950/30" : "",
+                              isFirstOfGroup(pendingReleasePallets, index) && "border-t-2 border-t-border"
+                            )}
                           >
                             <TableCell>
                               <Checkbox
@@ -1534,29 +2970,9 @@ export default function LoadDetail() {
                             </TableCell>
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            <TableCell>
-                              {canEditPallets ? (
-                                <Select
-                                  value={pallet.destination || "tbd"}
-                                  onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                                >
-                                  <SelectTrigger className="w-[130px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {destinations.map((dest) => (
-                                      <SelectItem key={dest.value} value={dest.value}>
-                                        {dest.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                destinations.find((d) => d.value === pallet.destination)?.label || "TBD"
-                              )}
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1569,32 +2985,111 @@ export default function LoadDetail() {
             {/* On Hold Pallets */}
             {onHoldPallets.length > 0 && (
               <Card className="border-red-200 dark:border-red-900">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Pause className="h-5 w-5 text-red-600" />
-                    <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Pause className="h-5 w-5 text-red-600" />
+                      <CardTitle>On Hold ({onHoldPallets.length})</CardTitle>
+                    </div>
+                    <CardDescription>
+                      Pallets that have been placed on hold
+                    </CardDescription>
                   </div>
-                  <CardDescription>
-                    Pallets that have been placed on hold
-                  </CardDescription>
+                  {isAdmin && selectedOnHoldPallets.size > 0 && (
+                    <div className="flex items-center gap-2">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" disabled={revertingPallets}>
+                            {revertingPallets ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Undo2 className="mr-2 h-4 w-4" />
+                            )}
+                            To Pending ({selectedOnHoldPallets.size})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Revert to Pending?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will move {selectedOnHoldPallets.size} pallet(s) back to the Pending Release section.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleRevertOnHoldToPending}>
+                              Revert
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button variant="outline" size="sm" onClick={handleOpenReplaceDialog}>
+                        <ArrowUpDown className="mr-2 h-4 w-4" />
+                        Replace ({selectedOnHoldPallets.size})
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" disabled={deletingPallets}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove ({selectedOnHoldPallets.size})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Selected Pallets?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove {selectedOnHoldPallets.size} pallet(s) from this load and return them to inventory.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteReleasePhasePallets(selectedOnHoldPallets)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {isAdmin && (
+                            <TableHead className="w-[40px]">
+                              <Checkbox
+                                checked={onHoldPallets.length > 0 && selectedOnHoldPallets.size === onHoldPallets.length}
+                                onCheckedChange={toggleAllOnHoldPallets}
+                              />
+                            </TableHead>
+                          )}
                           {isAdmin && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
+                          <TableHead>Held By</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {onHoldPallets.map((pallet) => (
-                          <TableRow key={pallet.id} className="bg-red-50/50 dark:bg-red-950/20">
+                        {onHoldPallets.map((pallet, index) => (
+                          <TableRow key={pallet.id} className={cn(
+                            "bg-red-50/50 dark:bg-red-950/20",
+                            isFirstOfGroup(onHoldPallets, index) && "border-t-2 border-t-border"
+                          )}>
+                            {isAdmin && (
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedOnHoldPallets.has(pallet.id)}
+                                  onCheckedChange={() => toggleOnHoldPallet(pallet.id)}
+                                />
+                              </TableCell>
+                            )}
                             {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
+                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                           </TableRow>
                         ))}
@@ -1666,12 +3161,13 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
-                      <TableHead>Destination</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && (
                           <TableCell>
                             <Checkbox
@@ -1682,25 +3178,8 @@ export default function LoadDetail() {
                         )}
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                        <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={pallet.destination || "tbd"}
-                            onValueChange={(value) => handleUpdateDestination(pallet.id, value)}
-                          >
-                            <SelectTrigger className="w-[130px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {destinations.map((dest) => (
-                                <SelectItem key={dest.value} value={dest.value}>
-                                  {dest.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1733,14 +3212,16 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pallets.map((pallet) => (
-                      <TableRow key={pallet.id}>
+                    {sortedAllPallets.map((pallet, index) => (
+                      <TableRow key={pallet.id} className={cn(
+                        isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
+                      )}>
                         {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                        <TableCell className="font-mono text-xs">{pallet.pallet.customer_lot || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
                         <TableCell>
-                          {destinations.find((d) => d.value === pallet.destination)?.label || "TBD"}
+                          {getDestinationLabel(pallet.destination)}
                         </TableCell>
                         <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
                       </TableRow>
@@ -1752,8 +3233,8 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Active POs with Available Inventory */}
-        {activePOsWithInventory.length > 0 && (
+        {/* Active POs with Available Inventory - Always show during assembling */}
+        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -1761,7 +3242,7 @@ export default function LoadDetail() {
                 <CardTitle className="text-lg">Active POs with Available Inventory</CardTitle>
               </div>
               <CardDescription>
-                Purchase Orders with matching materials available in inventory
+                Active Purchase Orders and their matching materials in inventory
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1770,7 +3251,7 @@ export default function LoadDetail() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>PO #</TableHead>
-                      {isAdmin && <TableHead>PT Code</TableHead>}
+                      <TableHead>PT Code</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead className="text-right">PO Qty</TableHead>
                       <TableHead className="text-center">Pallets Available</TableHead>
@@ -1778,20 +3259,23 @@ export default function LoadDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activePOsWithInventory.map((po) => (
-                      <TableRow key={po.po_number}>
-                        <TableCell className="font-medium">{po.po_number}</TableCell>
-                        {isAdmin && <TableCell className="font-mono text-sm">{po.product_pt_code}</TableCell>}
-                        <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
-                        <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary">{po.inventory_pallets}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-primary">
-                          {po.inventory_volume.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {activePOsWithInventory
+                      .filter((po) => po.inventory_pallets > 0)
+                      .sort((a, b) => b.inventory_pallets - a.inventory_pallets)
+                      .map((po) => (
+                        <TableRow key={po.po_number}>
+                          <TableCell className="font-medium">{po.po_number}</TableCell>
+                          <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                          <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-primary">
+                            {po.inventory_volume.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </div>
@@ -1868,7 +3352,7 @@ export default function LoadDetail() {
                           <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                           <TableHead className="text-right">Stock</TableHead>
                           <TableHead className="text-center">Vol. OK</TableHead>
-                          <ColumnFilterHeader label="BFX Order" filterKey="bfx_order" options={uniqueBfxOrders} />
+                          <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
                         </TableRow>
                       </TableHeader>
@@ -1923,47 +3407,149 @@ export default function LoadDetail() {
           </Card>
         )}
 
-        {/* Add Pallet Dialog - kept as fallback */}
-        <Dialog open={addPalletDialogOpen} onOpenChange={setAddPalletDialogOpen}>
-          <DialogContent>
+        {/* Replace Pallets Dialog - full inventory view */}
+        <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>Add Pallet to Load</DialogTitle>
+              <DialogTitle>Replace On-Hold Pallets</DialogTitle>
               <DialogDescription>
-                Select an available pallet from inventory to add to this load.
+                Replacing {palletsToReplace.size} on-hold pallet(s). Select replacement pallets from available inventory below. On-hold pallets will only be removed after replacements are confirmed.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Pallet</Label>
-                <Select value={selectedPalletId} onValueChange={setSelectedPalletId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a pallet" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePallets.map((pallet) => (
-                      <SelectItem key={pallet.id} value={pallet.id}>
-                        {pallet.pt_code} - {pallet.description.slice(0, 30)}... ({pallet.stock} {pallet.traceability})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  value={palletQuantity}
-                  onChange={(e) => setPalletQuantity(e.target.value)}
-                  placeholder="Enter quantity"
-                />
+            <div className="flex-1 overflow-auto space-y-4">
+              {/* Active POs Summary */}
+              {replacePOSummary.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Info className="h-4 w-4 text-primary" />
+                    Active POs with Available Stock
+                  </h4>
+                  <div className="rounded-md border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>PO #</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-center">Pallets</TableHead>
+                          <TableHead className="text-right">Volume</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replacePOSummary.map((po) => (
+                          <TableRow key={po.po_number}>
+                            <TableCell className="font-medium">{po.po_number}</TableCell>
+                            <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="secondary">{po.inventory_pallets}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-primary">
+                              {po.inventory_volume.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Available Pallets List */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Available Pallets ({availablePallets.length})</h4>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pallets..."
+                      value={replaceInventorySearch}
+                      onChange={(e) => setReplaceInventorySearch(e.target.value)}
+                      className="pl-8 w-[220px] h-8"
+                    />
+                  </div>
+                </div>
+                <div className="rounded-md border">
+                  <ScrollArea className="h-[300px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={replaceFilteredPallets.length > 0 && replaceSelectedPalletIds.size === replaceFilteredPallets.length}
+                              onCheckedChange={() => {
+                                if (replaceSelectedPalletIds.size === replaceFilteredPallets.length) {
+                                  setReplaceSelectedPalletIds(new Set());
+                                } else {
+                                  setReplaceSelectedPalletIds(new Set(replaceFilteredPallets.map((p) => p.id)));
+                                }
+                              }}
+                            />
+                          </TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>PT Code</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Stock</TableHead>
+                          <TableHead>Sales Order</TableHead>
+                          <TableHead>Unit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {replaceFilteredPallets.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                              No available pallets found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          replaceFilteredPallets.map((pallet) => (
+                            <TableRow
+                              key={pallet.id}
+                              className={replaceSelectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  checked={replaceSelectedPalletIds.has(pallet.id)}
+                                  onCheckedChange={() => {
+                                    setReplaceSelectedPalletIds((prev) => {
+                                      const newSet = new Set(prev);
+                                      if (newSet.has(pallet.id)) {
+                                        newSet.delete(pallet.id);
+                                      } else {
+                                        newSet.add(pallet.id);
+                                      }
+                                      return newSet;
+                                    });
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell className="text-sm">{format(new Date(pallet.fecha), "MM/dd/yyyy")}</TableCell>
+                              <TableCell className="font-mono">{pallet.pt_code}</TableCell>
+                              <TableCell className="max-w-[200px] truncate">{pallet.description}</TableCell>
+                              <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
+                              <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
+                              <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddPalletDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setReplaceDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddPallet}>Add Pallet</Button>
+              <Button onClick={handleConfirmReplace} disabled={replaceSelectedPalletIds.size === 0 || replacingPallets}>
+                {replacingPallets ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                )}
+                Replace with {replaceSelectedPalletIds.size} Pallet(s)
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -2035,27 +3621,55 @@ export default function LoadDetail() {
         </Dialog>
 
         {/* In Transit Confirmation Dialog */}
-        <AlertDialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Change Status to In Transit?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
+        <Dialog open={inTransitConfirmOpen} onOpenChange={setInTransitConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Status to In Transit?</DialogTitle>
+              <DialogDescription className="space-y-2">
                 <span className="block text-destructive font-medium">
                   ⚠️ Warning: Once the load is marked as "In Transit", you will no longer be able to modify pallets.
                 </span>
-                <span className="block">
-                  Are you sure you want to proceed?
-                </span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmInTransit}>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Ship Date (departure date)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !inTransitShipDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {inTransitShipDate ? format(inTransitShipDate, "PPP") : "Select ship date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={inTransitShipDate}
+                      onSelect={setInTransitShipDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInTransitConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmInTransit} disabled={!inTransitShipDate || updatingStatus}>
+                {updatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm In Transit
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Release Validation Dialog */}
         <ReleaseValidationDialog
@@ -2063,10 +3677,19 @@ export default function LoadDetail() {
           onOpenChange={setReleaseDialogOpen}
           selectedPallets={selectedPalletsForReleaseData}
           loadId={id!}
+          userId={user?.id}
+          destinationOptions={destinationOptions}
+          onAddDestination={() => setAddDestinationDialogOpen(true)}
           onComplete={() => {
             setSelectedPalletsForRelease(new Set());
             fetchLoadData();
           }}
+        />
+
+        {/* Add Destination Dialog */}
+        <AddDestinationDialog
+          open={addDestinationDialogOpen}
+          onOpenChange={setAddDestinationDialogOpen}
         />
       </div>
     </MainLayout>
