@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-
+import type { Json } from "@/integrations/supabase/types";
 const SAP_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
 const SAP_TIMEOUT_MS = 30000;
 const INSERT_BATCH_SIZE = 500;
