@@ -402,6 +402,7 @@ export default function ShippingLoads() {
               <TableHead>Ship Date</TableHead>
               <TableHead>Delivery Date</TableHead>
               <TableHead className="text-center">Pallets</TableHead>
+              <TableHead className="text-center">Released</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
