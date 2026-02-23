@@ -83,43 +83,81 @@ export function POComments({ purchaseOrderId, isInternal, title }: POCommentsPro
   };
 
   const fetchMentionableUsers = async () => {
-    // Fetch team members
-    const { data: teamData } = await supabase
-      .from("team_members")
-      .select("user_id, full_name")
-      .eq("is_active", true);
-
-    // Fetch order owner
-    const { data: orderData } = await supabase
-      .from("purchase_orders")
-      .select("user_id")
-      .eq("id", purchaseOrderId)
-      .maybeSingle();
-
     const users: MentionableUser[] = [];
     const seenIds = new Set<string>();
 
-    if (teamData) {
-      teamData.forEach((t) => {
-        if (!seenIds.has(t.user_id)) {
-          seenIds.add(t.user_id);
-          users.push({ id: t.user_id, name: t.full_name });
-        }
-      });
-    }
+    if (isInternal) {
+      // Internal chat: only BFX (internal) users — all team members
+      const { data: teamData } = await supabase
+        .from("team_members")
+        .select("user_id, full_name")
+        .eq("is_active", true);
 
-    if (orderData && !seenIds.has(orderData.user_id)) {
-      // Get owner profile
-      const { data: ownerProfile } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("user_id", orderData.user_id)
-        .maybeSingle();
-      if (ownerProfile) {
-        users.push({
-          id: orderData.user_id,
-          name: ownerProfile.full_name || ownerProfile.email || "Order Owner",
+      if (teamData) {
+        teamData.forEach((t) => {
+          if (!seenIds.has(t.user_id)) {
+            seenIds.add(t.user_id);
+            users.push({ id: t.user_id, name: t.full_name });
+          }
         });
+      }
+    } else {
+      // External chat: Destiny (external) users + BFX sales & admin only
+
+      // 1. Fetch all Destiny/external users
+      const { data: externalProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .eq("user_type", "external");
+
+      if (externalProfiles) {
+        externalProfiles.forEach((p) => {
+          if (!seenIds.has(p.user_id)) {
+            seenIds.add(p.user_id);
+            users.push({ id: p.user_id, name: p.full_name || p.email || "User" });
+          }
+        });
+      }
+
+      // 2. Fetch BFX sales reps (team_members with sales_rep or customer_service role)
+      const { data: salesTeam } = await supabase
+        .from("team_members")
+        .select("user_id, full_name")
+        .eq("is_active", true)
+        .in("team_role", ["sales_rep", "customer_service"]);
+
+      if (salesTeam) {
+        salesTeam.forEach((t) => {
+          if (!seenIds.has(t.user_id)) {
+            seenIds.add(t.user_id);
+            users.push({ id: t.user_id, name: t.full_name });
+          }
+        });
+      }
+
+      // 3. Fetch BFX admin users
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+
+      if (adminRoles) {
+        for (const ar of adminRoles) {
+          if (!seenIds.has(ar.user_id)) {
+            const { data: adminProfile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("user_id", ar.user_id)
+              .maybeSingle();
+            if (adminProfile) {
+              seenIds.add(ar.user_id);
+              users.push({
+                id: ar.user_id,
+                name: adminProfile.full_name || adminProfile.email || "Admin",
+              });
+            }
+          }
+        }
       }
     }
 
