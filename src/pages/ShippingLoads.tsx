@@ -431,6 +431,18 @@ export default function ShippingLoads() {
                       : "-"}
                   </TableCell>
                   <TableCell className="text-center">{load.total_pallets}</TableCell>
+                  <TableCell className="text-center">
+                    {(() => {
+                      const released = releasedPalletsMap.get(load.id) || 0;
+                      const isPending = load.status === "pending_release" || load.status === "approved" || load.status === "on_hold";
+                      if (!isPending && released === 0) return "-";
+                      return (
+                        <span className={released === load.total_pallets ? "text-emerald-600 font-medium" : ""}>
+                          {released} / {load.total_pallets}
+                        </span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {isAdmin ? (
                       <Select
