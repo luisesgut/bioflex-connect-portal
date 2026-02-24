@@ -103,31 +103,29 @@ export function LinkVirtualPalletDialog({
   const handleLink = async () => {
     if (!selectedRealId || !virtualPalletId) return;
 
+    // Find the selected real pallet to get its values
+    const realPallet = candidates.find((p) => p.id === selectedRealId);
+    if (!realPallet) return;
+
     setLinking(true);
     try {
       if (loadPalletId) {
-        // Get virtual pallet's load_pallet data (release_number, actioned_by, actioned_at, destination etc.)
-        const { data: loadPalletData } = await supabase
+        // Update load_pallets to point to the real pallet, copying quantity from real pallet
+        const { error: updateLoadError } = await supabase
           .from("load_pallets")
-          .select("*")
-          .eq("id", loadPalletId)
-          .single();
+          .update({
+            pallet_id: selectedRealId,
+            quantity: realPallet.stock,
+          })
+          .eq("id", loadPalletId);
 
-        if (loadPalletData) {
-          // Update load_pallets to point to the real pallet, keeping release info
-          const { error: updateLoadError } = await supabase
-            .from("load_pallets")
-            .update({ pallet_id: selectedRealId })
-            .eq("id", loadPalletId);
+        if (updateLoadError) throw updateLoadError;
 
-          if (updateLoadError) throw updateLoadError;
-
-          // Mark real pallet as assigned
-          await supabase
-            .from("inventory_pallets")
-            .update({ status: "assigned" })
-            .eq("id", selectedRealId);
-        }
+        // Mark real pallet as assigned
+        await supabase
+          .from("inventory_pallets")
+          .update({ status: "assigned" })
+          .eq("id", selectedRealId);
       } else {
         // Just link without load context
         await supabase
