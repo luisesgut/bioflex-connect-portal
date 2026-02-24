@@ -118,6 +118,7 @@ export function CreateVirtualPalletDialog({
     setStock("");
     setUnit("MIL");
     setTraceability("");
+    setNetWeight("");
   };
 
   const handleCreate = async () => {
