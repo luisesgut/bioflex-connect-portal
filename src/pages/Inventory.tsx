@@ -43,6 +43,7 @@ interface SAPInventoryItem {
   pallet_type: string | null;
   status: string;
   synced_at: string;
+  is_virtual?: boolean;
 }
 
 interface InventoryFilters {
