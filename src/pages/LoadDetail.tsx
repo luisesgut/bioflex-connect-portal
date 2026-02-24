@@ -2882,7 +2882,19 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            {isAdmin && (
+                              <TableCell className="font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  {pallet.pallet.pt_code}
+                                  {pallet.pallet.is_virtual && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                                      <Ghost className="h-3 w-3 mr-0.5" />
+                                      Virtual
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
