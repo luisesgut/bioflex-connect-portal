@@ -457,6 +457,11 @@ export default function Inventory() {
             <h1 className="text-2xl font-bold tracking-tight">{t('page.inventory.title')}</h1>
             <p className="text-muted-foreground">
               Inventario SAP en tiempo real
+              {virtualCount > 0 && (
+                <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                  • {virtualCount} virtual{virtualCount > 1 ? "es" : ""}
+                </span>
+              )}
             </p>
             {lastSyncTime && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
