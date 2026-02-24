@@ -134,11 +134,12 @@ export function CreateVirtualPalletDialog({
         description,
         stock: parseFloat(stock),
         unit,
-        traceability: `VIRTUAL-${traceability.trim()}`,
+        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}`,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
         is_virtual: true,
+        net_weight: netWeight ? parseFloat(netWeight) : null,
       });
 
       if (error) throw error;
