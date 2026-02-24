@@ -3097,6 +3097,11 @@ export default function LoadDetail() {
                     </div>
                     <CardDescription>
                       Pallets that have been placed on hold
+                      {onHoldPallets.some(p => p.pallet.is_virtual) && (
+                        <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                          • {onHoldPallets.filter(p => p.pallet.is_virtual).length} virtual
+                        </span>
+                      )}
                     </CardDescription>
                   </div>
                   {isAdmin && selectedOnHoldPallets.size > 0 && (
