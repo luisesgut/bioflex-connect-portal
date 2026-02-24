@@ -415,6 +415,10 @@ export default function Inventory() {
       return true;
     })
     .sort((a, b) => {
+      // Virtual pallets always first
+      if (a.is_virtual && !b.is_virtual) return -1;
+      if (!a.is_virtual && b.is_virtual) return 1;
+      // Then date sort
       if (!dateSortOrder) return 0;
       const dateA = new Date(a.fecha).getTime();
       const dateB = new Date(b.fecha).getTime();
