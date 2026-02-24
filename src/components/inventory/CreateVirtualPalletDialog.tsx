@@ -242,9 +242,9 @@ export function CreateVirtualPalletDialog({
             </Popover>
           </div>
 
-          {/* Auto-filled PT Code & Description */}
+          {/* Auto-filled PT Code, Description & Pieces per Pallet */}
           {selectedPO && (
-            <div className="grid grid-cols-2 gap-4 rounded-md border p-3 bg-muted/50">
+            <div className="grid grid-cols-3 gap-4 rounded-md border p-3 bg-muted/50">
               <div>
                 <p className="text-xs text-muted-foreground">PT Code</p>
                 <p className="text-sm font-medium">{ptCode || "—"}</p>
@@ -252,6 +252,10 @@ export function CreateVirtualPalletDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Producto</p>
                 <p className="text-sm font-medium truncate">{description || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Pzas / Tarima</p>
+                <p className="text-sm font-medium">{selectedPO.product?.pieces_per_pallet?.toLocaleString() || "—"}</p>
               </div>
             </div>
           )}
