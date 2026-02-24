@@ -3142,7 +3142,7 @@ export default function LoadDetail() {
                 <CardDescription>
                   Pallets selected for this load
                   {pallets.some(p => p.pallet.is_virtual) && (
-                    <span className="ml-2 text-purple-600 dark:text-purple-400 font-medium">
+                    <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
                       • {pallets.filter(p => p.pallet.is_virtual).length} virtual
                     </span>
                   )}
