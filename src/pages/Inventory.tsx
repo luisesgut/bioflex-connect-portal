@@ -20,12 +20,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
+import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 
 interface SAPInventoryItem {
   id: string;
@@ -42,6 +43,7 @@ interface SAPInventoryItem {
   pallet_type: string | null;
   status: string;
   synced_at: string;
+  is_virtual?: boolean;
 }
 
 interface InventoryFilters {
@@ -68,6 +70,7 @@ export default function Inventory() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [sapUnavailable, setSapUnavailable] = useState(false);
+  const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
@@ -82,6 +85,7 @@ export default function Inventory() {
 
   const loadFromDB = useCallback(async () => {
     try {
+      // Fetch SAP inventory
       const { data, error } = await supabase
         .from("sap_inventory")
         .select("*")
@@ -89,7 +93,7 @@ export default function Inventory() {
 
       if (error) throw error;
 
-      const items: SAPInventoryItem[] = (data || []).map((d: any) => ({
+      const sapItems: SAPInventoryItem[] = (data || []).map((d: any) => ({
         id: d.id,
         fecha: d.fecha,
         pt_code: d.pt_code || "",
@@ -104,12 +108,37 @@ export default function Inventory() {
         pallet_type: d.pallet_type,
         status: d.status || "available",
         synced_at: d.synced_at,
+        is_virtual: false,
       }));
 
-      setInventory(items);
+      // Fetch virtual pallets from inventory_pallets
+      const { data: virtualData } = await supabase
+        .from("inventory_pallets")
+        .select("*")
+        .eq("is_virtual", true);
 
-      if (items.length > 0) {
-        setLastSyncTime(items[0].synced_at);
+      const virtualItems: SAPInventoryItem[] = (virtualData || []).map((d: any) => ({
+        id: d.id,
+        fecha: d.fecha,
+        pt_code: d.pt_code || "",
+        description: d.description || "",
+        stock: d.stock || 0,
+        unit: d.unit || "MIL",
+        gross_weight: d.gross_weight,
+        net_weight: d.net_weight,
+        traceability: d.traceability || "",
+        bfx_order: d.bfx_order,
+        pieces: d.pieces,
+        pallet_type: d.pallet_type,
+        status: d.status || "available",
+        synced_at: d.created_at,
+        is_virtual: true,
+      }));
+
+      setInventory([...virtualItems, ...sapItems]);
+
+      if (sapItems.length > 0) {
+        setLastSyncTime(sapItems[0].synced_at);
       }
     } catch (error) {
       console.error("Error loading inventory from DB:", error);
@@ -386,6 +415,10 @@ export default function Inventory() {
       return true;
     })
     .sort((a, b) => {
+      // Virtual pallets always first
+      if (a.is_virtual && !b.is_virtual) return -1;
+      if (!a.is_virtual && b.is_virtual) return 1;
+      // Then date sort
       if (!dateSortOrder) return 0;
       const dateA = new Date(a.fecha).getTime();
       const dateB = new Date(b.fecha).getTime();
@@ -394,6 +427,7 @@ export default function Inventory() {
 
   const availableCount = filteredInventory.filter((i) => i.status === "available").length;
   const assignedCount = filteredInventory.filter((i) => i.status === "assigned").length;
+  const virtualCount = filteredInventory.filter((i) => i.is_virtual).length;
 
   return (
     <MainLayout>
@@ -423,6 +457,11 @@ export default function Inventory() {
             <h1 className="text-2xl font-bold tracking-tight">{t('page.inventory.title')}</h1>
             <p className="text-muted-foreground">
               Inventario SAP en tiempo real
+              {virtualCount > 0 && (
+                <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                  • {virtualCount} virtual{virtualCount > 1 ? "es" : ""}
+                </span>
+              )}
             </p>
             {lastSyncTime && (
               <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
@@ -434,18 +473,27 @@ export default function Inventory() {
             )}
           </div>
           {isAdmin && (
-            <Button
-              variant="outline"
-              onClick={() => syncSAPInventory()}
-              disabled={syncing}
-            >
-              {syncing ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Sincronizar SAP
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateVirtualOpen(true)}
+              >
+                <Ghost className="mr-2 h-4 w-4" />
+                + Virtual
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => syncSAPInventory()}
+                disabled={syncing}
+              >
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Sincronizar SAP
+              </Button>
+            </div>
           )}
         </div>
 
@@ -526,11 +574,21 @@ export default function Inventory() {
               </TableHeader>
               <TableBody>
                 {filteredInventory.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={item.is_virtual ? "bg-red-50 dark:bg-red-950/20" : ""}>
                     <TableCell className="whitespace-nowrap">
                       {new Date(item.fecha).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{item.pt_code}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      <div className="flex items-center gap-1.5">
+                        {item.pt_code}
+                        {item.is_virtual && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                            <Ghost className="h-3 w-3 mr-0.5" />
+                            Virtual
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={item.description}>
                       {item.description}
                     </TableCell>
@@ -551,6 +609,13 @@ export default function Inventory() {
             </Table>
           </div>
         )}
+
+        {/* Create Virtual Pallet Dialog */}
+        <CreateVirtualPalletDialog
+          open={createVirtualOpen}
+          onOpenChange={setCreateVirtualOpen}
+          onCreated={loadFromDB}
+        />
       </div>
     </MainLayout>
   );
