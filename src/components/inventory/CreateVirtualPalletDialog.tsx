@@ -122,8 +122,8 @@ export function CreateVirtualPalletDialog({
   };
 
   const handleCreate = async () => {
-    if (!selectedPOId || !ptCode || !description || !stock || !traceability.trim()) {
-      toast.error("Selecciona una PO, stock y trazabilidad son requeridos");
+    if (!selectedPOId || !ptCode || !description || !stock) {
+      toast.error("Selecciona una PO y stock son requeridos");
       return;
     }
 
