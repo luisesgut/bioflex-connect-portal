@@ -2957,6 +2957,11 @@ export default function LoadDetail() {
                   </div>
                   <CardDescription>
                     Select pallets and upload release document to approve them
+                    {pendingReleasePallets.some(p => p.pallet.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {pendingReleasePallets.filter(p => p.pallet.is_virtual).length} virtual
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
