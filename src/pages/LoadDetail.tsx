@@ -3241,7 +3241,7 @@ export default function LoadDetail() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400"
+                                className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
                                 onClick={() => {
                                   setLinkVirtualPalletId(pallet.pallet_id);
                                   setLinkVirtualPtCode(pallet.pallet.pt_code);
