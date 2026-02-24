@@ -2802,6 +2802,11 @@ export default function LoadDetail() {
                   </div>
                   <CardDescription>
                     Pallets that have been approved for shipping
+                    {releasedPallets.some(p => p.pallet.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {releasedPallets.filter(p => p.pallet.is_virtual).length} virtual
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 {isAdmin && selectedReleasedPallets.size > 0 && (
