@@ -3209,7 +3209,7 @@ export default function LoadDetail() {
                     {sortedAllPallets.map((pallet, index) => (
                       <TableRow key={pallet.id} className={cn(
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border",
-                        pallet.pallet.is_virtual && "bg-purple-50/50 dark:bg-purple-950/20"
+                        pallet.pallet.is_virtual && "bg-red-50/50 dark:bg-red-950/20"
                       )}>
                         {isAdmin && (
                           <TableCell>
