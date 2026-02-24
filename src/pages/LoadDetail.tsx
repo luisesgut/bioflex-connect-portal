@@ -177,6 +177,7 @@ interface AvailablePallet {
   bfx_order: string | null;
   unit: string;
   pieces_per_pallet?: number | null;
+  is_virtual?: boolean;
 }
 
 interface ActivePOWithInventory {
@@ -379,7 +380,7 @@ export default function LoadDetail() {
       // Fetch available pallets excluding those already in any load
       const { data: availableData } = await supabase
         .from("inventory_pallets")
-        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit")
+        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit, is_virtual")
         .eq("status", "available");
 
       // Filter out pallets already assigned to any load
@@ -689,7 +690,15 @@ export default function LoadDetail() {
     [pallets, sortByPOAndQuantity]
   );
 
-  const sortedAllPallets = useMemo(() => sortByPOAndQuantity(pallets), [pallets, sortByPOAndQuantity]);
+  const sortedAllPallets = useMemo(() => {
+    const sorted = sortByPOAndQuantity(pallets);
+    // Virtual pallets always first
+    return [...sorted].sort((a, b) => {
+      if (a.pallet.is_virtual && !b.pallet.is_virtual) return -1;
+      if (!a.pallet.is_virtual && b.pallet.is_virtual) return 1;
+      return 0;
+    });
+  }, [pallets, sortByPOAndQuantity]);
 
   // Calculate total gross weight
   const totalGrossWeight = useMemo(() => {
@@ -946,14 +955,15 @@ export default function LoadDetail() {
       result = result.filter(p => inventoryFilters.unit.includes(p.unit));
     }
 
-    // Apply date sorting
-    if (dateSortOrder) {
-      result = [...result].sort((a, b) => {
-        const dateA = new Date(a.fecha).getTime();
-        const dateB = new Date(b.fecha).getTime();
-        return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
-      });
-    }
+    // Sort: virtual pallets first, then by date
+    result = [...result].sort((a, b) => {
+      if (a.is_virtual && !b.is_virtual) return -1;
+      if (!a.is_virtual && b.is_virtual) return 1;
+      if (!dateSortOrder) return 0;
+      const dateA = new Date(a.fecha).getTime();
+      const dateB = new Date(b.fecha).getTime();
+      return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
 
     return result;
   }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder]);
@@ -3132,7 +3142,7 @@ export default function LoadDetail() {
                 <CardDescription>
                   Pallets selected for this load
                   {pallets.some(p => p.pallet.is_virtual) && (
-                    <span className="ml-2 text-purple-600 dark:text-purple-400 font-medium">
+                    <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
                       • {pallets.filter(p => p.pallet.is_virtual).length} virtual
                     </span>
                   )}
@@ -3199,7 +3209,7 @@ export default function LoadDetail() {
                     {sortedAllPallets.map((pallet, index) => (
                       <TableRow key={pallet.id} className={cn(
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border",
-                        pallet.pallet.is_virtual && "bg-purple-50/50 dark:bg-purple-950/20"
+                        pallet.pallet.is_virtual && "bg-red-50/50 dark:bg-red-950/20"
                       )}>
                         {isAdmin && (
                           <TableCell>
@@ -3214,7 +3224,7 @@ export default function LoadDetail() {
                             <div className="flex items-center gap-1.5">
                               {pallet.pallet.pt_code}
                               {pallet.pallet.is_virtual && (
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
                                   <Ghost className="h-3 w-3 mr-0.5" />
                                   Virtual
                                 </Badge>
@@ -3231,7 +3241,7 @@ export default function LoadDetail() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400"
+                                className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
                                 onClick={() => {
                                   setLinkVirtualPalletId(pallet.pallet_id);
                                   setLinkVirtualPtCode(pallet.pallet.pt_code);
@@ -3357,6 +3367,11 @@ export default function LoadDetail() {
                   <CardTitle>Available Inventory</CardTitle>
                   <CardDescription>
                     Select pallets to add to this load ({availablePallets.length} available, {selectedPalletIds.size} selected)
+                    {availablePallets.some(p => p.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {availablePallets.filter(p => p.is_virtual).length} virtual{availablePallets.filter(p => p.is_virtual).length > 1 ? "es" : ""}
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -3425,7 +3440,10 @@ export default function LoadDetail() {
                         {filteredAvailablePallets.map((pallet) => (
                           <TableRow
                             key={pallet.id}
-                            className={selectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                            className={cn(
+                              selectedPalletIds.has(pallet.id) && "bg-muted/50",
+                              pallet.is_virtual && !selectedPalletIds.has(pallet.id) && "bg-red-50 dark:bg-red-950/20"
+                            )}
                           >
                             <TableCell>
                               <Checkbox
@@ -3436,7 +3454,17 @@ export default function LoadDetail() {
                             <TableCell className="text-sm">
                               {format(new Date(pallet.fecha), "MM/dd/yyyy")}
                             </TableCell>
-                            <TableCell className="font-mono">{pallet.pt_code}</TableCell>
+                            <TableCell className="font-mono">
+                              <div className="flex items-center gap-1.5">
+                                {pallet.pt_code}
+                                {pallet.is_virtual && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                                    <Ghost className="h-3 w-3 mr-0.5" />
+                                    Virtual
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="max-w-[200px] truncate">
                               {pallet.description}
                             </TableCell>
