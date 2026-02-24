@@ -3440,7 +3440,10 @@ export default function LoadDetail() {
                         {filteredAvailablePallets.map((pallet) => (
                           <TableRow
                             key={pallet.id}
-                            className={selectedPalletIds.has(pallet.id) ? "bg-muted/50" : ""}
+                            className={cn(
+                              selectedPalletIds.has(pallet.id) && "bg-muted/50",
+                              pallet.is_virtual && !selectedPalletIds.has(pallet.id) && "bg-red-50 dark:bg-red-950/20"
+                            )}
                           >
                             <TableCell>
                               <Checkbox
