@@ -177,6 +177,7 @@ interface AvailablePallet {
   bfx_order: string | null;
   unit: string;
   pieces_per_pallet?: number | null;
+  is_virtual?: boolean;
 }
 
 interface ActivePOWithInventory {
