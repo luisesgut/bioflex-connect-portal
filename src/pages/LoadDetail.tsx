@@ -3224,7 +3224,7 @@ export default function LoadDetail() {
                             <div className="flex items-center gap-1.5">
                               {pallet.pallet.pt_code}
                               {pallet.pallet.is_virtual && (
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-purple-300 text-purple-600 dark:border-purple-700 dark:text-purple-400">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
                                   <Ghost className="h-3 w-3 mr-0.5" />
                                   Virtual
                                 </Badge>
