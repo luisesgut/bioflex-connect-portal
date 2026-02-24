@@ -282,15 +282,27 @@ export function CreateVirtualPalletDialog({
             </div>
           </div>
 
-          {/* Traceability */}
-          <div className="space-y-2">
-            <Label htmlFor="vp-traceability">Trazabilidad *</Label>
-            <Input
-              id="vp-traceability"
-              placeholder="Lote esperado"
-              value={traceability}
-              onChange={(e) => setTraceability(e.target.value)}
-            />
+          {/* Traceability & Net Weight */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vp-traceability">Trazabilidad</Label>
+              <Input
+                id="vp-traceability"
+                placeholder="Lote esperado (opcional)"
+                value={traceability}
+                onChange={(e) => setTraceability(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vp-net-weight">Peso Neto (kg)</Label>
+              <Input
+                id="vp-net-weight"
+                type="number"
+                placeholder="e.g. 850"
+                value={netWeight}
+                onChange={(e) => setNetWeight(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
