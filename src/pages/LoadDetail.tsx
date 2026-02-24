@@ -690,7 +690,15 @@ export default function LoadDetail() {
     [pallets, sortByPOAndQuantity]
   );
 
-  const sortedAllPallets = useMemo(() => sortByPOAndQuantity(pallets), [pallets, sortByPOAndQuantity]);
+  const sortedAllPallets = useMemo(() => {
+    const sorted = sortByPOAndQuantity(pallets);
+    // Virtual pallets always first
+    return [...sorted].sort((a, b) => {
+      if (a.pallet.is_virtual && !b.pallet.is_virtual) return -1;
+      if (!a.pallet.is_virtual && b.pallet.is_virtual) return 1;
+      return 0;
+    });
+  }, [pallets, sortByPOAndQuantity]);
 
   // Calculate total gross weight
   const totalGrossWeight = useMemo(() => {
