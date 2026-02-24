@@ -85,6 +85,7 @@ export default function Inventory() {
 
   const loadFromDB = useCallback(async () => {
     try {
+      // Fetch SAP inventory
       const { data, error } = await supabase
         .from("sap_inventory")
         .select("*")
@@ -92,7 +93,7 @@ export default function Inventory() {
 
       if (error) throw error;
 
-      const items: SAPInventoryItem[] = (data || []).map((d: any) => ({
+      const sapItems: SAPInventoryItem[] = (data || []).map((d: any) => ({
         id: d.id,
         fecha: d.fecha,
         pt_code: d.pt_code || "",
@@ -107,12 +108,37 @@ export default function Inventory() {
         pallet_type: d.pallet_type,
         status: d.status || "available",
         synced_at: d.synced_at,
+        is_virtual: false,
       }));
 
-      setInventory(items);
+      // Fetch virtual pallets from inventory_pallets
+      const { data: virtualData } = await supabase
+        .from("inventory_pallets")
+        .select("*")
+        .eq("is_virtual", true);
 
-      if (items.length > 0) {
-        setLastSyncTime(items[0].synced_at);
+      const virtualItems: SAPInventoryItem[] = (virtualData || []).map((d: any) => ({
+        id: d.id,
+        fecha: d.fecha,
+        pt_code: d.pt_code || "",
+        description: d.description || "",
+        stock: d.stock || 0,
+        unit: d.unit || "MIL",
+        gross_weight: d.gross_weight,
+        net_weight: d.net_weight,
+        traceability: d.traceability || "",
+        bfx_order: d.bfx_order,
+        pieces: d.pieces,
+        pallet_type: d.pallet_type,
+        status: d.status || "available",
+        synced_at: d.created_at,
+        is_virtual: true,
+      }));
+
+      setInventory([...virtualItems, ...sapItems]);
+
+      if (sapItems.length > 0) {
+        setLastSyncTime(sapItems[0].synced_at);
       }
     } catch (error) {
       console.error("Error loading inventory from DB:", error);
