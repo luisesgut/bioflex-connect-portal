@@ -574,11 +574,21 @@ export default function Inventory() {
               </TableHeader>
               <TableBody>
                 {filteredInventory.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={item.is_virtual ? "bg-red-50 dark:bg-red-950/20" : ""}>
                     <TableCell className="whitespace-nowrap">
                       {new Date(item.fecha).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{item.pt_code}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      <div className="flex items-center gap-1.5">
+                        {item.pt_code}
+                        {item.is_virtual && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                            <Ghost className="h-3 w-3 mr-0.5" />
+                            Virtual
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={item.description}>
                       {item.description}
                     </TableCell>
