@@ -180,7 +180,7 @@ export default function Products() {
           // Datos del endpoint (Destiny)
           customer_item: destiny.customer_item || product.customer_item,
           item_description: destiny.item_description || product.item_description,
-          item_type: destiny.tipoEmpaque || product.item_type,
+          item_type: product.item_type,
           tipo_empaque: destiny.tipoEmpaque || product.tipo_empaque,
           pt_code: destiny.codigoProducto || product.pt_code,
           codigo_producto: destiny.codigoProducto || product.codigo_producto,
