@@ -61,7 +61,8 @@ export function CreateVirtualPalletDialog({
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("MIL");
   const [traceability, setTraceability] = useState("");
-  const [saving, setSaving] = useState(false);
+   const [netWeight, setNetWeight] = useState("");
+   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
     () => activePOs.find((po) => po.id === selectedPOId) || null,
