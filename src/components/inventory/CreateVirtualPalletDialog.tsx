@@ -61,7 +61,8 @@ export function CreateVirtualPalletDialog({
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("MIL");
   const [traceability, setTraceability] = useState("");
-  const [saving, setSaving] = useState(false);
+   const [netWeight, setNetWeight] = useState("");
+   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
     () => activePOs.find((po) => po.id === selectedPOId) || null,
@@ -117,11 +118,12 @@ export function CreateVirtualPalletDialog({
     setStock("");
     setUnit("MIL");
     setTraceability("");
+    setNetWeight("");
   };
 
   const handleCreate = async () => {
-    if (!selectedPOId || !ptCode || !description || !stock || !traceability.trim()) {
-      toast.error("Selecciona una PO, stock y trazabilidad son requeridos");
+    if (!selectedPOId || !ptCode || !description || !stock) {
+      toast.error("Selecciona una PO y stock son requeridos");
       return;
     }
 
@@ -132,11 +134,12 @@ export function CreateVirtualPalletDialog({
         description,
         stock: parseFloat(stock),
         unit,
-        traceability: `VIRTUAL-${traceability.trim()}`,
+        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}`,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
         is_virtual: true,
+        net_weight: netWeight ? parseFloat(netWeight) : null,
       });
 
       if (error) throw error;
@@ -162,7 +165,7 @@ export function CreateVirtualPalletDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ghost className="h-5 w-5 text-purple-500" />
@@ -239,9 +242,9 @@ export function CreateVirtualPalletDialog({
             </Popover>
           </div>
 
-          {/* Auto-filled PT Code & Description */}
+          {/* Auto-filled PT Code, Description & Pieces per Pallet */}
           {selectedPO && (
-            <div className="grid grid-cols-2 gap-4 rounded-md border p-3 bg-muted/50">
+            <div className="grid grid-cols-3 gap-4 rounded-md border p-3 bg-muted/50">
               <div>
                 <p className="text-xs text-muted-foreground">PT Code</p>
                 <p className="text-sm font-medium">{ptCode || "—"}</p>
@@ -249,6 +252,10 @@ export function CreateVirtualPalletDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Producto</p>
                 <p className="text-sm font-medium truncate">{description || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Pzas / Tarima</p>
+                <p className="text-sm font-medium">{selectedPO.product?.pieces_per_pallet?.toLocaleString() || "—"}</p>
               </div>
             </div>
           )}
@@ -275,15 +282,27 @@ export function CreateVirtualPalletDialog({
             </div>
           </div>
 
-          {/* Traceability */}
-          <div className="space-y-2">
-            <Label htmlFor="vp-traceability">Trazabilidad *</Label>
-            <Input
-              id="vp-traceability"
-              placeholder="Lote esperado"
-              value={traceability}
-              onChange={(e) => setTraceability(e.target.value)}
-            />
+          {/* Traceability & Net Weight */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vp-traceability">Trazabilidad</Label>
+              <Input
+                id="vp-traceability"
+                placeholder="Lote esperado (opcional)"
+                value={traceability}
+                onChange={(e) => setTraceability(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vp-net-weight">Peso Neto (kg)</Label>
+              <Input
+                id="vp-net-weight"
+                type="number"
+                placeholder="e.g. 850"
+                value={netWeight}
+                onChange={(e) => setNetWeight(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
