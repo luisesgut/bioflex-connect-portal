@@ -2802,6 +2802,11 @@ export default function LoadDetail() {
                   </div>
                   <CardDescription>
                     Pallets that have been approved for shipping
+                    {releasedPallets.some(p => p.pallet.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {releasedPallets.filter(p => p.pallet.is_virtual).length} virtual
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 {isAdmin && selectedReleasedPallets.size > 0 && (
@@ -2861,6 +2866,7 @@ export default function LoadDetail() {
                           <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
+                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2877,7 +2883,19 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            {isAdmin && (
+                              <TableCell className="font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  {pallet.pallet.pt_code}
+                                  {pallet.pallet.is_virtual && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                                      <Ghost className="h-3 w-3 mr-0.5" />
+                                      Virtual
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
@@ -2900,6 +2918,26 @@ export default function LoadDetail() {
                                 "-"
                               )}
                             </TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                {pallet.pallet.is_virtual && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
+                                    onClick={() => {
+                                      setLinkVirtualPalletId(pallet.pallet_id);
+                                      setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                      setLinkLoadPalletId(pallet.id);
+                                      setLinkVirtualOpen(true);
+                                    }}
+                                  >
+                                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                                    Link
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -2919,6 +2957,11 @@ export default function LoadDetail() {
                   </div>
                   <CardDescription>
                     Select pallets and upload release document to approve them
+                    {pendingReleasePallets.some(p => p.pallet.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {pendingReleasePallets.filter(p => p.pallet.is_virtual).length} virtual
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2979,6 +3022,7 @@ export default function LoadDetail() {
                           <TableHead>Customer PO</TableHead>
                           <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
+                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2996,11 +3040,43 @@ export default function LoadDetail() {
                                 onCheckedChange={() => togglePalletForRelease(pallet.id)}
                               />
                             </TableCell>
-                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            {isAdmin && (
+                              <TableCell className="font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  {pallet.pallet.pt_code}
+                                  {pallet.pallet.is_virtual && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                                      <Ghost className="h-3 w-3 mr-0.5" />
+                                      Virtual
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                {pallet.pallet.is_virtual && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
+                                    onClick={() => {
+                                      setLinkVirtualPalletId(pallet.pallet_id);
+                                      setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                      setLinkLoadPalletId(pallet.id);
+                                      setLinkVirtualOpen(true);
+                                    }}
+                                  >
+                                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                                    Link
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
@@ -3021,6 +3097,11 @@ export default function LoadDetail() {
                     </div>
                     <CardDescription>
                       Pallets that have been placed on hold
+                      {onHoldPallets.some(p => p.pallet.is_virtual) && (
+                        <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                          • {onHoldPallets.filter(p => p.pallet.is_virtual).length} virtual
+                        </span>
+                      )}
                     </CardDescription>
                   </div>
                   {isAdmin && selectedOnHoldPallets.size > 0 && (
@@ -3098,6 +3179,7 @@ export default function LoadDetail() {
                           <TableHead>Customer PO</TableHead>
                           <TableHead>Held By</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
+                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3114,11 +3196,43 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                            {isAdmin && (
+                              <TableCell className="font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  {pallet.pallet.pt_code}
+                                  {pallet.pallet.is_virtual && (
+                                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                                      <Ghost className="h-3 w-3 mr-0.5" />
+                                      Virtual
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                {pallet.pallet.is_virtual && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
+                                    onClick={() => {
+                                      setLinkVirtualPalletId(pallet.pallet_id);
+                                      setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                      setLinkLoadPalletId(pallet.id);
+                                      setLinkVirtualOpen(true);
+                                    }}
+                                  >
+                                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                                    Link
+                                  </Button>
+                                )}
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
