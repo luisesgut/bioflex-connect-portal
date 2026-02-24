@@ -427,6 +427,7 @@ export default function Inventory() {
 
   const availableCount = filteredInventory.filter((i) => i.status === "available").length;
   const assignedCount = filteredInventory.filter((i) => i.status === "assigned").length;
+  const virtualCount = filteredInventory.filter((i) => i.is_virtual).length;
 
   return (
     <MainLayout>
