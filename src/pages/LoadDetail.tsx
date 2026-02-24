@@ -3367,6 +3367,11 @@ export default function LoadDetail() {
                   <CardTitle>Available Inventory</CardTitle>
                   <CardDescription>
                     Select pallets to add to this load ({availablePallets.length} available, {selectedPalletIds.size} selected)
+                    {availablePallets.some(p => p.is_virtual) && (
+                      <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+                        • {availablePallets.filter(p => p.is_virtual).length} virtual{availablePallets.filter(p => p.is_virtual).length > 1 ? "es" : ""}
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
