@@ -27,6 +27,7 @@ import {
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
 import { useLanguage } from "@/hooks/useLanguage";
+import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode } from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
@@ -48,16 +49,6 @@ interface Product {
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
-}
-
-interface DestinyProduct {
-  codigoProducto: string | null;
-  printCard: string | null;
-  TipoEmpaque: string | null;
-  UnidadesPorTarima: number | null;
-  PaquetePorCaja: number | null;
-  PiezasPorPaquete: number | null;
-  PiezasTotalePorCaja: number | null;
 }
 
 interface ProductRequest {
@@ -130,15 +121,6 @@ function getStatusBadgeVariant(status: string) {
   }
 }
 
-const normalizeCode = (value: string | null | undefined) => value?.trim().toUpperCase() || "";
-const parseNullableNumber = (value: unknown): number | null => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-const isMissingText = (value: string | null | undefined) => !value || value.trim() === "" || value.trim() === "0";
-const isMissingNumber = (value: number | null | undefined) => value === null || value === 0;
-
 export default function Products() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -169,13 +151,9 @@ export default function Products() {
         .select("id, product_name, customer, item_description, item_type, status, engineering_status, design_status, created_at, updated_at, pieces_per_pallet, customer_item_code")
         .neq("status", "completed")
         .order("created_at", { ascending: false }),
-      fetch("/productos_destiny.json")
-        .then(async (res) => {
-          if (!res.ok) throw new Error("Failed to load productos_destiny.json");
-          return res.json() as Promise<DestinyProduct[]>;
-        })
+      fetchDestinyProducts()
         .catch((error) => {
-          console.error("Error loading productos_destiny.json in Products page:", error);
+          console.error("Error loading DestinyDatos in Products page:", error);
           return [] as DestinyProduct[];
         }),
     ]);
@@ -184,37 +162,34 @@ export default function Products() {
       toast({ title: "Error", description: "Failed to fetch products", variant: "destructive" });
     } else {
       const destinyByCode = (destinyRes || []).reduce<Record<string, DestinyProduct>>((acc, item) => {
-        const key = normalizeCode(item.codigoProducto);
+        const key = normalizeDestinyCode(item.codigoProducto);
         if (key) acc[key] = item;
         return acc;
       }, {});
 
       const syncedProducts = (productsRes.data || []).map((product) => {
         const lookupCode =
-          normalizeCode(product.pt_code) ||
-          normalizeCode(product.codigo_producto) ||
-          normalizeCode(product.customer_item);
+          normalizeDestinyCode(product.pt_code) ||
+          normalizeDestinyCode(product.codigo_producto) ||
+          normalizeDestinyCode(product.customer_item);
         const destiny = destinyByCode[lookupCode];
         if (!destiny) return product;
 
-        const piezasTotalesPorCaja = parseNullableNumber(destiny.PiezasTotalePorCaja);
-        const unidadesPorTarima = parseNullableNumber(destiny.UnidadesPorTarima);
-        const piecesPerPalletFromJson =
-          unidadesPorTarima !== null && piezasTotalesPorCaja !== null
-            ? unidadesPorTarima * piezasTotalesPorCaja
-            : null;
-
         return {
           ...product,
-          pt_code: isMissingText(product.pt_code) ? destiny.codigoProducto : product.pt_code,
-          codigo_producto: isMissingText(product.codigo_producto) ? destiny.codigoProducto : product.codigo_producto,
-          print_card: isMissingText(product.print_card) ? destiny.printCard : product.print_card,
-          tipo_empaque: isMissingText(product.tipo_empaque) ? destiny.TipoEmpaque : product.tipo_empaque,
-          unidades_por_tarima: isMissingNumber(product.unidades_por_tarima) ? unidadesPorTarima : product.unidades_por_tarima,
-          paquete_por_caja: isMissingNumber(product.paquete_por_caja) ? parseNullableNumber(destiny.PaquetePorCaja) : product.paquete_por_caja,
-          piezas_por_paquete: isMissingNumber(product.piezas_por_paquete) ? parseNullableNumber(destiny.PiezasPorPaquete) : product.piezas_por_paquete,
-          piezas_totales_por_caja: isMissingNumber(product.piezas_totales_por_caja) ? piezasTotalesPorCaja : product.piezas_totales_por_caja,
-          pieces_per_pallet: isMissingNumber(product.pieces_per_pallet) ? piecesPerPalletFromJson : product.pieces_per_pallet,
+          customer_item: destiny.customer_item || product.customer_item,
+          item_description: destiny.item_description || product.item_description,
+          customer: null,
+          item_type: destiny.tipoEmpaque || product.item_type,
+          tipo_empaque: destiny.tipoEmpaque || product.tipo_empaque,
+          pt_code: destiny.codigoProducto || product.pt_code,
+          codigo_producto: destiny.codigoProducto || product.codigo_producto,
+          unidades_por_tarima: destiny.unidadesPorTarima ?? product.unidades_por_tarima,
+          paquete_por_caja: destiny.paquetePorCaja ?? product.paquete_por_caja,
+          piezas_por_paquete: destiny.piezasPorPaquete ?? product.piezas_por_paquete,
+          piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product.piezas_totales_por_caja,
+          pieces_per_pallet: destiny.piecesPerPallet ?? product.pieces_per_pallet,
+          print_card: destiny.printCard || product.print_card,
         };
       });
 

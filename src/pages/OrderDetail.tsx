@@ -88,7 +88,10 @@ interface StockVerificationItem {
   porcentajeEnviado: number;
   puedeCompletarOrden: boolean;
   detallesAlmacen: StockWarehouseDetail[];
-  totalStockDisponible: number;
+  detallesAlmacenTotal?: StockWarehouseDetail[];
+  totalStockDisponible?: number;
+  stockAsignadoPO?: number;
+  stockOtrasPOs?: number;
 }
 
 
@@ -594,89 +597,145 @@ export default function OrderDetail() {
                           key={`${item.claveProducto}-${index}`}
                           className="rounded-xl border bg-gradient-to-br from-emerald-50/60 via-background to-sky-50/60 p-4 space-y-4"
                         >
-                          <div className="flex items-start justify-between gap-3 flex-wrap">
-                            <div>
-                              <p className="text-sm text-muted-foreground">{item.claveProducto}</p>
-                              <p className="font-semibold">{item.producto}</p>
-                            </div>
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium",
-                                item.puedeCompletarOrden
-                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
-                                  : "border-amber-500/40 bg-amber-500/10 text-amber-700"
-                              )}
-                            >
-                              {item.puedeCompletarOrden ? (
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                              ) : (
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                              )}
-                              {item.puedeCompletarOrden ? "Can complete order" : "Insufficient stock"}
-                            </span>
-                          </div>
+                          {(() => {
+                            const lotsCurrent = item.detallesAlmacen || [];
+                            const lotsOther = item.detallesAlmacenTotal || [];
+                            const assignedFromLots = lotsCurrent.reduce((sum, lot) => sum + (lot.cantidad || 0), 0);
+                            const otherFromLots = lotsOther.reduce((sum, lot) => sum + (lot.cantidad || 0), 0);
+                            const stockAssignedPO = item.stockAsignadoPO ?? assignedFromLots;
+                            const stockOtherPOs = item.stockOtrasPOs ?? otherFromLots;
+                            const totalStock = item.totalStockDisponible ?? (stockAssignedPO + stockOtherPOs);
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="rounded-lg border bg-background/70 p-3">
-                              <p className="text-xs text-muted-foreground">Requested</p>
-                              <p className="text-lg font-semibold">
-                                {item.cantidadSolicitada.toLocaleString()} {item.unidadSolicitada}
-                              </p>
-                            </div>
-                            <div className="rounded-lg border bg-background/70 p-3">
-                              <p className="text-xs text-muted-foreground">Shipped</p>
-                              <p className="text-lg font-semibold">{item.cantidadEnviada.toLocaleString()}</p>
-                            </div>
-                            <div className="rounded-lg border bg-background/70 p-3">
-                              <p className="text-xs text-muted-foreground">Pending</p>
-                              <p className="text-lg font-semibold">{item.cantidadPendiente.toLocaleString()}</p>
-                            </div>
-                            <div className="rounded-lg border bg-background/70 p-3">
-                              <p className="text-xs text-muted-foreground">Stock Available</p>
-                              <p className="text-lg font-semibold">{item.totalStockDisponible.toLocaleString()}</p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>Fulfillment progress</span>
-                              <span>{item.porcentajeEnviado.toFixed(2)}%</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className={cn(
-                                  "h-full rounded-full transition-all",
-                                  item.puedeCompletarOrden ? "bg-emerald-500" : "bg-amber-500"
-                                )}
-                                style={{ width: `${Math.min(100, Math.max(0, item.porcentajeEnviado))}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Warehouse Lots</p>
-                            {item.detallesAlmacen.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">No warehouse lot details reported.</p>
-                            ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {item.detallesAlmacen.map((detalle, detailIndex) => (
-                                  <div
-                                    key={`${detalle.lote}-${detailIndex}`}
-                                    className="rounded-lg border bg-background/80 p-3 space-y-1"
-                                  >
-                                    <p className="text-xs text-muted-foreground">Lot</p>
-                                    <p className="font-medium">{detalle.lote}</p>
-                                    <div className="grid grid-cols-2 gap-2 text-sm pt-1">
-                                      <p className="text-muted-foreground">Qty: <span className="text-foreground font-medium">{detalle.cantidad.toLocaleString()}</span></p>
-                                      <p className="text-muted-foreground">Boxes: <span className="text-foreground font-medium">{detalle.cajas.toLocaleString()}</span></p>
-                                      <p className="text-muted-foreground">Gross: <span className="text-foreground font-medium">{detalle.pesoBruto.toLocaleString()}</span></p>
-                                      <p className="text-muted-foreground">Net: <span className="text-foreground font-medium">{detalle.pesoNeto.toLocaleString()}</span></p>
-                                    </div>
+                            return (
+                              <>
+                                <div className="flex items-start justify-between gap-3 flex-wrap">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">{item.claveProducto}</p>
+                                    <p className="font-semibold">{item.producto}</p>
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium",
+                                      item.puedeCompletarOrden
+                                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                                        : "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                                    )}
+                                  >
+                                    {item.puedeCompletarOrden ? (
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <AlertTriangle className="h-3.5 w-3.5" />
+                                    )}
+                                    {item.puedeCompletarOrden ? "Can complete order" : "Insufficient stock"}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                  <div className="rounded-lg border bg-background/70 p-3">
+                                    <p className="text-xs text-muted-foreground">Requested</p>
+                                    <p className="text-lg font-semibold">
+                                      {item.cantidadSolicitada.toLocaleString()} {item.unidadSolicitada}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-lg border bg-background/70 p-3">
+                                    <p className="text-xs text-muted-foreground">Shipped</p>
+                                    <p className="text-lg font-semibold">{item.cantidadEnviada.toLocaleString()}</p>
+                                  </div>
+                                  <div className="rounded-lg border bg-background/70 p-3">
+                                    <p className="text-xs text-muted-foreground">Pending</p>
+                                    <p className="text-lg font-semibold">{item.cantidadPendiente.toLocaleString()}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/70 p-3">
+                                    <p className="text-xs text-emerald-700">Stock Assigned To This PO</p>
+                                    <p className="text-lg font-semibold text-emerald-900">{stockAssignedPO.toLocaleString()}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-sky-200/70 bg-sky-50/70 p-3">
+                                    <p className="text-xs text-sky-700">Stock From Other POs</p>
+                                    <p className="text-lg font-semibold text-sky-900">{stockOtherPOs.toLocaleString()}</p>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-lg border bg-background/70 p-3">
+                                  <p className="text-xs text-muted-foreground">Total Warehouse Stock</p>
+                                  <p className="text-2xl font-semibold">{totalStock.toLocaleString()}</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Fulfillment progress</span>
+                                    <span>{item.porcentajeEnviado.toFixed(2)}%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                                    <div
+                                      className={cn(
+                                        "h-full rounded-full transition-all",
+                                        item.puedeCompletarOrden ? "bg-emerald-500" : "bg-amber-500"
+                                      )}
+                                      style={{ width: `${Math.min(100, Math.max(0, item.porcentajeEnviado))}%` }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm font-medium">Lots Assigned To This PO</p>
+                                      <Badge variant="secondary">{lotsCurrent.length} pallets</Badge>
+                                    </div>
+                                    {lotsCurrent.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground">No lots assigned to this PO.</p>
+                                    ) : (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {lotsCurrent.map((detalle, detailIndex) => (
+                                          <div
+                                            key={`${detalle.lote}-${detailIndex}`}
+                                            className="rounded-lg border border-emerald-200/60 bg-emerald-50/30 p-3 space-y-1"
+                                          >
+                                            <p className="text-xs text-muted-foreground">Lot</p>
+                                            <p className="font-medium">{detalle.lote}</p>
+                                            <div className="grid grid-cols-2 gap-2 text-sm pt-1">
+                                              <p className="text-muted-foreground">Qty: <span className="text-foreground font-medium">{detalle.cantidad.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Boxes: <span className="text-foreground font-medium">{detalle.cajas.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Gross: <span className="text-foreground font-medium">{detalle.pesoBruto.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Net: <span className="text-foreground font-medium">{detalle.pesoNeto.toLocaleString()}</span></p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm font-medium">Stock In Other POs</p>
+                                      <Badge variant="outline">{lotsOther.length} pallets</Badge>
+                                    </div>
+                                    {lotsOther.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground">No pallets reported from other POs.</p>
+                                    ) : (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {lotsOther.map((detalle, detailIndex) => (
+                                          <div
+                                            key={`${detalle.lote}-${detailIndex}`}
+                                            className="rounded-lg border border-sky-200/60 bg-sky-50/30 p-3 space-y-1"
+                                          >
+                                            <p className="text-xs text-muted-foreground">Lot</p>
+                                            <p className="font-medium">{detalle.lote}</p>
+                                            <div className="grid grid-cols-2 gap-2 text-sm pt-1">
+                                              <p className="text-muted-foreground">Qty: <span className="text-foreground font-medium">{detalle.cantidad.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Boxes: <span className="text-foreground font-medium">{detalle.cajas.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Gross: <span className="text-foreground font-medium">{detalle.pesoBruto.toLocaleString()}</span></p>
+                                              <p className="text-muted-foreground">Net: <span className="text-foreground font-medium">{detalle.pesoNeto.toLocaleString()}</span></p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>

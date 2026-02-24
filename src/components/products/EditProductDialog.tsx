@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, X, ChevronDown } from "lucide-react";
+import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode } from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
@@ -37,15 +38,6 @@ interface Product {
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
-}
-
-interface DestinyProduct {
-  codigoProducto: string | null;
-  TipoEmpaque: string | null;
-  PaquetePorCaja: number | null;
-  PiezasPorPaquete: number | null;
-  PiezasTotalePorCaja: number | null;
-  UnidadesPorTarima: number | null;
 }
 
 interface EditProductDialogProps {
@@ -98,39 +90,22 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const getOptions = (category: string) =>
     (dropdownOptions || []).filter((o) => o.category === category);
 
-  const normalizeCode = (value: string | null | undefined) => value?.trim().toUpperCase() || "";
-
-  const parseNullableNumber = (value: unknown): number | null => {
-    if (value === null || value === undefined || value === "") return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  };
-
   const isMissingTextValue = (value: string | null | undefined) => !value || value.trim() === "" || value.trim() === "0";
-  const isMissingNumericValue = (value: number | null | undefined) => value === null || value === 0;
 
   const buildFormWithDestinyData = (base: Partial<Product>) => {
     const record =
-      destinyProductsByCode[normalizeCode(base.pt_code)] ||
-      destinyProductsByCode[normalizeCode(base.customer_item)];
+      destinyProductsByCode[normalizeDestinyCode(base.pt_code)];
 
     if (!record) return base;
 
-    const piezasTotalesPorCaja = parseNullableNumber(record.PiezasTotalePorCaja);
-    const unidadesPorTarima = parseNullableNumber(record.UnidadesPorTarima);
-    const piecesPerPallet =
-      unidadesPorTarima !== null && piezasTotalesPorCaja !== null
-        ? unidadesPorTarima * piezasTotalesPorCaja
-        : null;
-
     return {
       ...base,
-      tipo_empaque: record.TipoEmpaque,
-      unidades_por_tarima: parseNullableNumber(record.UnidadesPorTarima),
-      paquete_por_caja: parseNullableNumber(record.PaquetePorCaja),
-      piezas_por_paquete: parseNullableNumber(record.PiezasPorPaquete),
-      piezas_totales_por_caja: piezasTotalesPorCaja,
-      pieces_per_pallet: piecesPerPallet,
+      tipo_empaque: record.tipoEmpaque,
+      unidades_por_tarima: record.unidadesPorTarima,
+      paquete_por_caja: record.paquetePorCaja,
+      piezas_por_paquete: record.piezasPorPaquete,
+      piezas_totales_por_caja: record.piezasTotalePorCaja,
+      pieces_per_pallet: record.piecesPerPallet,
     };
   };
 
@@ -141,23 +116,21 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     let isMounted = true;
     const loadDestinyProducts = async () => {
       try {
-        const response = await fetch("/productos_destiny.json");
-        if (!response.ok) throw new Error("Failed to load productos_destiny.json");
-        const raw = (await response.json()) as DestinyProduct[];
+        const raw = await fetchDestinyProducts();
         if (!isMounted) return;
 
         const mapped = raw.reduce<Record<string, DestinyProduct>>((acc, item) => {
-          const key = normalizeCode(item.codigoProducto);
+          const key = normalizeDestinyCode(item.codigoProducto);
           if (key) acc[key] = item;
           return acc;
         }, {});
 
         setDestinyProductsByCode(mapped);
       } catch (error) {
-        console.error("Error loading productos_destiny.json:", error);
+        console.error("Error loading DestinyDatos:", error);
         toast({
           title: "Warning",
-          description: "Could not load packaging data from JSON.",
+          description: "Could not load packaging data from DestinyDatos.",
           variant: "destructive",
         });
       }
