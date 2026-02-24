@@ -947,14 +947,15 @@ export default function LoadDetail() {
       result = result.filter(p => inventoryFilters.unit.includes(p.unit));
     }
 
-    // Apply date sorting
-    if (dateSortOrder) {
-      result = [...result].sort((a, b) => {
-        const dateA = new Date(a.fecha).getTime();
-        const dateB = new Date(b.fecha).getTime();
-        return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
-      });
-    }
+    // Sort: virtual pallets first, then by date
+    result = [...result].sort((a, b) => {
+      if (a.is_virtual && !b.is_virtual) return -1;
+      if (!a.is_virtual && b.is_virtual) return 1;
+      if (!dateSortOrder) return 0;
+      const dateA = new Date(a.fecha).getTime();
+      const dateB = new Date(b.fecha).getTime();
+      return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
+    });
 
     return result;
   }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder]);
