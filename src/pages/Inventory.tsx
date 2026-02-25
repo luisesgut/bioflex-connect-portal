@@ -85,39 +85,57 @@ export default function Inventory() {
 
   const loadFromDB = useCallback(async () => {
     try {
-      // Fetch SAP inventory
-      const { data, error } = await supabase
-        .from("sap_inventory")
-        .select("*")
-        .order("pt_code", { ascending: true });
+      // Fetch SAP inventory and real assigned pallets in parallel
+      const [sapResult, virtualResult, assignedResult] = await Promise.all([
+        supabase
+          .from("sap_inventory")
+          .select("*")
+          .order("pt_code", { ascending: true }),
+        supabase
+          .from("inventory_pallets")
+          .select("*")
+          .eq("is_virtual", true),
+        supabase
+          .from("load_pallets")
+          .select("pallet_id, inventory_pallets!inner(traceability, pt_code)")
+      ]);
 
-      if (error) throw error;
+      if (sapResult.error) throw sapResult.error;
 
-      const sapItems: SAPInventoryItem[] = (data || []).map((d: any) => ({
-        id: d.id,
-        fecha: d.fecha,
-        pt_code: d.pt_code || "",
-        description: d.description || "",
-        stock: d.stock || 0,
-        unit: d.unit || "MIL",
-        gross_weight: d.gross_weight,
-        net_weight: d.net_weight,
-        traceability: d.traceability || "",
-        bfx_order: d.bfx_order,
-        pieces: d.pieces,
-        pallet_type: d.pallet_type,
-        status: d.status || "available",
-        synced_at: d.synced_at,
-        is_virtual: false,
-      }));
+      // Build a set of traceability+pt_code combos that are truly assigned to loads
+      const assignedKeys = new Set<string>();
+      (assignedResult.data || []).forEach((lp: any) => {
+        const inv = lp.inventory_pallets;
+        if (inv) {
+          assignedKeys.add(`${inv.traceability}||${inv.pt_code}`);
+        }
+      });
 
-      // Fetch virtual pallets from inventory_pallets
-      const { data: virtualData } = await supabase
-        .from("inventory_pallets")
-        .select("*")
-        .eq("is_virtual", true);
+      const sapItems: SAPInventoryItem[] = (sapResult.data || []).map((d: any) => {
+        // Determine real status: assigned only if this pallet is actually in a load
+        const key = `${d.traceability || ""}||${d.pt_code || ""}`;
+        const realStatus = assignedKeys.has(key) ? "assigned" : "available";
 
-      const virtualItems: SAPInventoryItem[] = (virtualData || []).map((d: any) => ({
+        return {
+          id: d.id,
+          fecha: d.fecha,
+          pt_code: d.pt_code || "",
+          description: d.description || "",
+          stock: d.stock || 0,
+          unit: d.unit || "MIL",
+          gross_weight: d.gross_weight,
+          net_weight: d.net_weight,
+          traceability: d.traceability || "",
+          bfx_order: d.bfx_order,
+          pieces: d.pieces,
+          pallet_type: d.pallet_type,
+          status: realStatus,
+          synced_at: d.synced_at,
+          is_virtual: false,
+        };
+      });
+
+      const virtualItems: SAPInventoryItem[] = (virtualResult.data || []).map((d: any) => ({
         id: d.id,
         fecha: d.fecha,
         pt_code: d.pt_code || "",
