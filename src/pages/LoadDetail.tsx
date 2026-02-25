@@ -2845,104 +2845,31 @@ export default function LoadDetail() {
                     <p className="text-muted-foreground text-sm">No pallets released yet</p>
                   </div>
                 ) : (
-                  <div className="rounded-md border overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {isAdmin && (
-                            <TableHead className="w-[40px]">
-                              <Checkbox
-                                checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
-                                onCheckedChange={toggleAllReleasedPallets}
-                              />
-                            </TableHead>
-                          )}
-                          {isAdmin && <TableHead>PT Code</TableHead>}
-                          <TableHead>Description</TableHead>
-                          <TableHead>Customer PO</TableHead>
-                          <TableHead>CSR</TableHead>
-                          <TableHead className="text-right">Qty</TableHead>
-                          <TableHead>Destination</TableHead>
-                          <TableHead>Released By</TableHead>
-                          <TableHead>Release #</TableHead>
-                          <TableHead>Release PDF</TableHead>
-                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {releasedPallets.map((pallet, index) => (
-                          <TableRow key={pallet.id} className={cn(
-                            "bg-green-50/50 dark:bg-green-950/20",
-                            isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
-                          )}>
-                            {isAdmin && (
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedReleasedPallets.has(pallet.id)}
-                                  onCheckedChange={() => toggleReleasedPallet(pallet.id)}
-                                />
-                              </TableCell>
-                            )}
-                            {isAdmin && (
-                              <TableCell className="font-mono">
-                                <div className="flex items-center gap-1.5">
-                                  {pallet.pallet.pt_code}
-                                  {pallet.pallet.is_virtual && (
-                                    <Badge variant="outline" className="text-[10px] px-1 py-0 border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
-                                      <Ghost className="h-3 w-3 mr-0.5" />
-                                      Virtual
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                            )}
-                            <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
-                            <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
-                            <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
-                            <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            <TableCell>
-                              {getDestinationLabel(pallet.destination)}
-                            </TableCell>
-                            <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
-                            <TableCell className="font-mono text-sm">{pallet.release_number || "-"}</TableCell>
-                            <TableCell>
-                              {pallet.release_pdf_url ? (
-                                <button
-                                  onClick={() => openStorageFile(pallet.release_pdf_url, 'release-documents')}
-                                  className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  View
-                                </button>
-                              ) : (
-                                "-"
-                              )}
-                            </TableCell>
-                            {isAdmin && (
-                              <TableCell>
-                                {pallet.pallet.is_virtual && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
-                                    onClick={() => {
-                                      setLinkVirtualPalletId(pallet.pallet_id);
-                                      setLinkVirtualPtCode(pallet.pallet.pt_code);
-                                      setLinkLoadPalletId(pallet.id);
-                                      setLinkVirtualOpen(true);
-                                    }}
-                                  >
-                                    <Link2 className="h-3.5 w-3.5 mr-1" />
-                                    Link
-                                  </Button>
-                                )}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <>
+                    <div className="rounded-md border overflow-auto">
+...
+                    </div>
+                    {isAdmin && releasedPallets.length > 0 && (() => {
+                      const total = releasedPallets.reduce((sum, p) => {
+                        const po = resolveCustomerPO(p);
+                        const price = po !== "-" ? poPriceMap.get(po) : undefined;
+                        return sum + (price ? (p.quantity / 1000) * price : 0);
+                      }, 0);
+                      if (total <= 0) return null;
+                      const formatted = "$" + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      return (
+                        <div className="flex justify-end mt-3 pr-2">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <span>Released Total:</span>
+                            <span className="text-green-700 dark:text-green-400">
+                              {formatted}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
                 )}
               </CardContent>
             </Card>
