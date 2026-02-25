@@ -686,33 +686,31 @@ export default function OrderDetail() {
                                       <p className="text-sm text-muted-foreground">No lots assigned to this PO.</p>
                                     ) : (
                                       <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/30 overflow-hidden">
-                                        <div className="overflow-x-auto">
-                                          <table className="w-full min-w-[640px] text-sm">
-                                            <thead className="bg-emerald-100/70 text-emerald-900">
-                                              <tr>
-                                                <th className="px-3 py-2 text-left font-medium">Lot</th>
-                                                <th className="px-3 py-2 text-right font-medium">Qty</th>
-                                                <th className="px-3 py-2 text-right font-medium">Boxes</th>
-                                                <th className="px-3 py-2 text-right font-medium">Gross</th>
-                                                <th className="px-3 py-2 text-right font-medium">Net</th>
+                                        <table className="w-full text-xs">
+                                          <thead className="bg-emerald-100/70 text-emerald-900">
+                                            <tr>
+                                              <th className="px-3 py-1.5 text-left font-medium">Lot</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Qty</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Gross</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Net</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {lotsCurrent.map((detalle, detailIndex) => (
+                                              <tr
+                                                key={`${detalle.lote}-${detailIndex}`}
+                                                className="border-t border-emerald-100/80 odd:bg-background/60 even:bg-emerald-50/40"
+                                              >
+                                                <td className="px-3 py-1 font-medium">{detalle.lote}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
                                               </tr>
-                                            </thead>
-                                            <tbody>
-                                              {lotsCurrent.map((detalle, detailIndex) => (
-                                                <tr
-                                                  key={`${detalle.lote}-${detailIndex}`}
-                                                  className="border-t border-emerald-100/80 odd:bg-background/60 even:bg-emerald-50/40"
-                                                >
-                                                  <td className="px-3 py-2 font-medium">{detalle.lote}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
+                                            ))}
+                                          </tbody>
+                                        </table>
                                       </div>
                                     )}
                                   </div>
@@ -726,33 +724,31 @@ export default function OrderDetail() {
                                       <p className="text-sm text-muted-foreground">No pallets reported from other POs.</p>
                                     ) : (
                                       <div className="rounded-lg border border-sky-200/70 bg-sky-50/30 overflow-hidden">
-                                        <div className="overflow-x-auto">
-                                          <table className="w-full min-w-[640px] text-sm">
-                                            <thead className="bg-sky-100/70 text-sky-900">
-                                              <tr>
-                                                <th className="px-3 py-2 text-left font-medium">Lot</th>
-                                                <th className="px-3 py-2 text-right font-medium">Qty</th>
-                                                <th className="px-3 py-2 text-right font-medium">Boxes</th>
-                                                <th className="px-3 py-2 text-right font-medium">Gross</th>
-                                                <th className="px-3 py-2 text-right font-medium">Net</th>
+                                        <table className="w-full text-xs">
+                                          <thead className="bg-sky-100/70 text-sky-900">
+                                            <tr>
+                                              <th className="px-3 py-1.5 text-left font-medium">Lot</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Qty</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Gross</th>
+                                              <th className="px-3 py-1.5 text-right font-medium">Net</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {lotsOther.map((detalle, detailIndex) => (
+                                              <tr
+                                                key={`${detalle.lote}-${detailIndex}`}
+                                                className="border-t border-sky-100/80 odd:bg-background/60 even:bg-sky-50/40"
+                                              >
+                                                <td className="px-3 py-1 font-medium">{detalle.lote}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
                                               </tr>
-                                            </thead>
-                                            <tbody>
-                                              {lotsOther.map((detalle, detailIndex) => (
-                                                <tr
-                                                  key={`${detalle.lote}-${detailIndex}`}
-                                                  className="border-t border-sky-100/80 odd:bg-background/60 even:bg-sky-50/40"
-                                                >
-                                                  <td className="px-3 py-2 font-medium">{detalle.lote}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
-                                                  <td className="px-3 py-2 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
+                                            ))}
+                                          </tbody>
+                                        </table>
                                       </div>
                                     )}
                                   </div>
