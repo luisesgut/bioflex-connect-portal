@@ -68,6 +68,9 @@ interface StockVerificationItem {
   porcentajeEnviado?: number;
   totalStockDisponible?: number;
   detallesAlmacen?: StockVerificationWarehouseDetail[];
+  detallesAlmacenTotal?: StockVerificationWarehouseDetail[];
+  stockAsignadoPO?: number;
+  stockOtrasPOs?: number;
 }
 
 interface Order {
@@ -472,10 +475,25 @@ export default function Orders() {
             const totalRequested = items.reduce((sum, item) => sum + (item.cantidadSolicitada || 0), 0);
             const totalShipped = items.reduce((sum, item) => sum + (item.cantidadEnviada || 0), 0);
             const totalPending = items.reduce((sum, item) => sum + (item.cantidadPendiente || 0), 0);
-            const totalStock = items.reduce((sum, item) => sum + (item.totalStockDisponible || 0), 0);
             const totalInFloor = items.reduce((sum, item) => {
-              const lotTotal = (item.detallesAlmacen || []).reduce((lotSum, lot) => lotSum + (lot.cantidad || 0), 0);
-              return sum + lotTotal;
+              const assignedFromLots = (item.detallesAlmacen || []).reduce(
+                (lotSum, lot) => lotSum + (lot.cantidad || 0),
+                0
+              );
+              return sum + (item.stockAsignadoPO ?? assignedFromLots);
+            }, 0);
+            const totalStock = items.reduce((sum, item) => {
+              const assignedFromLots = (item.detallesAlmacen || []).reduce(
+                (lotSum, lot) => lotSum + (lot.cantidad || 0),
+                0
+              );
+              const otherFromLots = (item.detallesAlmacenTotal || []).reduce(
+                (lotSum, lot) => lotSum + (lot.cantidad || 0),
+                0
+              );
+              const stockAssignedPO = item.stockAsignadoPO ?? assignedFromLots;
+              const stockOtherPOs = item.stockOtrasPOs ?? otherFromLots;
+              return sum + (item.totalStockDisponible ?? stockAssignedPO + stockOtherPOs);
             }, 0);
             const percentProduced =
               totalRequested > 0
