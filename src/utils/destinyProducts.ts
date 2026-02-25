@@ -55,6 +55,20 @@ const splitNombreProducto = (value: string | null | undefined) => {
   };
 };
 
+/**
+ * Maps SAP "tipo_empaque" to the product_line enum value.
+ * Returns null if no match is found.
+ */
+export function mapTipoEmpaqueToProductLine(tipoEmpaque: string | null | undefined): string | null {
+  if (!tipoEmpaque) return null;
+  const te = tipoEmpaque.toLowerCase();
+  if (te.includes("wicket")) return "bag_wicket";
+  if (te.includes("sello lateral")) return "bag_no_wicket_zipper";
+  if (te.includes("zipper")) return "bag_zipper";
+  if (te.includes("bobina")) return "film";
+  return null;
+}
+
 export async function fetchDestinyProducts(endpoint = DESTINY_DATOS_ENDPOINT): Promise<DestinyProduct[]> {
   const response = await fetch(endpoint, {
     signal: AbortSignal.timeout(30000),
