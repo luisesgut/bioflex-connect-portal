@@ -70,6 +70,21 @@ export function mapTipoEmpaqueToProductLine(tipoEmpaque: string | null | undefin
   return null;
 }
 
+/**
+ * Maps a product_line enum value to the human-readable Item Type label.
+ */
+export function mapProductLineToItemType(productLine: string | null | undefined): string | null {
+  if (!productLine) return null;
+  switch (productLine) {
+    case "bag_wicket": return "Bag Wicket";
+    case "bag_no_wicket_zipper": return "Bag No Wicket/Zipper";
+    case "bag_zipper": return "Bag Zipper";
+    case "film": return "Film";
+    case "pouch": return "Bag Zipper Pouch";
+    default: return null;
+  }
+}
+
 export async function fetchDestinyProducts(endpoint = DESTINY_DATOS_ENDPOINT): Promise<DestinyProduct[]> {
   const response = await fetch(endpoint, {
     signal: AbortSignal.timeout(30000),
