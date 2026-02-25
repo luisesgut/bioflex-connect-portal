@@ -519,37 +519,7 @@ export default function CreateOrder() {
                           </span>
                         )}
                       </div>
-                      {matchedProductName && (() => {
-                        const matched = products.find(p => p.id === selectedProductId);
-                        if (!matched) return null;
-                        const hasPc = !!matched.print_card_url;
-                        const hasSpec = !!matched.customer_tech_spec_url;
-                        if (!hasPc && !hasSpec) return null;
-                        return (
-                          <div className="flex items-center gap-3 mt-2">
-                            {hasPc && (
-                              <button
-                                type="button"
-                                onClick={() => openStorageFile(matched.print_card_url, 'print-cards')}
-                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                              >
-                                <FileText className="h-3.5 w-3.5" />
-                                Print Card
-                              </button>
-                            )}
-                            {hasSpec && (
-                              <button
-                                type="button"
-                                onClick={() => openStorageFile(matched.customer_tech_spec_url, 'print-cards')}
-                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                                Customer Spec
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      
                     </div>
                   )}
                 </div>
@@ -659,8 +629,32 @@ export default function CreateOrder() {
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                  </PopoverContent>
+              </PopoverContent>
                 </Popover>
+                {selectedProduct && (selectedProduct.print_card_url || selectedProduct.customer_tech_spec_url) && (
+                  <div className="flex items-center gap-3 mt-2">
+                    {selectedProduct.print_card_url && (
+                      <button
+                        type="button"
+                        onClick={() => openStorageFile(selectedProduct.print_card_url, 'print-cards')}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Print Card
+                      </button>
+                    )}
+                    {selectedProduct.customer_tech_spec_url && (
+                      <button
+                        type="button"
+                        onClick={() => openStorageFile(selectedProduct.customer_tech_spec_url, 'print-cards')}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Customer Spec
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
