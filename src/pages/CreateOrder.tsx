@@ -509,28 +509,9 @@ export default function CreateOrder() {
                       <div className="flex justify-between mt-1">
                         <span className="text-muted-foreground">Matched Product:</span>
                         {matchedProductName ? (
-                          (() => {
-                            const matched = products.find(p => p.id === selectedProductId);
-                            const specUrl = matched?.customer_tech_spec_url || matched?.print_card_url;
-                            if (specUrl) {
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={() => openStorageFile(specUrl, 'print-cards')}
-                                  className="font-medium text-green-600 text-right truncate max-w-[200px] hover:underline cursor-pointer bg-transparent border-none p-0 inline-flex items-center gap-1"
-                                  title={`Click to view spec: ${matchedProductName}`}
-                                >
-                                  {matchedProductName}
-                                  <ExternalLink className="h-3 w-3 shrink-0" />
-                                </button>
-                              );
-                            }
-                            return (
-                              <span className="font-medium text-green-600 text-right truncate max-w-[200px]" title={matchedProductName}>
-                                {matchedProductName}
-                              </span>
-                            );
-                          })()
+                          <span className="font-medium text-green-600 text-right truncate max-w-[200px]" title={matchedProductName}>
+                            {matchedProductName}
+                          </span>
                         ) : (
                           <span className="flex items-center gap-1 text-amber-600">
                             <AlertCircle className="h-3 w-3" />
@@ -538,6 +519,37 @@ export default function CreateOrder() {
                           </span>
                         )}
                       </div>
+                      {matchedProductName && (() => {
+                        const matched = products.find(p => p.id === selectedProductId);
+                        if (!matched) return null;
+                        const hasPc = !!matched.print_card_url;
+                        const hasSpec = !!matched.customer_tech_spec_url;
+                        if (!hasPc && !hasSpec) return null;
+                        return (
+                          <div className="flex items-center gap-3 mt-2">
+                            {hasPc && (
+                              <button
+                                type="button"
+                                onClick={() => openStorageFile(matched.print_card_url, 'print-cards')}
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                Print Card
+                              </button>
+                            )}
+                            {hasSpec && (
+                              <button
+                                type="button"
+                                onClick={() => openStorageFile(matched.customer_tech_spec_url, 'print-cards')}
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                Customer Spec
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
