@@ -1564,7 +1564,11 @@ export type Database = {
           documents_sent: boolean | null
           estimated_delivery_date: string | null
           eta_cross_border: string | null
+          freight_invoice_amount: number | null
+          freight_invoice_number: string | null
+          freight_invoice_pdf_url: string | null
           id: string
+          invoice_amount: number | null
           invoice_number: string | null
           invoice_pdf_url: string | null
           last_reported_city: string | null
@@ -1586,7 +1590,11 @@ export type Database = {
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
+          freight_invoice_amount?: number | null
+          freight_invoice_number?: string | null
+          freight_invoice_pdf_url?: string | null
           id?: string
+          invoice_amount?: number | null
           invoice_number?: string | null
           invoice_pdf_url?: string | null
           last_reported_city?: string | null
@@ -1608,7 +1616,11 @@ export type Database = {
           documents_sent?: boolean | null
           estimated_delivery_date?: string | null
           eta_cross_border?: string | null
+          freight_invoice_amount?: number | null
+          freight_invoice_number?: string | null
+          freight_invoice_pdf_url?: string | null
           id?: string
+          invoice_amount?: number | null
           invoice_number?: string | null
           invoice_pdf_url?: string | null
           last_reported_city?: string | null

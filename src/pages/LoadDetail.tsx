@@ -150,6 +150,10 @@ interface ShippingLoad {
   cross_border_actual_date: string | null;
   invoice_number: string | null;
   invoice_pdf_url: string | null;
+  invoice_amount: number | null;
+  freight_invoice_number: string | null;
+  freight_invoice_pdf_url: string | null;
+  freight_invoice_amount: number | null;
 }
 
 interface DeliveryDateEntry {
@@ -291,8 +295,13 @@ export default function LoadDetail() {
   const [savingDestDate, setSavingDestDate] = useState<string | null>(null);
   const [uploadingPod, setUploadingPod] = useState<string | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [uploadingInvoicePdf, setUploadingInvoicePdf] = useState(false);
+  const [freightInvoiceNumber, setFreightInvoiceNumber] = useState("");
+  const [freightInvoiceAmount, setFreightInvoiceAmount] = useState("");
+  const [savingFreightInvoice, setSavingFreightInvoice] = useState(false);
+  const [uploadingFreightInvoicePdf, setUploadingFreightInvoicePdf] = useState(false);
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [linkVirtualOpen, setLinkVirtualOpen] = useState(false);
   const [linkVirtualPalletId, setLinkVirtualPalletId] = useState("");
@@ -520,25 +529,31 @@ export default function LoadDetail() {
 
   // Sync invoice number from load data
   useEffect(() => {
-    if (load?.invoice_number) {
-      setInvoiceNumber(load.invoice_number);
-    }
-  }, [load?.invoice_number]);
+    if (load?.invoice_number) setInvoiceNumber(load.invoice_number);
+    if (load?.invoice_amount) setInvoiceAmount(String(load.invoice_amount));
+    if (load?.freight_invoice_number) setFreightInvoiceNumber(load.freight_invoice_number);
+    if (load?.freight_invoice_amount) setFreightInvoiceAmount(String(load.freight_invoice_amount));
+  }, [load?.invoice_number, load?.invoice_amount, load?.freight_invoice_number, load?.freight_invoice_amount]);
 
-  const handleSaveInvoiceNumber = async () => {
-    if (!id || !invoiceNumber.trim()) return;
+  const handleSaveInvoice = async () => {
+    if (!id) return;
     setSavingInvoice(true);
     try {
+      const updates: any = {};
+      if (invoiceNumber.trim()) updates.invoice_number = invoiceNumber.trim();
+      if (invoiceAmount.trim()) updates.invoice_amount = parseFloat(invoiceAmount.trim());
+      else updates.invoice_amount = null;
+      if (Object.keys(updates).length === 0) return;
       const { error } = await supabase
         .from("shipping_loads")
-        .update({ invoice_number: invoiceNumber.trim() })
+        .update(updates)
         .eq("id", id);
       if (error) throw error;
-      toast.success("Invoice number saved");
+      toast.success("Product invoice saved");
       fetchLoadData();
     } catch (error) {
-      console.error("Error saving invoice number:", error);
-      toast.error("Failed to save invoice number");
+      console.error("Error saving invoice:", error);
+      toast.error("Failed to save invoice");
     } finally {
       setSavingInvoice(false);
     }
@@ -555,14 +570,12 @@ export default function LoadDetail() {
         .from("release-documents")
         .upload(filePath, file);
       if (uploadError) throw uploadError;
-
       const storagePath = `release-documents:${filePath}`;
       const { error: updateError } = await supabase
         .from("shipping_loads")
         .update({ invoice_pdf_url: storagePath })
         .eq("id", id);
       if (updateError) throw updateError;
-
       toast.success("Invoice PDF uploaded");
       fetchLoadData();
     } catch (error) {
@@ -570,6 +583,57 @@ export default function LoadDetail() {
       toast.error("Failed to upload invoice PDF");
     } finally {
       setUploadingInvoicePdf(false);
+    }
+  };
+
+  const handleSaveFreightInvoice = async () => {
+    if (!id) return;
+    setSavingFreightInvoice(true);
+    try {
+      const updates: any = {};
+      if (freightInvoiceNumber.trim()) updates.freight_invoice_number = freightInvoiceNumber.trim();
+      if (freightInvoiceAmount.trim()) updates.freight_invoice_amount = parseFloat(freightInvoiceAmount.trim());
+      else updates.freight_invoice_amount = null;
+      if (Object.keys(updates).length === 0) return;
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update(updates)
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Freight invoice saved");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error saving freight invoice:", error);
+      toast.error("Failed to save freight invoice");
+    } finally {
+      setSavingFreightInvoice(false);
+    }
+  };
+
+  const handleUploadFreightInvoicePdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setUploadingFreightInvoicePdf(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const filePath = `freight-invoices/${id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("release-documents")
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const storagePath = `release-documents:${filePath}`;
+      const { error: updateError } = await supabase
+        .from("shipping_loads")
+        .update({ freight_invoice_pdf_url: storagePath })
+        .eq("id", id);
+      if (updateError) throw updateError;
+      toast.success("Freight invoice PDF uploaded");
+      fetchLoadData();
+    } catch (error) {
+      console.error("Error uploading freight invoice PDF:", error);
+      toast.error("Failed to upload freight invoice PDF");
+    } finally {
+      setUploadingFreightInvoicePdf(false);
     }
   };
 
@@ -2711,75 +2775,157 @@ export default function LoadDetail() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
-                Invoice
+                Invoices
               </CardTitle>
               <CardDescription>
-                Invoice details for this shipment
+                Product and freight invoice details for this shipment
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {/* Invoice Number */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Invoice Number</Label>
-                  {isAdmin ? (
-                    <div className="flex items-center gap-2">
+            <CardContent className="space-y-6">
+              {/* Product Invoice */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Product Invoice</h4>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Invoice Number</Label>
+                    {isAdmin ? (
                       <Input
-                        placeholder="Enter invoice number"
+                        placeholder="Invoice #"
                         value={invoiceNumber}
                         onChange={(e) => setInvoiceNumber(e.target.value)}
                       />
-                      <Button
-                        size="sm"
-                        onClick={handleSaveInvoiceNumber}
-                        disabled={savingInvoice || !invoiceNumber.trim() || invoiceNumber.trim() === (load.invoice_number || "")}
-                      >
-                        {savingInvoice ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-sm font-mono">{load.invoice_number || "—"}</p>
-                  )}
-                </div>
-
-                {/* Invoice PDF */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Invoice PDF</Label>
-                  <div className="flex items-center gap-2">
-                    {load.invoice_pdf_url ? (
-                      <button
-                        onClick={() => openStorageFile(load.invoice_pdf_url, "release-documents")}
-                        className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-sm"
-                      >
-                        <FileText className="h-4 w-4" />
-                        View Invoice PDF
-                      </button>
                     ) : (
-                      <span className="text-sm text-muted-foreground">No file uploaded</span>
-                    )}
-                    {isAdmin && (
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          className="hidden"
-                          onChange={handleUploadInvoicePdf}
-                          disabled={uploadingInvoicePdf}
-                        />
-                        <Button variant="outline" size="sm" asChild disabled={uploadingInvoicePdf}>
-                          <span>
-                            {uploadingInvoicePdf ? (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            ) : (
-                              <Plus className="mr-1 h-3 w-3" />
-                            )}
-                            {load.invoice_pdf_url ? "Replace" : "Upload"}
-                          </span>
-                        </Button>
-                      </label>
+                      <p className="text-sm font-mono">{load.invoice_number || "—"}</p>
                     )}
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Amount</Label>
+                    {isAdmin ? (
+                      <Input
+                        placeholder="$0.00"
+                        type="number"
+                        step="0.01"
+                        value={invoiceAmount}
+                        onChange={(e) => setInvoiceAmount(e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-sm font-mono">{load.invoice_amount ? `$${Number(load.invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">PDF</Label>
+                    <div className="flex items-center gap-2">
+                      {load.invoice_pdf_url ? (
+                        <button
+                          onClick={() => openStorageFile(load.invoice_pdf_url, "release-documents")}
+                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-sm"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View
+                        </button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {isAdmin && (
+                        <label className="cursor-pointer">
+                          <input type="file" accept=".pdf" className="hidden" onChange={handleUploadInvoicePdf} disabled={uploadingInvoicePdf} />
+                          <Button variant="outline" size="sm" asChild disabled={uploadingInvoicePdf}>
+                            <span>
+                              {uploadingInvoicePdf ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+                              {load.invoice_pdf_url ? "Replace" : "Upload"}
+                            </span>
+                          </Button>
+                        </label>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                {isAdmin && (
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveInvoice}
+                      disabled={savingInvoice || (!invoiceNumber.trim() && !invoiceAmount.trim())}
+                    >
+                      {savingInvoice ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                      Save Product Invoice
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t" />
+
+              {/* Freight Invoice */}
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Freight Invoice</h4>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Invoice Number</Label>
+                    {isAdmin ? (
+                      <Input
+                        placeholder="Invoice #"
+                        value={freightInvoiceNumber}
+                        onChange={(e) => setFreightInvoiceNumber(e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-sm font-mono">{load.freight_invoice_number || "—"}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Amount</Label>
+                    {isAdmin ? (
+                      <Input
+                        placeholder="$0.00"
+                        type="number"
+                        step="0.01"
+                        value={freightInvoiceAmount}
+                        onChange={(e) => setFreightInvoiceAmount(e.target.value)}
+                      />
+                    ) : (
+                      <p className="text-sm font-mono">{load.freight_invoice_amount ? `$${Number(load.freight_invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">PDF</Label>
+                    <div className="flex items-center gap-2">
+                      {load.freight_invoice_pdf_url ? (
+                        <button
+                          onClick={() => openStorageFile(load.freight_invoice_pdf_url, "release-documents")}
+                          className="text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 text-sm"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View
+                        </button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {isAdmin && (
+                        <label className="cursor-pointer">
+                          <input type="file" accept=".pdf" className="hidden" onChange={handleUploadFreightInvoicePdf} disabled={uploadingFreightInvoicePdf} />
+                          <Button variant="outline" size="sm" asChild disabled={uploadingFreightInvoicePdf}>
+                            <span>
+                              {uploadingFreightInvoicePdf ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+                              {load.freight_invoice_pdf_url ? "Replace" : "Upload"}
+                            </span>
+                          </Button>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {isAdmin && (
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveFreightInvoice}
+                      disabled={savingFreightInvoice || (!freightInvoiceNumber.trim() && !freightInvoiceAmount.trim())}
+                    >
+                      {savingFreightInvoice ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                      Save Freight Invoice
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
