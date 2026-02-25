@@ -8,8 +8,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
-import { Info } from "lucide-react";
+import { Info, DollarSign } from "lucide-react";
 
 interface LoadPallet {
   id: string;
@@ -39,6 +40,7 @@ interface POSummary {
   released_count: number;
   pending_count: number;
   on_hold_count: number;
+  subtotal: number | null;
 }
 
 interface LoadPOSummaryProps {
@@ -46,9 +48,13 @@ interface LoadPOSummaryProps {
   isAdmin: boolean;
   title?: string;
   ptCodeToPOMap?: Map<string, string>;
+  poPriceMap?: Map<string, number>;
+  loadStatus?: string;
 }
 
-export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap }: LoadPOSummaryProps) {
+export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus }: LoadPOSummaryProps) {
+  const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0 && (loadStatus === "in_transit" || loadStatus === "delivered");
+
   const poSummary = useMemo(() => {
     const poMap = new Map<string, POSummary>();
     
@@ -59,6 +65,9 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
       const isReleased = !!pallet.release_number || !!pallet.release_pdf_url;
       const isOnHold = pallet.is_on_hold;
       const isPending = !isReleased && !isOnHold;
+
+      const price = poPriceMap?.get(key);
+      const palletSubtotal = price ? (pallet.quantity / 1000) * price : 0;
       
       if (existing) {
         existing.pallet_count++;
@@ -66,6 +75,9 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
         if (isReleased) existing.released_count++;
         if (isPending) existing.pending_count++;
         if (isOnHold) existing.on_hold_count++;
+        if (existing.subtotal !== null) {
+          existing.subtotal += palletSubtotal;
+        }
       } else {
         poMap.set(key, {
           customer_lot: key,
@@ -76,14 +88,22 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
           released_count: isReleased ? 1 : 0,
           pending_count: isPending ? 1 : 0,
           on_hold_count: isOnHold ? 1 : 0,
+          subtotal: price ? palletSubtotal : null,
         });
       }
     });
     
     return Array.from(poMap.values());
-  }, [pallets]);
+  }, [pallets, ptCodeToPOMap, poPriceMap]);
+
+  const grandTotal = useMemo(() => {
+    if (!showSubtotals) return 0;
+    return poSummary.reduce((sum, po) => sum + (po.subtotal || 0), 0);
+  }, [poSummary, showSubtotals]);
 
   if (poSummary.length === 0) return null;
+
+  const formatCurrency = (val: number) => "$" + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -109,6 +129,7 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                 <TableHead className="text-center">Released</TableHead>
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
+                {showSubtotals && <TableHead className="text-right">Subtotal</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,9 +165,29 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                       </Badge>
                     )}
                   </TableCell>
+                  {showSubtotals && (
+                    <TableCell className="text-right font-medium">
+                      {po.subtotal !== null ? formatCurrency(po.subtotal) : "-"}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
+            {showSubtotals && grandTotal > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-right font-semibold">
+                    <div className="flex items-center justify-end gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span>Load Total:</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-green-700 dark:text-green-400">
+                    {formatCurrency(grandTotal)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
       </CardContent>
