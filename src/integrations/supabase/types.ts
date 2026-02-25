@@ -1102,6 +1102,7 @@ export type Database = {
           pisos: number | null
           print_card: string | null
           print_card_url: string | null
+          product_line: string | null
           pt_code: string | null
           refilado: string | null
           size: string | null
@@ -1151,6 +1152,7 @@ export type Database = {
           pisos?: number | null
           print_card?: string | null
           print_card_url?: string | null
+          product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
           size?: string | null
@@ -1200,6 +1202,7 @@ export type Database = {
           pisos?: number | null
           print_card?: string | null
           print_card_url?: string | null
+          product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
           size?: string | null

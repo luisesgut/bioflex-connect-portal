@@ -27,7 +27,7 @@ import {
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
 import { useLanguage } from "@/hooks/useLanguage";
-import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode } from "@/utils/destinyProducts";
+import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpaqueToProductLine } from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
@@ -49,6 +49,7 @@ interface Product {
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
+  product_line: string | null;
 }
 
 interface ProductRequest {
@@ -144,7 +145,7 @@ export default function Products() {
     const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa")
+        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
         .order("customer_item"),
       supabase
         .from("product_requests")
@@ -167,21 +168,36 @@ export default function Products() {
         return acc;
       }, {});
 
+      // Track products that need product_line backfill
+      const productLineUpdates: { id: string; product_line: string }[] = [];
+
       const syncedProducts = (productsRes.data || []).map((product) => {
         const lookupCode =
           normalizeDestinyCode(product.pt_code) ||
           normalizeDestinyCode(product.codigo_producto) ||
           normalizeDestinyCode(product.customer_item);
         const destiny = destinyByCode[lookupCode];
-        if (!destiny) return product;
+
+        const tipoEmpaque = destiny?.tipoEmpaque || product.tipo_empaque;
+
+        // Auto-map product_line from tipo_empaque if not already set
+        let productLine = product.product_line;
+        if (!productLine && tipoEmpaque) {
+          const mapped = mapTipoEmpaqueToProductLine(tipoEmpaque);
+          if (mapped) {
+            productLine = mapped;
+            productLineUpdates.push({ id: product.id, product_line: mapped });
+          }
+        }
+
+        if (!destiny) return { ...product, product_line: productLine };
 
         return {
           ...product,
-          // Datos del endpoint (Destiny)
           customer_item: destiny.customer_item || product.customer_item,
           item_description: destiny.item_description || product.item_description,
           item_type: product.item_type,
-          tipo_empaque: destiny.tipoEmpaque || product.tipo_empaque,
+          tipo_empaque: tipoEmpaque,
           pt_code: destiny.codigoProducto || product.pt_code,
           codigo_producto: destiny.codigoProducto || product.codigo_producto,
           unidades_por_tarima: destiny.unidadesPorTarima ?? product.unidades_por_tarima,
@@ -190,13 +206,22 @@ export default function Products() {
           piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product.piezas_totales_por_caja,
           pieces_per_pallet: destiny.piecesPerPallet ?? product.pieces_per_pallet,
           print_card: destiny.printCard || product.print_card,
-          // Estos campos SIEMPRE vienen de la BD (no se sobreescriben)
           customer: product.customer,
           customer_tech_spec_url: product.customer_tech_spec_url,
           bfx_spec_url: product.bfx_spec_url,
           dp_sales_csr_names: product.dp_sales_csr_names,
+          product_line: productLine,
         };
       });
+
+      // Persist product_line mappings to DB (fire-and-forget)
+      if (productLineUpdates.length > 0) {
+        Promise.all(
+          productLineUpdates.map((u) =>
+            supabase.from("products").update({ product_line: u.product_line }).eq("id", u.id)
+          )
+        ).catch((err) => console.error("Failed to backfill product_line:", err))
+      }
 
       setProducts(syncedProducts);
     }
