@@ -109,6 +109,11 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     };
   };
 
+  const destinyRecord =
+    destinyProductsByCode[normalizeDestinyCode(form.pt_code)] ||
+    destinyProductsByCode[normalizeDestinyCode(product?.pt_code)];
+  const isApiManagedProduct = Boolean(destinyRecord);
+
   useEffect(() => {
     if (!open) return;
     if (Object.keys(destinyProductsByCode).length > 0) return;
@@ -279,10 +284,20 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           <DialogTitle>Edit Product</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {isApiManagedProduct && (
+            <p className="text-xs text-muted-foreground rounded-md border bg-muted/40 px-3 py-2">
+              Fields synced from DestinyDatos are read-only.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Item Code</Label>
-              <Input value={form.customer_item || ""} onChange={(e) => setForm({ ...form, customer_item: e.target.value })} />
+              <Input
+                value={form.customer_item || ""}
+                onChange={(e) => setForm({ ...form, customer_item: e.target.value })}
+                readOnly={isApiManagedProduct}
+                className={isApiManagedProduct ? "bg-muted" : ""}
+              />
             </div>
             <div className="space-y-2">
               <Label>Final Customer</Label>
@@ -301,7 +316,12 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
           <div className="space-y-2">
             <Label>Item Description</Label>
-            <Input value={form.item_description || ""} onChange={(e) => setForm({ ...form, item_description: e.target.value })} />
+            <Input
+              value={form.item_description || ""}
+              onChange={(e) => setForm({ ...form, item_description: e.target.value })}
+              readOnly={isApiManagedProduct}
+              className={isApiManagedProduct ? "bg-muted" : ""}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -320,7 +340,9 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
             <div className="space-y-2">
               <Label>Tipo Empaque</Label>
-              {isMissingTextValue(form.tipo_empaque) ? (
+              {isApiManagedProduct ? (
+                <Input value={form.tipo_empaque || ""} readOnly className="bg-muted" />
+              ) : isMissingTextValue(form.tipo_empaque) ? (
                 <Select value={form.tipo_empaque || ""} onValueChange={(v) => setForm({ ...form, tipo_empaque: v || null })}>
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="Select tipo..." />
@@ -340,7 +362,12 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>PT Code</Label>
-              <Input value={form.pt_code || ""} onChange={(e) => setForm({ ...form, pt_code: e.target.value })} />
+              <Input
+                value={form.pt_code || ""}
+                onChange={(e) => setForm({ ...form, pt_code: e.target.value })}
+                readOnly={isApiManagedProduct}
+                className={isApiManagedProduct ? "bg-muted" : ""}
+              />
             </div>
             <div className="space-y-2">
               <Label>Units per Pallet</Label>
@@ -348,6 +375,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
                 type="number"
                 value={form.unidades_por_tarima ?? ""}
                 onChange={(e) => setForm({ ...form, unidades_por_tarima: e.target.value ? Number(e.target.value) : null })}
+                readOnly={isApiManagedProduct}
+                className={isApiManagedProduct ? "bg-muted" : ""}
               />
             </div>
           </div>
@@ -355,7 +384,13 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           {/* PC Number + PDF */}
           <div className="space-y-2">
             <Label>PC Number</Label>
-            <Input value={form.print_card || ""} onChange={(e) => setForm({ ...form, print_card: e.target.value })} placeholder="e.g. PC-001" />
+            <Input
+              value={form.print_card || ""}
+              onChange={(e) => setForm({ ...form, print_card: e.target.value })}
+              placeholder="e.g. PC-001"
+              readOnly={isApiManagedProduct}
+              className={isApiManagedProduct ? "bg-muted" : ""}
+            />
           </div>
           <div className="space-y-2">
             <Label>PC PDF</Label>
