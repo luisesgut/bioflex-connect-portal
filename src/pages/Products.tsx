@@ -27,7 +27,7 @@ import {
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
 import { useLanguage } from "@/hooks/useLanguage";
-import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpaqueToProductLine } from "@/utils/destinyProducts";
+import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpaqueToProductLine, mapProductLineToItemType } from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
@@ -168,8 +168,8 @@ export default function Products() {
         return acc;
       }, {});
 
-      // Track products that need product_line backfill
-      const productLineUpdates: { id: string; product_line: string }[] = [];
+      // Track products that need product_line or item_type backfill
+      const backfillUpdates: { id: string; product_line?: string; item_type?: string }[] = [];
 
       const syncedProducts = (productsRes.data || []).map((product) => {
         const lookupCode =
@@ -180,15 +180,29 @@ export default function Products() {
 
         const tipoEmpaque = destiny?.tipoEmpaque || product.tipo_empaque;
 
-        // Auto-map product_line from tipo_empaque if not already set
+        // Auto-map product_line and item_type from tipo_empaque if not already set
         let productLine = product.product_line;
-        if (!productLine && tipoEmpaque) {
-          const mapped = mapTipoEmpaqueToProductLine(tipoEmpaque);
-          if (mapped) {
-            productLine = mapped;
-            productLineUpdates.push({ id: product.id, product_line: mapped });
+        let itemType = product.item_type;
+        const mapped = tipoEmpaque ? mapTipoEmpaqueToProductLine(tipoEmpaque) : null;
+        const updates: { id: string; product_line?: string; item_type?: string } = { id: product.id };
+        let needsUpdate = false;
+
+        if (!productLine && mapped) {
+          productLine = mapped;
+          updates.product_line = mapped;
+          needsUpdate = true;
+        }
+
+        if (!itemType && mapped) {
+          const itemTypeLabel = mapProductLineToItemType(mapped);
+          if (itemTypeLabel) {
+            itemType = itemTypeLabel;
+            updates.item_type = itemTypeLabel;
+            needsUpdate = true;
           }
         }
+
+        if (needsUpdate) backfillUpdates.push(updates);
 
         if (!destiny) return { ...product, product_line: productLine };
 
@@ -196,7 +210,7 @@ export default function Products() {
           ...product,
           customer_item: destiny.customer_item || product.customer_item,
           item_description: destiny.item_description || product.item_description,
-          item_type: product.item_type,
+          item_type: itemType || product.item_type,
           tipo_empaque: tipoEmpaque,
           pt_code: destiny.codigoProducto || product.pt_code,
           codigo_producto: destiny.codigoProducto || product.codigo_producto,
@@ -214,13 +228,16 @@ export default function Products() {
         };
       });
 
-      // Persist product_line mappings to DB (fire-and-forget)
-      if (productLineUpdates.length > 0) {
+      // Persist backfill mappings to DB (fire-and-forget)
+      if (backfillUpdates.length > 0) {
         Promise.all(
-          productLineUpdates.map((u) =>
-            supabase.from("products").update({ product_line: u.product_line }).eq("id", u.id)
-          )
-        ).catch((err) => console.error("Failed to backfill product_line:", err))
+          backfillUpdates.map((u) => {
+            const updateData: Record<string, string> = {};
+            if (u.product_line) updateData.product_line = u.product_line;
+            if (u.item_type) updateData.item_type = u.item_type;
+            return supabase.from("products").update(updateData).eq("id", u.id);
+          })
+        ).catch((err) => console.error("Failed to backfill product data:", err))
       }
 
       setProducts(syncedProducts);
