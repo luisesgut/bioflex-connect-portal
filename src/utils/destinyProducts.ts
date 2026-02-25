@@ -66,6 +66,7 @@ export function mapTipoEmpaqueToProductLine(tipoEmpaque: string | null | undefin
   if (te.includes("sello lateral")) return "bag_no_wicket_zipper";
   if (te.includes("zipper")) return "bag_zipper";
   if (te.includes("bobina")) return "film";
+  if (te.includes("stand up pouch") || te.includes("laminado")) return "pouch";
   return null;
 }
 
