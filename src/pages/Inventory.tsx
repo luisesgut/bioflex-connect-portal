@@ -20,7 +20,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost, Trash2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -588,6 +588,7 @@ export default function Inventory() {
                   <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                   <TableHead className="text-right">Pieces</TableHead>
                   <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
+                  {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -621,6 +622,33 @@ export default function Inventory() {
                         {item.status}
                       </Badge>
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        {item.is_virtual && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                              const { error } = await supabase
+                                .from("inventory_pallets")
+                                .delete()
+                                .eq("id", item.id);
+                              if (error) {
+                                toast.error("Error al eliminar tarima virtual");
+                                console.error(error);
+                              } else {
+                                toast.success("Tarima virtual eliminada");
+                                loadFromDB();
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
