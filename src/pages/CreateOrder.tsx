@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock, Sparkles, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, Package, Plus, Minus, Flame, Calendar, Info, DollarSign, Search, Upload, FileText, X, Loader2, Clock, Sparkles, Check, AlertCircle, ExternalLink } from "lucide-react";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,8 @@ interface Product {
   pieces_per_pallet: number | null;
   customer_item: string | null;
   item_description: string | null;
+  print_card_url: string | null;
+  customer_tech_spec_url: string | null;
 }
 
 interface ExtractedPOData {
@@ -81,7 +84,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item, item_description")
+        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item, item_description, print_card_url, customer_tech_spec_url")
         .order("name");
 
       if (error) {
@@ -506,9 +509,28 @@ export default function CreateOrder() {
                       <div className="flex justify-between mt-1">
                         <span className="text-muted-foreground">Matched Product:</span>
                         {matchedProductName ? (
-                          <span className="font-medium text-green-600 text-right truncate max-w-[200px]" title={matchedProductName}>
-                            {matchedProductName}
-                          </span>
+                          (() => {
+                            const matched = products.find(p => p.id === selectedProductId);
+                            const specUrl = matched?.customer_tech_spec_url || matched?.print_card_url;
+                            if (specUrl) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => openStorageFile(specUrl, 'print-cards')}
+                                  className="font-medium text-green-600 text-right truncate max-w-[200px] hover:underline cursor-pointer bg-transparent border-none p-0 inline-flex items-center gap-1"
+                                  title={`Click to view spec: ${matchedProductName}`}
+                                >
+                                  {matchedProductName}
+                                  <ExternalLink className="h-3 w-3 shrink-0" />
+                                </button>
+                              );
+                            }
+                            return (
+                              <span className="font-medium text-green-600 text-right truncate max-w-[200px]" title={matchedProductName}>
+                                {matchedProductName}
+                              </span>
+                            );
+                          })()
                         ) : (
                           <span className="flex items-center gap-1 text-amber-600">
                             <AlertCircle className="h-3 w-3" />
