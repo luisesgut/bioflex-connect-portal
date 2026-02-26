@@ -269,7 +269,8 @@ export default function POTRImport() {
                   </table>
                 </div>
               </details>
-            ))
+            ))}
+
 
             {/* Summary */}
             <div className="flex gap-4 flex-wrap">
