@@ -3631,6 +3631,7 @@ export default function LoadDetail() {
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                           <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{po.shipped_quantity > 0 ? po.shipped_quantity.toLocaleString() : "-"}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="secondary">{po.inventory_pallets}</Badge>
                           </TableCell>
