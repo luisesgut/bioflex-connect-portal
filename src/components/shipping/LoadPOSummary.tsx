@@ -131,6 +131,13 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
                 {showSubtotals && <TableHead className="text-right">Subtotal</TableHead>}
+                {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (
+                  <>
+                    <TableHead className="text-right">PO Total</TableHead>
+                    <TableHead className="text-right">Shipped</TableHead>
+                    <TableHead className="text-right">PO Pending</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
