@@ -178,6 +178,19 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                       {po.subtotal !== null ? formatCurrency(po.subtotal) : "-"}
                     </TableCell>
                   )}
+                  {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (() => {
+                    const totals = poTotalsMap.get(po.customer_lot);
+                    const poTotal = totals?.total_quantity || 0;
+                    const shipped = totals?.shipped_quantity || 0;
+                    const pending = poTotal - shipped;
+                    return (
+                      <>
+                        <TableCell className="text-right">{poTotal > 0 ? poTotal.toLocaleString() : "-"}</TableCell>
+                        <TableCell className="text-right">{shipped > 0 ? shipped.toLocaleString() : "-"}</TableCell>
+                        <TableCell className="text-right">{poTotal > 0 ? pending.toLocaleString() : "-"}</TableCell>
+                      </>
+                    );
+                  })()}
                 </TableRow>
               ))}
             </TableBody>
