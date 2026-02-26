@@ -59,6 +59,7 @@ const App = () => (
                 <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
                 <Route path="/release-requests" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
+                <Route path="/potr-import" element={<ProtectedRoute><POTRImport /></ProtectedRoute>} />
                 
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
