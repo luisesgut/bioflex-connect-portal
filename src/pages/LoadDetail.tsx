@@ -3599,9 +3599,22 @@ export default function LoadDetail() {
                       .filter((po) => po.inventory_pallets > 0)
                       .sort((a, b) => b.inventory_pallets - a.inventory_pallets)
                       .map((po) => (
-                        <TableRow key={po.po_number}>
+                        <TableRow
+                          key={po.po_number}
+                          className={cn(
+                            "cursor-pointer hover:bg-muted/50",
+                            activePOPtCodeFilter === po.product_pt_code && "bg-primary/10"
+                          )}
+                          onClick={() => {
+                            setActivePOPtCodeFilter(prev =>
+                              prev === po.product_pt_code ? null : po.product_pt_code
+                            );
+                          }}
+                        >
                           <TableCell className="font-medium">{po.po_number}</TableCell>
-                          <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                          <TableCell className="font-mono text-sm text-primary font-semibold">
+                            {po.product_pt_code || "-"}
+                          </TableCell>
                           <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                           <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
                           <TableCell className="text-center">
