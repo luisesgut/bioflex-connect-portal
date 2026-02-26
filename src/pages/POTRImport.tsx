@@ -43,31 +43,52 @@ export default function POTRImport() {
       const buffer = await response.arrayBuffer();
       const wb = XLSX.read(buffer);
 
-      // Log sheet names and columns for debugging
       const colInfo: Record<string, string[]> = {};
       const allRows: POTRRow[] = [];
 
-      for (const sheetName of wb.SheetNames) {
+      // Only process sheets likely to have PO data
+      const targetSheets = wb.SheetNames.filter(s =>
+        /open|closed|po/i.test(s)
+      );
+      // If none match, try all sheets
+      const sheetsToProcess = targetSheets.length > 0 ? targetSheets : wb.SheetNames;
+
+      for (const sheetName of sheetsToProcess) {
         const ws = wb.Sheets[sheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-        if (jsonRows.length === 0) continue;
+        // Read as raw array-of-arrays to find the real header row
+        const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as string[][];
+        if (aoa.length < 2) continue;
 
-        const keys = Object.keys(jsonRows[0]);
-        colInfo[sheetName] = keys;
+        // Find the header row: look for a row containing "Item" or "Customer"
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(aoa.length, 15); i++) {
+          const row = aoa[i];
+          const rowStr = row.map(c => String(c || "").toLowerCase()).join("|");
+          if (rowStr.includes("item") && (rowStr.includes("customer") || rowStr.includes("csr"))) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+        if (headerRowIdx < 0) continue;
 
-        // Auto-detect columns
-        const itemCodeCol = keys.find(k => /item\s*(#|code|number)/i.test(k) || /^item$/i.test(k.trim()));
-        const customerCol = keys.find(k => /customer/i.test(k) && !/item/i.test(k));
-        const csrCol = keys.find(k => /csr|sales.*csr|dp.*sales/i.test(k));
+        const headers = aoa[headerRowIdx].map(h => String(h || "").trim());
+        colInfo[sheetName] = headers.filter(Boolean);
 
-        if (!itemCodeCol) continue;
+        // Auto-detect columns by header name
+        const itemCodeIdx = headers.findIndex(k => /item\s*(#|code|number)/i.test(k) || /^item\s*#?$/i.test(k.trim()));
+        const customerIdx = headers.findIndex(k => /^customer$/i.test(k.trim()));
+        const csrIdx = headers.findIndex(k => /csr|sales.*csr|dp.*sales/i.test(k));
 
-        for (const row of jsonRows) {
-          const itemCode = String(row[itemCodeCol] || "").trim();
+        if (itemCodeIdx < 0) continue;
+
+        // Process data rows after header
+        for (let i = headerRowIdx + 1; i < aoa.length; i++) {
+          const row = aoa[i];
+          const itemCode = String(row[itemCodeIdx] || "").trim();
           if (!itemCode) continue;
 
-          const customer = customerCol ? String(row[customerCol] || "").trim() : "";
-          const dpSalesCsr = csrCol ? String(row[csrCol] || "").trim() : "";
+          const customer = customerIdx >= 0 ? String(row[customerIdx] || "").trim() : "";
+          const dpSalesCsr = csrIdx >= 0 ? String(row[csrIdx] || "").trim() : "";
 
           if (customer || dpSalesCsr) {
             allRows.push({ itemCode, customer, dpSalesCsr });
