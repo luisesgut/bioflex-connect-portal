@@ -584,10 +584,12 @@ export default function Inventory() {
                   <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                   <ColumnFilterHeader label="Description" filterKey="description" options={uniqueDescriptions} />
                   <TableHead className="text-right">Stock</TableHead>
-                  <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
-                  <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
-                  <TableHead className="text-right">Pieces</TableHead>
-                  <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
+                   <ColumnFilterHeader label="Traceability" filterKey="traceability" options={uniqueTraceability} />
+                   <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
+                   <TableHead className="text-right">Boxes</TableHead>
+                   <TableHead className="text-right">Gross</TableHead>
+                   <TableHead className="text-right">Net</TableHead>
+                   <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
