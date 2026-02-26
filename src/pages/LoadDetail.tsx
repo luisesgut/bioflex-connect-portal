@@ -3056,26 +3056,6 @@ export default function LoadDetail() {
                       </TableBody>
                     </Table>
                     </div>
-                    {isAdmin && releasedPallets.length > 0 && (() => {
-                      const total = releasedPallets.reduce((sum, p) => {
-                        const po = resolveCustomerPO(p);
-                        const price = po !== "-" ? poPriceMap.get(po) : undefined;
-                        return sum + (price ? (p.quantity / 1000) * price : 0);
-                      }, 0);
-                      if (total <= 0) return null;
-                      const formatted = "$" + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                      return (
-                        <div className="flex justify-end mt-3 pr-2">
-                          <div className="flex items-center gap-2 text-sm font-semibold">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <span>Released Total:</span>
-                            <span className="text-green-700 dark:text-green-400">
-                              {formatted}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </>
                 )}
               </CardContent>
