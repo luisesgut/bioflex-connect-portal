@@ -79,37 +79,29 @@ export default function POTRImport() {
         const previewRows = aoa.slice(headerRowIdx, headerRowIdx + 8).map(r => r.map(c => String(c || "")));
         setRawPreview(prev => ({ ...prev, [sheetName]: { headerRow: headerRowIdx, headers, rows: previewRows } }));
 
-        // Auto-detect columns by header name
-        // There may be TWO "Item" columns: first = description, second = item code
-        const customerIdx = headers.findIndex(k => /^customer$/i.test(k.trim()));
+        // The "Customer" header actually contains Item Codes (e.g., 1587V1)
+        // The second "Item" column contains type categories (not useful)
+        // Sales/CSR contains the CSR names
+        const itemCodeIdx = headers.findIndex(k => /^customer$/i.test(k.trim()));
         const csrIdx = headers.findIndex(k => /csr|sales.*csr|dp.*sales/i.test(k));
-
-        // Find all "Item" columns - use the SECOND one as the item code
-        const itemIndices: number[] = [];
-        headers.forEach((h, i) => {
-          if (/^item$/i.test(h.trim())) itemIndices.push(i);
-        });
-        // If only one Item column, use it. If two, the second is the code.
-        const itemCodeIdx = itemIndices.length >= 2 ? itemIndices[1] : itemIndices[0] ?? -1;
 
         if (itemCodeIdx < 0) continue;
 
-        // Process data rows after header, skip sub-header rows
+        // Process data rows after header, skip sub-header and category rows
         for (let i = headerRowIdx + 1; i < aoa.length; i++) {
           const row = aoa[i];
           const itemCode = String(row[itemCodeIdx] || "").trim();
-          // Skip empty rows and sub-header rows (like "Item #", "Description", "Names")
-          if (!itemCode || /^(item\s*#?|description|names?)$/i.test(itemCode)) continue;
+          // Skip empty, sub-headers, and non-code values
+          if (!itemCode || /^(item\s*#?|description|names?|type|customer)$/i.test(itemCode)) continue;
+          // Skip rows that look like merged section headers (no numeric/alphanumeric code pattern)
+          if (/^(bag|film|wicket|zipper|roll)/i.test(itemCode) && !/\d/.test(itemCode)) continue;
 
-          const customer = customerIdx >= 0 ? String(row[customerIdx] || "").trim() : "";
           const dpSalesCsr = csrIdx >= 0 ? String(row[csrIdx] || "").trim() : "";
 
-          // Skip rows where customer looks like a sub-header
-          if (/^(customer|description|item)$/i.test(customer)) continue;
+          // Skip rows with no CSR data
+          if (!dpSalesCsr || /^(names?)$/i.test(dpSalesCsr)) continue;
 
-          if (customer || dpSalesCsr) {
-            allRows.push({ itemCode, customer, dpSalesCsr });
-          }
+          allRows.push({ itemCode, customer: "", dpSalesCsr });
         }
       }
 
