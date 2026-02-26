@@ -22,6 +22,7 @@ import Users from "./pages/Users";
 import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
+import POTRImport from "./pages/POTRImport";
 
 
 import ProductRequests from "./pages/ProductRequests";
