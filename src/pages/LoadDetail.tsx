@@ -305,6 +305,7 @@ export default function LoadDetail() {
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [linkVirtualOpen, setLinkVirtualOpen] = useState(false);
   const [linkVirtualPalletId, setLinkVirtualPalletId] = useState("");
+  const [activePOPtCodeFilter, setActivePOPtCodeFilter] = useState<string | null>(null);
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
 
