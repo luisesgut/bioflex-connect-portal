@@ -2974,7 +2974,7 @@ export default function LoadDetail() {
                           <TableHead>Customer PO</TableHead>
                           <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          {isAdmin && <TableHead className="text-right">Subtotal</TableHead>}
+                          
                           <TableHead>Destination</TableHead>
                           <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
