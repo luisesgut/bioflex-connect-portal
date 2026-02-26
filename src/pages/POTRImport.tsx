@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 interface POTRRow {
@@ -22,12 +22,41 @@ interface MatchResult {
   status: "will_update" | "no_match" | "already_set";
 }
 
+// Map short first names from POTR to full names from profiles
+function resolveFullNames(
+  shortNames: string,
+  profilesByFirstName: Map<string, string>
+): string {
+  const parts = shortNames.split(/\s*\/\s*/);
+  const resolved = parts
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .map((n) => profilesByFirstName.get(n.toLowerCase()) || n);
+  return resolved.join(", ");
+}
+
+// Map Excel customer names to dropdown option labels
+function resolveCustomer(
+  raw: string,
+  customerLabels: Set<string>
+): string {
+  const trimmed = raw.trim();
+  // Direct match
+  if (customerLabels.has(trimmed)) return trimmed;
+  // Case-insensitive match
+  for (const label of customerLabels) {
+    if (label.toLowerCase() === trimmed.toLowerCase()) return label;
+  }
+  // Partial match (e.g., "Church" → "Church Brothers")
+  for (const label of customerLabels) {
+    if (label.toLowerCase().startsWith(trimmed.toLowerCase())) return label;
+  }
+  return trimmed;
+}
+
 export default function POTRImport() {
   const [parsing, setParsing] = useState(true);
-  const [rows, setRows] = useState<POTRRow[]>([]);
   const [matches, setMatches] = useState<MatchResult[]>([]);
-  const [columns, setColumns] = useState<Record<string, string[]>>({});
-  const [rawPreview, setRawPreview] = useState<Record<string, { headerRow: number; headers: string[]; rows: string[][] }>>({});
   const [updating, setUpdating] = useState(false);
   const [done, setDone] = useState(false);
   const [updateResults, setUpdateResults] = useState({ updated: 0, errors: 0 });
@@ -39,92 +68,107 @@ export default function POTRImport() {
   const parseAndMatch = async () => {
     setParsing(true);
     try {
-      // Fetch the Excel from public folder
       const response = await fetch("/temp-potr.xlsx");
       const buffer = await response.arrayBuffer();
       const wb = XLSX.read(buffer);
 
-      const colInfo: Record<string, string[]> = {};
+      // Fetch profiles to build first-name → full-name map
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_type", "external");
+
+      const profilesByFirstName = new Map<string, string>();
+      for (const p of profiles || []) {
+        if (p.full_name) {
+          const firstName = p.full_name.split(" ")[0].toLowerCase();
+          profilesByFirstName.set(firstName, p.full_name);
+        }
+      }
+
+      // Fetch customer dropdown options
+      const { data: dropdownOpts } = await supabase
+        .from("dropdown_options")
+        .select("label")
+        .eq("category", "final_customer")
+        .eq("is_active", true);
+
+      const customerLabels = new Set((dropdownOpts || []).map((o) => o.label));
+
       const allRows: POTRRow[] = [];
 
-      // Only process sheets likely to have PO data
-      const targetSheets = wb.SheetNames.filter(s =>
-        /open|closed|po/i.test(s)
-      );
-      // If none match, try all sheets
+      // Process sheets with PO data
+      const targetSheets = wb.SheetNames.filter((s) => /open|closed|po/i.test(s));
       const sheetsToProcess = targetSheets.length > 0 ? targetSheets : wb.SheetNames;
 
       for (const sheetName of sheetsToProcess) {
         const ws = wb.Sheets[sheetName];
-        // Read as raw array-of-arrays to find the real header row
         const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as string[][];
-        if (aoa.length < 2) continue;
+        if (aoa.length < 3) continue;
 
-        // Find the header row: look for a row containing "Item" or "Customer"
+        // Find the LAST header row with "Item" — this is the actual column-level header
+        // e.g., row with: Priority | Ship | Deliver | DP | Item # | Description | Type | Names | Customer
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(aoa.length, 15); i++) {
           const row = aoa[i];
-          const rowStr = row.map(c => String(c || "").toLowerCase()).join("|");
-          if (rowStr.includes("item") && (rowStr.includes("customer") || rowStr.includes("csr"))) {
+          const rowStr = row.map((c) => String(c || "").toLowerCase()).join("|");
+          if (rowStr.includes("item #") || rowStr.includes("item#")) {
             headerRowIdx = i;
             break;
           }
         }
+        // Fallback: look for row with "Priority"
+        if (headerRowIdx < 0) {
+          for (let i = 0; i < Math.min(aoa.length, 15); i++) {
+            const row = aoa[i];
+            const rowStr = row.map((c) => String(c || "").toLowerCase()).join("|");
+            if (rowStr.includes("priority") && rowStr.includes("customer")) {
+              headerRowIdx = i;
+              break;
+            }
+          }
+        }
         if (headerRowIdx < 0) continue;
 
-        const headers = aoa[headerRowIdx].map(h => String(h || "").trim());
-        colInfo[sheetName] = headers.filter(Boolean);
+        const headers = aoa[headerRowIdx].map((h) => String(h || "").trim().toLowerCase());
 
-        // Save raw preview for debugging
-        const previewRows = aoa.slice(headerRowIdx, headerRowIdx + 8).map(r => r.map(c => String(c || "")));
-        setRawPreview(prev => ({ ...prev, [sheetName]: { headerRow: headerRowIdx, headers, rows: previewRows } }));
-
-        // The "Customer" header actually contains Item Codes (e.g., 1587V1)
-        // The second "Item" column contains type categories (not useful)
-        // Sales/CSR contains the CSR names
-        const itemCodeIdx = headers.findIndex(k => /^customer$/i.test(k.trim()));
-        const csrIdx = headers.findIndex(k => /csr|sales.*csr|dp.*sales/i.test(k));
+        // Find column indices
+        const itemCodeIdx = headers.findIndex((h) => h === "item #" || h === "item#" || h === "item");
+        const customerIdx = headers.findIndex((h) => h === "customer");
+        const csrIdx = headers.findIndex((h) => h === "names" || /csr|sales.*csr/i.test(h));
 
         if (itemCodeIdx < 0) continue;
 
-        // Process data rows after header, skip sub-header and category rows
         for (let i = headerRowIdx + 1; i < aoa.length; i++) {
           const row = aoa[i];
           const itemCode = String(row[itemCodeIdx] || "").trim();
-          // Skip empty, sub-headers, and non-code values
-          if (!itemCode || /^(item\s*#?|description|names?|type|customer)$/i.test(itemCode)) continue;
-          // Skip rows that look like merged section headers (no numeric/alphanumeric code pattern)
-          if (/^(bag|film|wicket|zipper|roll)/i.test(itemCode) && !/\d/.test(itemCode)) continue;
+          if (!itemCode) continue;
+          // Skip section headers and non-data rows
+          if (/^(bag|film|wicket|zipper|roll|total)/i.test(itemCode) && !/\d/.test(itemCode)) continue;
+          if (/^(item\s*#?|description|names?|type|customer)$/i.test(itemCode)) continue;
 
-          const dpSalesCsr = csrIdx >= 0 ? String(row[csrIdx] || "").trim() : "";
+          const rawCustomer = customerIdx >= 0 ? String(row[customerIdx] || "").trim() : "";
+          const rawCsr = csrIdx >= 0 ? String(row[csrIdx] || "").trim() : "";
 
-          // Skip rows with no CSR data
-          if (!dpSalesCsr || /^(names?)$/i.test(dpSalesCsr)) continue;
+          if (!rawCustomer && !rawCsr) continue;
 
-          allRows.push({ itemCode, customer: "", dpSalesCsr });
+          const customer = rawCustomer ? resolveCustomer(rawCustomer, customerLabels) : "";
+          const dpSalesCsr = rawCsr ? resolveFullNames(rawCsr, profilesByFirstName) : "";
+
+          allRows.push({ itemCode, customer, dpSalesCsr });
         }
       }
 
-      setColumns(colInfo);
-
-      // Deduplicate by itemCode - keep first occurrence with data
+      // Deduplicate by itemCode
       const byItemCode = new Map<string, POTRRow>();
       for (const row of allRows) {
-        const existing = byItemCode.get(row.itemCode);
-        if (!existing) {
-          byItemCode.set(row.itemCode, row);
-        } else {
-          // Merge: prefer non-empty values
-          byItemCode.set(row.itemCode, {
-            itemCode: row.itemCode,
-            customer: existing.customer || row.customer,
-            dpSalesCsr: existing.dpSalesCsr || row.dpSalesCsr,
-          });
+        const key = row.itemCode.toUpperCase();
+        if (!byItemCode.has(key)) {
+          byItemCode.set(key, row);
         }
       }
 
       const uniqueRows = Array.from(byItemCode.values());
-      setRows(uniqueRows);
 
       // Fetch all products
       const { data: products } = await supabase
@@ -138,27 +182,21 @@ export default function POTRImport() {
         }
       }
 
-      // Match rows to products
       const matchResults: MatchResult[] = uniqueRows.map((row) => {
         const product = productMap.get(row.itemCode.toUpperCase());
-
         if (!product) {
           return { ...row, productId: null, currentCustomer: null, currentCsr: null, status: "no_match" as const };
         }
 
-        // Normalize CSR names: replace "/" with ", "
-        const normalizedCsr = row.dpSalesCsr.replace(/\s*\/\s*/g, ", ");
-
         const customerChanged = row.customer && row.customer !== product.customer;
-        const csrChanged = normalizedCsr && normalizedCsr !== product.dp_sales_csr_names;
+        const csrChanged = row.dpSalesCsr && row.dpSalesCsr !== product.dp_sales_csr_names;
 
         return {
           ...row,
-          dpSalesCsr: normalizedCsr,
           productId: product.id,
           currentCustomer: product.customer,
           currentCsr: product.dp_sales_csr_names,
-          status: (customerChanged || csrChanged) ? "will_update" as const : "already_set" as const,
+          status: customerChanged || csrChanged ? ("will_update" as const) : ("already_set" as const),
         };
       });
 
@@ -224,47 +262,6 @@ export default function POTRImport() {
 
         {!parsing && (
           <>
-            {/* Column detection info */}
-            <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <h3 className="font-semibold text-sm">Detected Sheets & Columns</h3>
-              {Object.entries(columns).map(([sheet, cols]) => (
-                <div key={sheet} className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{sheet}:</span> {cols.join(", ")}
-                </div>
-              ))}
-            </div>
-
-            {/* Raw data preview for debugging */}
-            {Object.entries(rawPreview).map(([sheet, info]) => (
-              <details key={sheet} className="rounded-lg border bg-muted/30 p-4">
-                <summary className="cursor-pointer text-sm font-semibold">Raw data: {sheet} (header row {info.headerRow})</summary>
-                <div className="overflow-x-auto mt-2">
-                  <table className="text-xs border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="border px-2 py-1 bg-muted">Row</th>
-                        {info.headers.map((h, i) => (
-                          <th key={i} className="border px-2 py-1 bg-muted">{i}: {h || "(empty)"}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {info.rows.slice(1).map((row, ri) => (
-                        <tr key={ri}>
-                          <td className="border px-2 py-1 font-mono">{info.headerRow + 1 + ri}</td>
-                          {row.map((cell, ci) => (
-                            <td key={ci} className="border px-2 py-1 max-w-[150px] truncate">{cell || "—"}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            ))}
-
-
-            {/* Summary */}
             <div className="flex gap-4 flex-wrap">
               <Badge variant="default" className="text-sm px-3 py-1">
                 {willUpdate.length} to update
@@ -277,7 +274,6 @@ export default function POTRImport() {
               </Badge>
             </div>
 
-            {/* Preview table */}
             {willUpdate.length > 0 && (
               <div className="rounded-xl border bg-card overflow-hidden">
                 <div className="px-4 py-3 border-b bg-muted/50 font-semibold text-sm">
@@ -302,7 +298,7 @@ export default function POTRImport() {
                             {m.customer && m.customer !== m.currentCustomer ? (
                               <span className="text-green-600 font-medium">{m.customer}</span>
                             ) : (
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">{m.customer || "—"}</span>
                             )}
                           </td>
                           <td className="px-4 py-2 text-muted-foreground">{m.currentCustomer || "—"}</td>
@@ -310,7 +306,7 @@ export default function POTRImport() {
                             {m.dpSalesCsr && m.dpSalesCsr !== m.currentCsr ? (
                               <span className="text-green-600 font-medium">{m.dpSalesCsr}</span>
                             ) : (
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">{m.dpSalesCsr || "—"}</span>
                             )}
                           </td>
                           <td className="px-4 py-2 text-muted-foreground">{m.currentCsr || "—"}</td>
@@ -322,11 +318,10 @@ export default function POTRImport() {
               </div>
             )}
 
-            {/* No match table */}
             {noMatch.length > 0 && (
               <details className="rounded-xl border bg-card overflow-hidden">
                 <summary className="px-4 py-3 cursor-pointer text-sm font-semibold text-muted-foreground hover:text-foreground">
-                  {noMatch.length} items without matching product in DB (click to expand)
+                  {noMatch.length} items without matching product in DB
                 </summary>
                 <div className="overflow-x-auto border-t">
                   <table className="w-full text-sm">
@@ -351,18 +346,11 @@ export default function POTRImport() {
               </details>
             )}
 
-            {/* Action */}
             {!done ? (
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleUpdate}
-                  disabled={updating || willUpdate.length === 0}
-                  className="gap-2"
-                >
-                  {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {updating ? "Updating..." : `Update ${willUpdate.length} products`}
-                </Button>
-              </div>
+              <Button onClick={handleUpdate} disabled={updating || willUpdate.length === 0} className="gap-2">
+                {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {updating ? "Updating..." : `Update ${willUpdate.length} products`}
+              </Button>
             ) : (
               <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-4 flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -373,9 +361,6 @@ export default function POTRImport() {
                   {updateResults.errors > 0 && (
                     <p className="text-sm text-red-600">{updateResults.errors} errors.</p>
                   )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    You can now go back to Products. This page can be removed.
-                  </p>
                 </div>
               </div>
             )}
