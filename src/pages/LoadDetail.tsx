@@ -192,6 +192,7 @@ interface ActivePOWithInventory {
   pieces_per_pallet: number | null;
   inventory_pallets: number;
   inventory_volume: number;
+  shipped_quantity: number;
 }
 
 const statusStyles: Record<string, string> = {
