@@ -75,6 +75,10 @@ export default function POTRImport() {
         const headers = aoa[headerRowIdx].map(h => String(h || "").trim());
         colInfo[sheetName] = headers.filter(Boolean);
 
+        // Save raw preview for debugging
+        const previewRows = aoa.slice(headerRowIdx, headerRowIdx + 8).map(r => r.map(c => String(c || "")));
+        setRawPreview(prev => ({ ...prev, [sheetName]: { headerRow: headerRowIdx, headers, rows: previewRows } }));
+
         // Auto-detect columns by header name
         // There may be TWO "Item" columns: first = description, second = item code
         const customerIdx = headers.findIndex(k => /^customer$/i.test(k.trim()));
