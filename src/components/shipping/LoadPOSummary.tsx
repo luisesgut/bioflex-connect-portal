@@ -197,7 +197,7 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
             {showSubtotals && grandTotal > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-right font-semibold">
+                  <TableCell colSpan={(isAdmin ? 8 : 7) + (isAdmin && poTotalsMap && poTotalsMap.size > 0 ? 3 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
                       <DollarSign className="h-4 w-4 text-green-600" />
                       <span>Load Total:</span>

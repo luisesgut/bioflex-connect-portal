@@ -2927,7 +2927,7 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} />
+          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
