@@ -3013,19 +3013,6 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            {isAdmin && (
-                              <TableCell className="text-right font-medium">
-                                {(() => {
-                                  const po = resolveCustomerPO(pallet);
-                                  const price = po !== "-" ? poPriceMap.get(po) : undefined;
-                                  if (price) {
-                                    const subtotal = (pallet.quantity / 1000) * price;
-                                    return "$" + subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                  }
-                                  return "-";
-                                })()}
-                              </TableCell>
-                            )}
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
                             </TableCell>
