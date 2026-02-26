@@ -305,6 +305,7 @@ export default function LoadDetail() {
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [linkVirtualOpen, setLinkVirtualOpen] = useState(false);
   const [linkVirtualPalletId, setLinkVirtualPalletId] = useState("");
+  const [activePOPtCodeFilter, setActivePOPtCodeFilter] = useState<string | null>(null);
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
 
@@ -986,6 +987,11 @@ export default function LoadDetail() {
   const filteredAvailablePallets = useMemo(() => {
     let result = availablePallets;
 
+    // Apply Active PO PT Code filter
+    if (activePOPtCodeFilter) {
+      result = result.filter(p => p.pt_code === activePOPtCodeFilter);
+    }
+
     // Apply text search
     if (inventorySearch.trim()) {
       const search = inventorySearch.toLowerCase();
@@ -1030,7 +1036,7 @@ export default function LoadDetail() {
     });
 
     return result;
-  }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder]);
+  }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder, activePOPtCodeFilter]);
 
   const handleTogglePallet = (palletId: string) => {
     setSelectedPalletIds((prev) => {
@@ -3593,9 +3599,22 @@ export default function LoadDetail() {
                       .filter((po) => po.inventory_pallets > 0)
                       .sort((a, b) => b.inventory_pallets - a.inventory_pallets)
                       .map((po) => (
-                        <TableRow key={po.po_number}>
+                        <TableRow
+                          key={po.po_number}
+                          className={cn(
+                            "cursor-pointer hover:bg-muted/50",
+                            activePOPtCodeFilter === po.product_pt_code && "bg-primary/10"
+                          )}
+                          onClick={() => {
+                            setActivePOPtCodeFilter(prev =>
+                              prev === po.product_pt_code ? null : po.product_pt_code
+                            );
+                          }}
+                        >
                           <TableCell className="font-medium">{po.po_number}</TableCell>
-                          <TableCell className="font-mono text-sm">{po.product_pt_code || "-"}</TableCell>
+                          <TableCell className="font-mono text-sm text-primary font-semibold">
+                            {po.product_pt_code || "-"}
+                          </TableCell>
                           <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                           <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
                           <TableCell className="text-center">
@@ -3628,6 +3647,16 @@ export default function LoadDetail() {
                       </span>
                     )}
                   </CardDescription>
+                  {activePOPtCodeFilter && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="gap-1">
+                        Filtered by: {activePOPtCodeFilter}
+                        <button onClick={() => setActivePOPtCodeFilter(null)} className="ml-1 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="relative">
