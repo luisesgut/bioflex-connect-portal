@@ -987,6 +987,11 @@ export default function LoadDetail() {
   const filteredAvailablePallets = useMemo(() => {
     let result = availablePallets;
 
+    // Apply Active PO PT Code filter
+    if (activePOPtCodeFilter) {
+      result = result.filter(p => p.pt_code === activePOPtCodeFilter);
+    }
+
     // Apply text search
     if (inventorySearch.trim()) {
       const search = inventorySearch.toLowerCase();
