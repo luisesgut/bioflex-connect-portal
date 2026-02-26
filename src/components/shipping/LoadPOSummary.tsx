@@ -50,6 +50,7 @@ interface LoadPOSummaryProps {
   ptCodeToPOMap?: Map<string, string>;
   poPriceMap?: Map<string, number>;
   loadStatus?: string;
+  poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
 }
 
 export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus }: LoadPOSummaryProps) {
