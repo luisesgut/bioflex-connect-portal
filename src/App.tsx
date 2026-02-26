@@ -22,6 +22,7 @@ import Users from "./pages/Users";
 import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
+import POTRImport from "./pages/POTRImport";
 
 
 import ProductRequests from "./pages/ProductRequests";
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/shipping-loads" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/shipping-loads/:id" element={<ProtectedRoute><LoadDetail /></ProtectedRoute>} />
                 <Route path="/release-requests" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
+                <Route path="/potr-import" element={<ProtectedRoute><POTRImport /></ProtectedRoute>} />
                 
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
