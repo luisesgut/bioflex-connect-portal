@@ -1036,7 +1036,7 @@ export default function LoadDetail() {
     });
 
     return result;
-  }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder]);
+  }, [availablePallets, inventorySearch, inventoryFilters, dateSortOrder, activePOPtCodeFilter]);
 
   const handleTogglePallet = (palletId: string) => {
     setSelectedPalletIds((prev) => {
