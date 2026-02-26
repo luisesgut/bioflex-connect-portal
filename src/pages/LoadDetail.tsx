@@ -308,6 +308,7 @@ export default function LoadDetail() {
   const [activePOPtCodeFilter, setActivePOPtCodeFilter] = useState<string | null>(null);
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
+  const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -480,6 +481,35 @@ export default function LoadDetail() {
         });
         setPoPriceMap(priceMap);
         setPoSalesOrderMap(salesMap);
+
+        // Build PO totals map (total requested quantity)
+        const totalsMap = new Map<string, { total_quantity: number; shipped_quantity: number }>();
+        (priceData || []).forEach((po: any) => {
+          // We need quantity from purchase_orders - fetch separately
+        });
+
+        // Fetch PO quantities
+        const { data: poQuantities } = await supabase
+          .from("purchase_orders")
+          .select("po_number, quantity")
+          .in("po_number", loadPONumbers);
+
+        // Fetch shipped quantities per PO from shipped_pallets
+        const { data: shippedData } = await supabase
+          .from("shipped_pallets")
+          .select("customer_lot, quantity")
+          .in("customer_lot", loadPONumbers);
+
+        (poQuantities || []).forEach((po: any) => {
+          totalsMap.set(po.po_number, { total_quantity: po.quantity, shipped_quantity: 0 });
+        });
+        (shippedData || []).forEach((sp: any) => {
+          const entry = totalsMap.get(sp.customer_lot);
+          if (entry) {
+            entry.shipped_quantity += sp.quantity;
+          }
+        });
+        setPoTotalsMap(totalsMap);
       }
 
       // Fetch products CSR map by pt_code
@@ -2897,7 +2927,7 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} />
+          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}

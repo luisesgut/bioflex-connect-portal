@@ -50,9 +50,10 @@ interface LoadPOSummaryProps {
   ptCodeToPOMap?: Map<string, string>;
   poPriceMap?: Map<string, number>;
   loadStatus?: string;
+  poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
 }
 
-export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus }: LoadPOSummaryProps) {
+export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus, poTotalsMap }: LoadPOSummaryProps) {
   const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
 
   const poSummary = useMemo(() => {
@@ -130,6 +131,13 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
                 {showSubtotals && <TableHead className="text-right">Subtotal</TableHead>}
+                {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (
+                  <>
+                    <TableHead className="text-right">PO Total</TableHead>
+                    <TableHead className="text-right">Shipped</TableHead>
+                    <TableHead className="text-right">PO Pending</TableHead>
+                  </>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -170,13 +178,26 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                       {po.subtotal !== null ? formatCurrency(po.subtotal) : "-"}
                     </TableCell>
                   )}
+                  {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (() => {
+                    const totals = poTotalsMap.get(po.customer_lot);
+                    const poTotal = totals?.total_quantity || 0;
+                    const shipped = totals?.shipped_quantity || 0;
+                    const pending = poTotal - shipped;
+                    return (
+                      <>
+                        <TableCell className="text-right">{poTotal > 0 ? poTotal.toLocaleString() : "-"}</TableCell>
+                        <TableCell className="text-right">{shipped > 0 ? shipped.toLocaleString() : "-"}</TableCell>
+                        <TableCell className="text-right">{poTotal > 0 ? pending.toLocaleString() : "-"}</TableCell>
+                      </>
+                    );
+                  })()}
                 </TableRow>
               ))}
             </TableBody>
             {showSubtotals && grandTotal > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 8 : 7} className="text-right font-semibold">
+                  <TableCell colSpan={(isAdmin ? 8 : 7) + (isAdmin && poTotalsMap && poTotalsMap.size > 0 ? 3 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
                       <DollarSign className="h-4 w-4 text-green-600" />
                       <span>Load Total:</span>
