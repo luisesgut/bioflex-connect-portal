@@ -53,7 +53,7 @@ interface LoadPOSummaryProps {
 }
 
 export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus }: LoadPOSummaryProps) {
-  const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0 && (loadStatus === "in_transit" || loadStatus === "delivered");
+  const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
 
   const poSummary = useMemo(() => {
     const poMap = new Map<string, POSummary>();
