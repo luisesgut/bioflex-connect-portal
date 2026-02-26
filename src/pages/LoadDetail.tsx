@@ -192,6 +192,7 @@ interface ActivePOWithInventory {
   pieces_per_pallet: number | null;
   inventory_pallets: number;
   inventory_volume: number;
+  shipped_quantity: number;
 }
 
 const statusStyles: Record<string, string> = {
@@ -423,6 +424,20 @@ export default function LoadDetail() {
       });
       setProductsMap(prodMap);
 
+      // Fetch shipped quantities per PO
+      const activePONumbers = (activePOs || []).map((po: any) => po.po_number);
+      const { data: shippedForActivePOs } = activePONumbers.length > 0
+        ? await supabase
+            .from("shipped_pallets")
+            .select("customer_lot, quantity")
+            .in("customer_lot", activePONumbers)
+        : { data: [] };
+
+      const shippedByPO = new Map<string, number>();
+      (shippedForActivePOs || []).forEach((sp: any) => {
+        shippedByPO.set(sp.customer_lot, (shippedByPO.get(sp.customer_lot) || 0) + sp.quantity);
+      });
+
       // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
@@ -436,7 +451,8 @@ export default function LoadDetail() {
           total_quantity: po.quantity,
           pieces_per_pallet: po.product?.pieces_per_pallet || null,
           inventory_pallets: matchingPallets.length,
-          inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0)
+          inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0),
+          shipped_quantity: shippedByPO.get(po.po_number) || 0,
         });
       });
       setActivePOsWithInventory(poInventoryData);
@@ -3587,6 +3603,7 @@ export default function LoadDetail() {
                       <TableHead>PT Code</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead className="text-right">PO Qty</TableHead>
+                      <TableHead className="text-right">Shipped</TableHead>
                       <TableHead className="text-center">Pallets Available</TableHead>
                       <TableHead className="text-right">Volume Available</TableHead>
                     </TableRow>
@@ -3614,6 +3631,7 @@ export default function LoadDetail() {
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">{po.product_description}</TableCell>
                           <TableCell className="text-right">{po.total_quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{po.shipped_quantity > 0 ? po.shipped_quantity.toLocaleString() : "-"}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="secondary">{po.inventory_pallets}</Badge>
                           </TableCell>
