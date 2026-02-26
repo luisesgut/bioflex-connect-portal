@@ -617,8 +617,10 @@ export default function Inventory() {
                       {item.stock.toLocaleString()} {item.unit}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.traceability}</TableCell>
-                    <TableCell>{item.bfx_order || "-"}</TableCell>
-                    <TableCell className="text-right">{item.pieces || "-"}</TableCell>
+                     <TableCell>{item.bfx_order || "-"}</TableCell>
+                     <TableCell className="text-right">{item.pieces || "-"}</TableCell>
+                     <TableCell className="text-right">{item.gross_weight?.toLocaleString() || "-"}</TableCell>
+                     <TableCell className="text-right">{item.net_weight?.toLocaleString() || "-"}</TableCell>
                     <TableCell>
                       <Badge className={statusStyles[item.status] || ""} variant="secondary">
                         {item.status}
