@@ -3603,6 +3603,7 @@ export default function LoadDetail() {
                       <TableHead>PT Code</TableHead>
                       <TableHead>Product</TableHead>
                       <TableHead className="text-right">PO Qty</TableHead>
+                      <TableHead className="text-right">Shipped</TableHead>
                       <TableHead className="text-center">Pallets Available</TableHead>
                       <TableHead className="text-right">Volume Available</TableHead>
                     </TableRow>
