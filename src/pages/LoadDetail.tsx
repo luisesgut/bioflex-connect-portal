@@ -3647,6 +3647,16 @@ export default function LoadDetail() {
                       </span>
                     )}
                   </CardDescription>
+                  {activePOPtCodeFilter && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="gap-1">
+                        Filtered by: {activePOPtCodeFilter}
+                        <button onClick={() => setActivePOPtCodeFilter(null)} className="ml-1 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="relative">
