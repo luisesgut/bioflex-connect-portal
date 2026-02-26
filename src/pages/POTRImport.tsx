@@ -27,6 +27,7 @@ export default function POTRImport() {
   const [rows, setRows] = useState<POTRRow[]>([]);
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [columns, setColumns] = useState<Record<string, string[]>>({});
+  const [rawPreview, setRawPreview] = useState<Record<string, { headerRow: number; headers: string[]; rows: string[][] }>>({});
   const [updating, setUpdating] = useState(false);
   const [done, setDone] = useState(false);
   const [updateResults, setUpdateResults] = useState({ updated: 0, errors: 0 });
