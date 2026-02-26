@@ -242,6 +242,35 @@ export default function POTRImport() {
               ))}
             </div>
 
+            {/* Raw data preview for debugging */}
+            {Object.entries(rawPreview).map(([sheet, info]) => (
+              <details key={sheet} className="rounded-lg border bg-muted/30 p-4">
+                <summary className="cursor-pointer text-sm font-semibold">Raw data: {sheet} (header row {info.headerRow})</summary>
+                <div className="overflow-x-auto mt-2">
+                  <table className="text-xs border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="border px-2 py-1 bg-muted">Row</th>
+                        {info.headers.map((h, i) => (
+                          <th key={i} className="border px-2 py-1 bg-muted">{i}: {h || "(empty)"}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {info.rows.slice(1).map((row, ri) => (
+                        <tr key={ri}>
+                          <td className="border px-2 py-1 font-mono">{info.headerRow + 1 + ri}</td>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="border px-2 py-1 max-w-[150px] truncate">{cell || "—"}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ))
+
             {/* Summary */}
             <div className="flex gap-4 flex-wrap">
               <Badge variant="default" className="text-sm px-3 py-1">
