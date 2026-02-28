@@ -1796,6 +1796,7 @@ export type Database = {
         | "design_leader"
         | "designer"
         | "customer_service"
+        | "billing"
       thickness_unit: "gauge" | "microns"
     }
     CompositeTypes: {
@@ -1974,6 +1975,7 @@ export const Constants = {
         "design_leader",
         "designer",
         "customer_service",
+        "billing",
       ],
       thickness_unit: ["gauge", "microns"],
     },
