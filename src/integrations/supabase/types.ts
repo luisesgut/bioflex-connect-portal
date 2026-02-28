@@ -332,6 +332,56 @@ export type Database = {
           },
         ]
       }
+      load_billing_validations: {
+        Row: {
+          created_at: string
+          customs_document_url: string | null
+          id: string
+          load_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customs_document_url?: string | null
+          id?: string
+          load_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customs_document_url?: string | null
+          id?: string
+          load_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_billing_validations_load_id_fkey"
+            columns: ["load_id"]
+            isOneToOne: true
+            referencedRelation: "shipping_loads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       load_comments: {
         Row: {
           comment: string
