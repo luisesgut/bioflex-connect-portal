@@ -345,6 +345,7 @@ export type Database = {
           submitted_at: string
           submitted_by: string
           updated_at: string
+          validated_data: Json | null
         }
         Insert: {
           created_at?: string
@@ -358,6 +359,7 @@ export type Database = {
           submitted_at?: string
           submitted_by: string
           updated_at?: string
+          validated_data?: Json | null
         }
         Update: {
           created_at?: string
@@ -371,6 +373,7 @@ export type Database = {
           submitted_at?: string
           submitted_by?: string
           updated_at?: string
+          validated_data?: Json | null
         }
         Relationships: [
           {
