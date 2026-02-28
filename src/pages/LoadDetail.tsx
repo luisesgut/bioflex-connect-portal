@@ -2461,6 +2461,19 @@ export default function LoadDetail() {
           </div>
         )}
 
+        {/* Billing Validation Card */}
+        {user && (
+          <BillingValidationCard
+            loadId={id!}
+            loadStatus={load.status}
+            isAdmin={isAdmin}
+            isBillingTeam={isBillingTeam}
+            userId={user.id}
+            onGenerateCustomsDocument={handleGenerateCustomsDocument}
+            onValidationChange={fetchBillingValidationStatus}
+          />
+        )}
+
         {/* Transit Timeline - Courier Style */}
         {(load.status === "in_transit" || load.status === "delivered") && (
           <Card>
