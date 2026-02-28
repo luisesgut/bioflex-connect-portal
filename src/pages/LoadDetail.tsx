@@ -96,6 +96,7 @@ import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 import { LinkVirtualPalletDialog } from "@/components/inventory/LinkVirtualPalletDialog";
+import { BillingValidationCard } from "@/components/shipping/BillingValidationCard";
 
 interface InventoryFilters {
   fecha: string[];
