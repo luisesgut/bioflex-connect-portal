@@ -96,6 +96,7 @@ import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { AddDestinationDialog } from "@/components/shipping/AddDestinationDialog";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 import { LinkVirtualPalletDialog } from "@/components/inventory/LinkVirtualPalletDialog";
+import { BillingValidationCard } from "@/components/shipping/BillingValidationCard";
 
 interface InventoryFilters {
   fecha: string[];
@@ -310,6 +311,8 @@ export default function LoadDetail() {
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
   const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
+  const [isBillingTeam, setIsBillingTeam] = useState(false);
+  const [billingValidationStatus, setBillingValidationStatus] = useState<string | null>(null);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -573,6 +576,37 @@ export default function LoadDetail() {
   useEffect(() => {
     fetchLoadData();
   }, [fetchLoadData]);
+
+  // Check if current user is in billing team
+  useEffect(() => {
+    const checkBillingTeam = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("team_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("team_role", "billing")
+        .eq("is_active", true)
+        .maybeSingle();
+      setIsBillingTeam(!!data);
+    };
+    checkBillingTeam();
+  }, [user]);
+
+  // Fetch billing validation status
+  const fetchBillingValidationStatus = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("load_billing_validations")
+      .select("status")
+      .eq("load_id", id)
+      .maybeSingle();
+    setBillingValidationStatus(data?.status || null);
+  }, [id]);
+
+  useEffect(() => {
+    fetchBillingValidationStatus();
+  }, [fetchBillingValidationStatus]);
 
   // Sync invoice number from load data
   useEffect(() => {
@@ -1655,6 +1689,11 @@ export default function LoadDetail() {
       setPendingStatus(newStatus);
       setStatusDialogOpen(true);
     } else if (newStatus === "in_transit") {
+      // Check billing validation before allowing in_transit
+      if (billingValidationStatus !== "approved") {
+        toast.error("Billing validation must be approved before marking as In Transit. Send the load for billing validation first.");
+        return;
+      }
       const validation = validateForInTransit();
       if (!validation.valid) {
         toast.error(validation.message);
@@ -2420,6 +2459,19 @@ export default function LoadDetail() {
               </>
             )}
           </div>
+        )}
+
+        {/* Billing Validation Card */}
+        {user && (
+          <BillingValidationCard
+            loadId={id!}
+            loadStatus={load.status}
+            isAdmin={isAdmin}
+            isBillingTeam={isBillingTeam}
+            userId={user.id}
+            onGenerateCustomsDocument={handleGenerateCustomsDocument}
+            onValidationChange={fetchBillingValidationStatus}
+          />
         )}
 
         {/* Transit Timeline - Courier Style */}

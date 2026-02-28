@@ -43,6 +43,7 @@ const TEAM_ROLES: TeamRole[] = [
   "designer",
   "sales_rep",
   "customer_service",
+  "billing",
 ];
 
 export function TeamManagement() {

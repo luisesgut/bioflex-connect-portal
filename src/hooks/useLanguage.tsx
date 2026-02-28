@@ -163,6 +163,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teamRoles.designer': 'Designer',
     'teamRoles.sales_rep': 'Sales Rep',
     'teamRoles.customer_service': 'Customer Service',
+    'teamRoles.billing': 'Billing',
 
     // Common
     'common.loading': 'Loading',
@@ -341,6 +342,7 @@ const translations: Record<Language, Record<string, string>> = {
     'teamRoles.designer': 'Diseñador',
     'teamRoles.sales_rep': 'Representante de Ventas',
     'teamRoles.customer_service': 'Servicio al Cliente',
+    'teamRoles.billing': 'Facturación',
 
     // Common
     'common.loading': 'Cargando',
