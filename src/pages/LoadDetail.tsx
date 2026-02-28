@@ -577,6 +577,37 @@ export default function LoadDetail() {
     fetchLoadData();
   }, [fetchLoadData]);
 
+  // Check if current user is in billing team
+  useEffect(() => {
+    const checkBillingTeam = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("team_members")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("team_role", "billing")
+        .eq("is_active", true)
+        .maybeSingle();
+      setIsBillingTeam(!!data);
+    };
+    checkBillingTeam();
+  }, [user]);
+
+  // Fetch billing validation status
+  const fetchBillingValidationStatus = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("load_billing_validations")
+      .select("status")
+      .eq("load_id", id)
+      .maybeSingle();
+    setBillingValidationStatus(data?.status || null);
+  }, [id]);
+
+  useEffect(() => {
+    fetchBillingValidationStatus();
+  }, [fetchBillingValidationStatus]);
+
   // Sync invoice number from load data
   useEffect(() => {
     if (load?.invoice_number) setInvoiceNumber(load.invoice_number);
