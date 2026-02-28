@@ -1689,6 +1689,11 @@ export default function LoadDetail() {
       setPendingStatus(newStatus);
       setStatusDialogOpen(true);
     } else if (newStatus === "in_transit") {
+      // Check billing validation before allowing in_transit
+      if (billingValidationStatus !== "approved") {
+        toast.error("Billing validation must be approved before marking as In Transit. Send the load for billing validation first.");
+        return;
+      }
       const validation = validateForInTransit();
       if (!validation.valid) {
         toast.error(validation.message);
