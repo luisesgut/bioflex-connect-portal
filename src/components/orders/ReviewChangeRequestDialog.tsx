@@ -137,12 +137,17 @@ export function ReviewChangeRequestDialog({
               <span className="text-sm text-muted-foreground">Request Type</span>
               <Badge 
                 variant={request.request_type === "cancellation" ? "destructive" : "secondary"}
-                className={request.request_type === "do_not_delay" ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" : ""}
+                className={cn(
+                  request.request_type === "do_not_delay" && "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+                  request.request_type === "hot_order" && "bg-destructive/10 text-destructive border-destructive/20"
+                )}
               >
                 {request.request_type === "cancellation" 
                   ? "Cancellation" 
                   : request.request_type === "do_not_delay"
                   ? "Do Not Delay"
+                  : request.request_type === "hot_order"
+                  ? "Hot Order"
                   : "Volume Change"}
               </Badge>
             </div>
@@ -150,6 +155,12 @@ export function ReviewChangeRequestDialog({
               <div className="flex items-center gap-2 text-sm text-yellow-600">
                 <Clock className="h-4 w-4" />
                 <span>Customer requests this order not be delayed</span>
+              </div>
+            )}
+            {request.request_type === "hot_order" && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <Flame className="h-4 w-4" />
+                <span>Customer requests Hot Order priority for this PO</span>
               </div>
             )}
             {request.request_type === "volume_change" && (
