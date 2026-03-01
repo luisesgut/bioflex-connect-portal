@@ -473,6 +473,10 @@ export default function OrderDetail() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="text-sm text-muted-foreground">PO Number</label>
+                    <p className="font-medium">{order.po_number}</p>
+                  </div>
+                  <div>
                     <label className="text-sm text-muted-foreground">PO Date</label>
                     <p className="font-medium">{formatDate(order.po_date)}</p>
                   </div>
