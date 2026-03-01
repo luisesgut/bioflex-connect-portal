@@ -261,6 +261,41 @@ export default function OrderDetail() {
     setLoading(false);
   };
 
+  const handleToggleHotOrder = async () => {
+    if (!order) return;
+    setTogglingHot(true);
+    const newValue = !order.is_hot_order;
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ is_hot_order: newValue })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update hot order status");
+    } else {
+      toast.success(newValue ? "Order marked as Hot Order" : "Hot Order status removed");
+      setOrder({ ...order, is_hot_order: newValue });
+    }
+    setTogglingHot(false);
+  };
+
+  const handleSaveDeliveryDate = async () => {
+    if (!order || !newDeliveryDate) return;
+    setSavingDeliveryDate(true);
+    const dateStr = format(newDeliveryDate, "yyyy-MM-dd");
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ requested_delivery_date: dateStr })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update delivery date");
+    } else {
+      toast.success("Delivery date updated");
+      setOrder({ ...order, requested_delivery_date: dateStr });
+      setEditingDeliveryDate(false);
+    }
+    setSavingDeliveryDate(false);
+  };
+
 
   const handleCloseOrder = async () => {
     if (!order) return;
