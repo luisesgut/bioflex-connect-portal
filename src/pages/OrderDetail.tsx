@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
