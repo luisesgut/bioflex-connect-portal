@@ -593,28 +593,45 @@ export default function LoadDetail() {
     checkBillingTeam();
   }, [user]);
 
-  // Fetch billing validation status
+  // Fetch billing validation status and data
+  const [billingValidatedData, setBillingValidatedData] = useState<any[] | null>(null);
   const fetchBillingValidationStatus = useCallback(async () => {
     if (!id) return;
     const { data } = await supabase
       .from("load_billing_validations")
-      .select("status")
+      .select("status, validated_data")
       .eq("load_id", id)
       .maybeSingle();
     setBillingValidationStatus(data?.status || null);
+    if (data?.validated_data && Array.isArray(data.validated_data)) {
+      setBillingValidatedData(data.validated_data as any[]);
+    }
   }, [id]);
 
   useEffect(() => {
     fetchBillingValidationStatus();
   }, [fetchBillingValidationStatus]);
 
-  // Sync invoice number from load data
+  // Sync invoice amounts from load data, pre-fill from billing validation if empty
   useEffect(() => {
     if (load?.invoice_number) setInvoiceNumber(load.invoice_number);
-    if (load?.invoice_amount) setInvoiceAmount(String(load.invoice_amount));
     if (load?.freight_invoice_number) setFreightInvoiceNumber(load.freight_invoice_number);
-    if (load?.freight_invoice_amount) setFreightInvoiceAmount(String(load.freight_invoice_amount));
-  }, [load?.invoice_number, load?.invoice_amount, load?.freight_invoice_number, load?.freight_invoice_amount]);
+
+    // For invoice amount: use saved value, or pre-fill from billing validation total
+    if (load?.invoice_amount) {
+      setInvoiceAmount(String(load.invoice_amount));
+    } else if (billingValidatedData && billingValidatedData.length > 0) {
+      const totalProductValue = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPrice || 0), 0);
+      if (totalProductValue > 0) setInvoiceAmount(String(totalProductValue.toFixed(2)));
+    }
+
+    // For freight amount: use saved value, or pre-fill from billing validation default (5000)
+    if (load?.freight_invoice_amount) {
+      setFreightInvoiceAmount(String(load.freight_invoice_amount));
+    } else if (billingValidatedData && billingValidatedData.length > 0) {
+      setFreightInvoiceAmount("5000");
+    }
+  }, [load?.invoice_number, load?.invoice_amount, load?.freight_invoice_number, load?.freight_invoice_amount, billingValidatedData]);
 
   const handleSaveInvoice = async () => {
     if (!id) return;
