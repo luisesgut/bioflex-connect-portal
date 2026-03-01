@@ -9,6 +9,7 @@ interface PalletDetail {
   palletIndex: number;
   grossWeight: number;
   netWeight: number;
+  pieces: number;
 }
 
 interface ProductSummary {
@@ -110,21 +111,26 @@ export function generateCustomsPDF(
       checkPage(20);
       // Table header
       const colTarima = MARGIN + 2;
-      const colBruto = MARGIN + 60;
-      const colNeto = MARGIN + 110;
+      const colPiezas = MARGIN + 30;
+      const colBruto = MARGIN + 75;
+      const colNeto = MARGIN + 120;
 
       doc.setFillColor(200, 200, 200);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText("Tarima", colTarima, y, { bold: true, size: 8 });
+      addText("Piezas", colPiezas, y, { bold: true, size: 8 });
       addText("Bruto", colBruto, y, { bold: true, size: 8 });
       addText("Neto", colNeto, y, { bold: true, size: 8 });
       y += 5;
 
+      let totalPieces = 0;
       p.palletDetails.forEach((pd) => {
         checkPage(5);
         addText(String(pd.palletIndex), colTarima, y, { size: 8 });
+        addRightText(fmt(pd.pieces, 0), colPiezas + 25, y, { size: 8 });
         addRightText(fmt(pd.grossWeight), colBruto + 25, y, { size: 8 });
         addRightText(fmt(pd.netWeight), colNeto + 25, y, { size: 8 });
+        totalPieces += pd.pieces;
         y += 4;
       });
 
@@ -133,6 +139,7 @@ export function generateCustomsPDF(
       doc.setFillColor(240, 240, 240);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText(String(p.palletDetails.length), colTarima, y, { bold: true, size: 8 });
+      addRightText(fmt(totalPieces, 0), colPiezas + 25, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalGrossWeight), colBruto + 25, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalNetWeight), colNeto + 25, y, { bold: true, size: 8 });
       y += 6;
