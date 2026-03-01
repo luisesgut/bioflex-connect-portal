@@ -19,7 +19,7 @@ import { toast } from "sonner";
 interface ChangeRequest {
   id: string;
   purchase_order_id: string;
-  request_type: "volume_change" | "cancellation" | "do_not_delay";
+  request_type: "volume_change" | "cancellation" | "do_not_delay" | "hot_order";
   current_quantity: number;
   requested_quantity: number | null;
   reason: string;
