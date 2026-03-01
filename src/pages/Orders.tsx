@@ -420,6 +420,7 @@ export default function Orders() {
         created_at: order.created_at,
         pdf_url: order.pdf_url,
         sales_order_number: order.sales_order_number,
+        accepted_at: order.accepted_at || null,
         inventoryStats: {
           inFloor: stats.inFloor,
           shipped: stats.shipped,
