@@ -10,6 +10,7 @@ interface CanvasOrder {
   po_number: string;
   product_name: string | null;
   product_item_type: string | null;
+  product_tipo_empaque: string | null;
   product_customer: string | null;
   quantity: number;
   total_price: number | null;
@@ -29,6 +30,7 @@ interface CanvasOrder {
 
 interface OrdersCanvasProps {
   orders: CanvasOrder[];
+  groupBy?: "product_item_type" | "product_tipo_empaque";
 }
 
 const columnColors: string[] = [
