@@ -620,6 +620,36 @@ export default function OrderDetail() {
                       <p className="font-medium">{order.sales_order_number || "—"}</p>
                     </div>
                   )}
+                  {isAdmin && order.accepted_at && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Sales Order Date</label>
+                      <p className="font-medium">{formatDate(order.accepted_at.split("T")[0])}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm text-muted-foreground">PO Age (Days)</label>
+                    <p className="font-medium">
+                      {(() => {
+                        const start = new Date(order.po_date);
+                        const end = order.status === "closed" ? new Date(order.updated_at) : new Date();
+                        const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                        return `${days} days`;
+                      })()}
+                    </p>
+                  </div>
+                  {order.accepted_at && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">SO Age (Days)</label>
+                      <p className="font-medium">
+                        {(() => {
+                          const start = new Date(order.accepted_at);
+                          const end = order.status === "closed" ? new Date(order.updated_at) : new Date();
+                          const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          return `${days} days`;
+                        })()}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm text-muted-foreground">Quantity</label>
                     <p className="font-medium">{order.quantity.toLocaleString()}</p>
