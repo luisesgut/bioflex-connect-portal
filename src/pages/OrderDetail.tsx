@@ -266,6 +266,7 @@ export default function OrderDetail() {
         conversion_date,
         created_at,
         accepted_at,
+        updated_at,
         pdf_url,
         notes,
         sales_order_number,
