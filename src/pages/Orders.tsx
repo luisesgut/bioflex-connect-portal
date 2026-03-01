@@ -230,7 +230,7 @@ export default function Orders() {
 
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
-        .select("id, bfx_order, quantity")
+        .select("id, bfx_order, quantity, traceability")
         .in("bfx_order", salesOrderNumbers);
 
       if (!shippedError && shippedData) {
@@ -242,11 +242,12 @@ export default function Orders() {
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          if (!shippedPalletIds[poNum]) {
-            shippedPalletIds[poNum] = new Set();
+          if (!shippedTraceability[poNum]) {
+            shippedTraceability[poNum] = new Set();
           }
-          if (!shippedPalletIds[poNum].has(pallet.id)) {
-            shippedPalletIds[poNum].add(pallet.id);
+          const traceKey = pallet.traceability || pallet.id;
+          if (!shippedTraceability[poNum].has(traceKey)) {
+            shippedTraceability[poNum].add(traceKey);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
           }
         });
