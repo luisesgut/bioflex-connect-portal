@@ -1614,6 +1614,8 @@ export type Database = {
       shipping_loads: {
         Row: {
           border_crossed: boolean | null
+          carrier_tracking_url: string | null
+          carrier_unit_number: string | null
           created_at: string
           created_by: string
           cross_border_actual_date: string | null
@@ -1640,6 +1642,8 @@ export type Database = {
         }
         Insert: {
           border_crossed?: boolean | null
+          carrier_tracking_url?: string | null
+          carrier_unit_number?: string | null
           created_at?: string
           created_by: string
           cross_border_actual_date?: string | null
@@ -1666,6 +1670,8 @@ export type Database = {
         }
         Update: {
           border_crossed?: boolean | null
+          carrier_tracking_url?: string | null
+          carrier_unit_number?: string | null
           created_at?: string
           created_by?: string
           cross_border_actual_date?: string | null

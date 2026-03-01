@@ -179,6 +179,8 @@ interface ShippingLoad {
   freight_invoice_number: string | null;
   freight_invoice_pdf_url: string | null;
   freight_invoice_amount: number | null;
+  carrier_tracking_url: string | null;
+  carrier_unit_number: string | null;
 }
 
 interface DeliveryDateEntry {
@@ -337,6 +339,9 @@ export default function LoadDetail() {
   const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
   const [isBillingTeam, setIsBillingTeam] = useState(false);
   const [billingValidationStatus, setBillingValidationStatus] = useState<string | null>(null);
+  const [carrierTrackingUrl, setCarrierTrackingUrl] = useState("");
+  const [carrierUnitNumber, setCarrierUnitNumber] = useState("");
+  const [savingCarrierInfo, setSavingCarrierInfo] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
@@ -656,6 +661,33 @@ export default function LoadDetail() {
       setFreightInvoiceAmount("5000");
     }
   }, [load?.invoice_number, load?.invoice_amount, load?.freight_invoice_number, load?.freight_invoice_amount, billingValidatedData]);
+
+  // Sync carrier info from load data
+  useEffect(() => {
+    if (load?.carrier_tracking_url) setCarrierTrackingUrl(load.carrier_tracking_url);
+    if (load?.carrier_unit_number) setCarrierUnitNumber(load.carrier_unit_number);
+  }, [load?.carrier_tracking_url, load?.carrier_unit_number]);
+
+  const handleSaveCarrierInfo = async () => {
+    if (!id) return;
+    setSavingCarrierInfo(true);
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({
+          carrier_tracking_url: carrierTrackingUrl.trim() || null,
+          carrier_unit_number: carrierUnitNumber.trim() || null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Carrier info saved");
+      fetchLoadData();
+    } catch (err: any) {
+      toast.error("Error saving carrier info: " + err.message);
+    } finally {
+      setSavingCarrierInfo(false);
+    }
+  };
 
   const handleSaveInvoice = async () => {
     if (!id) return;
@@ -2907,6 +2939,56 @@ export default function LoadDetail() {
                   </div>
                 );
               })()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Carrier Tracking - Admin Only */}
+        {isAdmin && (load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Truck className="h-4 w-4 text-primary" />
+                Carrier Tracking
+              </CardTitle>
+              <CardDescription>Carrier-provided tracking link and unit number</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Unit Number</Label>
+                  <Input
+                    placeholder="e.g. UNIT-4521"
+                    value={carrierUnitNumber}
+                    onChange={(e) => setCarrierUnitNumber(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tracking URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://..."
+                      value={carrierTrackingUrl}
+                      onChange={(e) => setCarrierTrackingUrl(e.target.value)}
+                    />
+                    {carrierTrackingUrl.trim() && (
+                      <Button variant="outline" size="icon" className="shrink-0" asChild>
+                        <a href={carrierTrackingUrl.trim()} target="_blank" rel="noopener noreferrer">
+                          <Link2 className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleSaveCarrierInfo}
+                disabled={savingCarrierInfo}
+              >
+                {savingCarrierInfo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Carrier Info
+              </Button>
             </CardContent>
           </Card>
         )}
