@@ -25,6 +25,7 @@ export interface PalletDetail {
   palletIndex: number;
   grossWeight: number;
   netWeight: number;
+  pieces: number;
 }
 
 export interface CustomsProductSummary {
