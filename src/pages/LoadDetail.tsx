@@ -339,6 +339,9 @@ export default function LoadDetail() {
   const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
   const [isBillingTeam, setIsBillingTeam] = useState(false);
   const [billingValidationStatus, setBillingValidationStatus] = useState<string | null>(null);
+  const [carrierTrackingUrl, setCarrierTrackingUrl] = useState("");
+  const [carrierUnitNumber, setCarrierUnitNumber] = useState("");
+  const [savingCarrierInfo, setSavingCarrierInfo] = useState(false);
 
   // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
   const resolveCustomerPO = (pallet: LoadPallet): string => {
