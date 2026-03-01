@@ -243,6 +243,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       palletIndex: group.palletDetails.length + 1,
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
+      pieces: lp.quantity,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
