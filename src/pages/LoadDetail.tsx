@@ -98,6 +98,29 @@ import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualP
 import { LinkVirtualPalletDialog } from "@/components/inventory/LinkVirtualPalletDialog";
 import { BillingValidationCard } from "@/components/shipping/BillingValidationCard";
 
+const formatCurrency = (v: string) => {
+  const n = Number(v);
+  if (!v || isNaN(n)) return "";
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+function CurrencyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <Input
+      className="h-8 text-sm text-right w-36 ml-auto font-mono"
+      placeholder="$0.00"
+      value={editing ? value : formatCurrency(value)}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/[^0-9.]/g, "");
+        onChange(raw);
+      }}
+    />
+  );
+}
+
 interface InventoryFilters {
   fecha: string[];
   pt_code: string[];
@@ -2912,7 +2935,7 @@ export default function LoadDetail() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {isAdmin ? (
-                          <Input className="h-8 text-sm text-right w-28 ml-auto" placeholder="$0.00" type="number" step="0.01" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} />
+                          <CurrencyInput value={invoiceAmount} onChange={setInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.invoice_amount ? `$${Number(load.invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
                         )}
@@ -2958,7 +2981,7 @@ export default function LoadDetail() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {isAdmin ? (
-                          <Input className="h-8 text-sm text-right w-28 ml-auto" placeholder="$0.00" type="number" step="0.01" value={freightInvoiceAmount} onChange={(e) => setFreightInvoiceAmount(e.target.value)} />
+                          <CurrencyInput value={freightInvoiceAmount} onChange={setFreightInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_amount ? `$${Number(load.freight_invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
                         )}
