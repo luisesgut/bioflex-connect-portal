@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -133,6 +134,7 @@ export default function OrderDetail() {
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [togglingHot, setTogglingHot] = useState(false);
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [savingDeliveryDate, setSavingDeliveryDate] = useState(false);
@@ -478,6 +480,15 @@ export default function OrderDetail() {
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
+              {(order.status === "pending" || order.status === "submitted") && (
+                <Button
+                  variant="default"
+                  onClick={() => setAcceptDialogOpen(true)}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Accept PO
+                </Button>
+              )}
               {order.status !== "closed" && (
                 <Button
                   variant="outline"
@@ -1072,6 +1083,20 @@ export default function OrderDetail() {
             onOpenChange={setEditDialogOpen}
             order={order}
             onSaved={fetchOrderDetails}
+          />
+        )}
+        {/* Accept Order Dialog */}
+        {isAdmin && order && (
+          <AcceptOrderDialog
+            open={acceptDialogOpen}
+            onOpenChange={setAcceptDialogOpen}
+            order={{
+              id: order.id,
+              po_number: order.po_number,
+              is_hot_order: order.is_hot_order,
+              product_name: order.product?.name || null,
+            }}
+            onAccepted={fetchOrderDetails}
           />
         )}
       </div>
