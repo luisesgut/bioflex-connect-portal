@@ -278,6 +278,8 @@ export function CustomsReviewDialog({
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [freightCostInput, setFreightCostInput] = useState(FREIGHT_COST);
+  const [exchangeRate, setExchangeRate] = useState(17.5);
 
   useEffect(() => {
     if (!open) return;
