@@ -844,12 +844,10 @@ export default function Orders() {
                   <LayoutGrid className="h-4 w-4" />
                   Board
                 </TabsTrigger>
-                {isAdmin && (
-                  <TabsTrigger value="canvas" className="gap-2">
-                    <Package className="h-4 w-4" />
-                    Canvas
-                  </TabsTrigger>
-                )}
+                <TabsTrigger value="canvas" className="gap-2">
+                  <Package className="h-4 w-4" />
+                  Canvas
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
