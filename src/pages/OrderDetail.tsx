@@ -397,10 +397,12 @@ export default function OrderDetail() {
                     <label className="text-sm text-muted-foreground">Item Type</label>
                     <p className="font-medium">{order.product?.item_type || "—"}</p>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Tipo Empaque</label>
-                    <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
-                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Tipo Empaque</label>
+                      <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
+                    </div>
+                  )}
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PT Code</label>
@@ -470,6 +472,10 @@ export default function OrderDetail() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">PO Number</label>
+                    <p className="font-medium">{order.po_number}</p>
+                  </div>
                   <div>
                     <label className="text-sm text-muted-foreground">PO Date</label>
                     <p className="font-medium">{formatDate(order.po_date)}</p>
