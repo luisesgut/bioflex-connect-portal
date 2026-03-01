@@ -23,6 +23,7 @@ interface CanvasOrder {
     inFloor: number;
     shipped: number;
     pending: number;
+    sapVerificationLoading?: boolean;
   };
 }
 
