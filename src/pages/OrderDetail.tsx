@@ -50,6 +50,7 @@ interface OrderDetails {
   conversion_date: string | null;
   created_at: string;
   accepted_at: string | null;
+  updated_at: string;
   pdf_url: string | null;
   notes: string | null;
   sales_order_number: string | null;
@@ -265,6 +266,7 @@ export default function OrderDetail() {
         conversion_date,
         created_at,
         accepted_at,
+        updated_at,
         pdf_url,
         notes,
         sales_order_number,
@@ -616,6 +618,36 @@ export default function OrderDetail() {
                     <div>
                       <label className="text-sm text-muted-foreground">Sales Order #</label>
                       <p className="font-medium">{order.sales_order_number || "—"}</p>
+                    </div>
+                  )}
+                  {isAdmin && order.accepted_at && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Sales Order Date</label>
+                      <p className="font-medium">{formatDate(order.accepted_at.split("T")[0])}</p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-sm text-muted-foreground">PO Age (Days)</label>
+                    <p className="font-medium">
+                      {(() => {
+                        const start = new Date(order.po_date);
+                        const end = order.status === "closed" ? new Date(order.updated_at) : new Date();
+                        const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                        return `${days} days`;
+                      })()}
+                    </p>
+                  </div>
+                  {order.accepted_at && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">SO Age (Days)</label>
+                      <p className="font-medium">
+                        {(() => {
+                          const start = new Date(order.accepted_at);
+                          const end = order.status === "closed" ? new Date(order.updated_at) : new Date();
+                          const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          return `${days} days`;
+                        })()}
+                      </p>
                     </div>
                   )}
                   <div>
