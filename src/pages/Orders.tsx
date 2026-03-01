@@ -878,14 +878,14 @@ export default function Orders() {
           />
         )}
 
-        {/* Board View */}
+        {/* Board View - grouped by tipo_empaque */}
         {!loading && viewMode === "board" && (
-          <OrdersKanban orders={activeOrders} isAdmin={isAdmin} />
+          <OrdersCanvas orders={activeOrders} groupBy="product_tipo_empaque" />
         )}
 
-        {/* Canvas View (Admin only) */}
-        {!loading && viewMode === "canvas" && isAdmin && (
-          <OrdersCanvas orders={activeOrders} />
+        {/* Canvas View - grouped by item_type */}
+        {!loading && viewMode === "canvas" && (
+          <OrdersCanvas orders={activeOrders} groupBy="product_item_type" />
         )}
 
         {/* Active Orders Table */}
