@@ -216,6 +216,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         ceTruncated: 0,
         customsValue: 0,
         unit: lp.pallet.unit,
+        palletDetails: [],
         // Legacy
         sapNumber: poInfo?.sales_order_number || null,
         piecesPerPallet: piecesPerPackage,
