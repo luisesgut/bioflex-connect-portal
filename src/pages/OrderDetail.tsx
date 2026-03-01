@@ -441,15 +441,20 @@ export default function OrderDetail() {
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold">{order.po_number}</h1>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "px-3 py-1",
-                  statusStyles[order.status] || statusStyles.pending
-                )}
-              >
-                {statusLabels[order.status] || order.status}
-              </Badge>
+              {(() => {
+                const displayStatus = pendingHotRequest ? "pending-hot-approval" : order.status;
+                return (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "px-3 py-1",
+                      statusStyles[displayStatus] || statusStyles.pending
+                    )}
+                  >
+                    {statusLabels[displayStatus] || order.status}
+                  </Badge>
+                );
+              })()}
               {order.is_hot_order && (
                 <Badge variant="destructive" className="gap-1">
                   <Flame className="h-3 w-3" />
