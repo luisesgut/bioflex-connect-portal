@@ -40,7 +40,7 @@ interface PackingListParams {
 
 interface ProductRow {
   poNumber: string;
-  lotNumber: string;
+  releaseNumber: string;
   itemNumber: string;
   description: string;
   quantity: number;
@@ -71,7 +71,7 @@ export async function generatePackingList({
       const poInfo = poInfoMap.get(customerPO);
       groups.set(key, {
         poNumber: customerPO,
-        lotNumber: poInfo?.sales_order_number || "",
+        releaseNumber: pallet.release_number || "",
         itemNumber: poInfo?.customer_item || "",
         description: pallet.description,
         quantity: 0,
@@ -83,6 +83,12 @@ export async function generatePackingList({
     const group = groups.get(key)!;
     group.quantity += pallet.quantity;
     group.pallets += 1;
+    // Collect unique release numbers per group
+    if (pallet.release_number && !group.releaseNumber.includes(pallet.release_number)) {
+      group.releaseNumber = group.releaseNumber
+        ? `${group.releaseNumber}, ${pallet.release_number}`
+        : pallet.release_number;
+    }
   });
 
   const products = Array.from(groups.values());
@@ -202,7 +208,7 @@ export async function generatePackingList({
   // === TABLE (drawn manually) ===
   const tableTop = Math.max(leftY, rightY) + 6;
   const colWidths = [28, 22, 38, 80, 30, 20, 22]; // PO, LOT, ITEM, DESC, QTY, UNITS, PALLETS
-  const headers = ["PO #", "LOT #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
+  const headers = ["PO #", "RELEASE #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
   const rowHeight = 8;
   const tableLeft = margin;
 
@@ -233,7 +239,7 @@ export async function generatePackingList({
     xPos = tableLeft;
     const vals = [
       product.poNumber,
-      product.lotNumber,
+      product.releaseNumber,
       product.itemNumber,
       product.description,
       product.quantity.toLocaleString(),
