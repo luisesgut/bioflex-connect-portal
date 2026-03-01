@@ -838,7 +838,7 @@ export default function Orders() {
             )}
             
             {/* View Mode Toggle */}
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board")} className="w-auto">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board" | "canvas")} className="w-auto">
               <TabsList>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
@@ -852,6 +852,12 @@ export default function Orders() {
                   <LayoutGrid className="h-4 w-4" />
                   Board
                 </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="canvas" className="gap-2">
+                    <Package className="h-4 w-4" />
+                    Canvas
+                  </TabsTrigger>
+                )}
               </TabsList>
             </Tabs>
           </div>
