@@ -2958,7 +2958,7 @@ export default function LoadDetail() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {isAdmin ? (
-                          <Input className="h-8 text-sm text-right w-28 ml-auto" placeholder="$0.00" type="number" step="0.01" value={freightInvoiceAmount} onChange={(e) => setFreightInvoiceAmount(e.target.value)} />
+                          <Input className="h-8 text-sm text-right w-36 ml-auto" placeholder="$0.00" value={freightInvoiceAmount ? `$${Number(freightInvoiceAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""} onFocus={(e) => { e.target.value = freightInvoiceAmount; }} onChange={(e) => { const raw = e.target.value.replace(/[^0-9.]/g, ""); setFreightInvoiceAmount(raw); }} onBlur={(e) => { if (freightInvoiceAmount) e.target.value = `$${Number(freightInvoiceAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_amount ? `$${Number(load.freight_invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
                         )}
