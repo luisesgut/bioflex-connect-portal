@@ -21,6 +21,12 @@ import { openStorageFile } from "@/hooks/useOpenStorageFile";
 const FREIGHT_COST = 5000;
 const FULL_LOAD_PALLETS = 24;
 
+export interface PalletDetail {
+  palletIndex: number;
+  grossWeight: number;
+  netWeight: number;
+}
+
 export interface CustomsProductSummary {
   description: string;
   destination: string;
@@ -38,6 +44,7 @@ export interface CustomsProductSummary {
   ceTruncated: number;
   customsValue: number;
   unit: string;
+  palletDetails?: PalletDetail[];
   // Legacy compat fields for PDF
   sapNumber: string | null;
   piecesPerPallet: number;
@@ -209,6 +216,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         ceTruncated: 0,
         customsValue: 0,
         unit: lp.pallet.unit,
+        palletDetails: [],
         // Legacy
         sapNumber: poInfo?.sales_order_number || null,
         piecesPerPallet: piecesPerPackage,
@@ -228,6 +236,16 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     group.totalUnits += lp.quantity;
     group.totalGrossWeight += lp.pallet.gross_weight || 0;
     group.totalNetWeight += lp.pallet.net_weight || 0;
+
+    // Collect pallet detail for PDF breakdown
+    if (!isPartialPallet) {
+      group.palletDetails = group.palletDetails || [];
+      group.palletDetails.push({
+        palletIndex: group.palletDetails.length + 1,
+        grossWeight: lp.pallet.gross_weight || 0,
+        netWeight: lp.pallet.net_weight || 0,
+      });
+    }
 
     if (!isPartialPallet) {
       group.totalBoxesOrRolls += packagesPerBox;
