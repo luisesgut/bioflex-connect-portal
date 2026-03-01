@@ -552,8 +552,8 @@ export function CustomsReviewDialog({
                       className="h-8 text-sm mt-0.5 w-32"
                       type="number"
                       step="0.01"
-                      value={exchangeRate}
-                      onChange={e => setExchangeRate(Number(e.target.value))}
+                      value={exchangeRateInput}
+                      onChange={e => setExchangeRateInput(e.target.value)}
                       disabled={isReadOnly}
                     />
                   </div>
