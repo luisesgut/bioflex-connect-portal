@@ -179,11 +179,21 @@ export function BillingValidationCard({
                   {isApproved ? "View Breakdown" : "Review"}
                 </Button>
 
-                {isApproved && (
+                {isApproved && validation?.validated_data && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setReviewDialogOpen(true)}
+                    onClick={() => {
+                      const products = validation.validated_data as any[];
+                      const totalPalletCount = products.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                      generateCustomsPDF(
+                        { loadNumber, shippingDate },
+                        products,
+                        totalPalletCount,
+                        5000
+                      );
+                      toast.success("PDF downloaded");
+                    }}
                   >
                     <FileDown className="mr-2 h-4 w-4" />
                     Download PDF
