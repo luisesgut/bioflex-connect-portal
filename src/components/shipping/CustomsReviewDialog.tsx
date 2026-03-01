@@ -21,6 +21,12 @@ import { openStorageFile } from "@/hooks/useOpenStorageFile";
 const FREIGHT_COST = 5000;
 const FULL_LOAD_PALLETS = 24;
 
+export interface PalletDetail {
+  palletIndex: number;
+  grossWeight: number;
+  netWeight: number;
+}
+
 export interface CustomsProductSummary {
   description: string;
   destination: string;
@@ -38,6 +44,7 @@ export interface CustomsProductSummary {
   ceTruncated: number;
   customsValue: number;
   unit: string;
+  palletDetails?: PalletDetail[];
   // Legacy compat fields for PDF
   sapNumber: string | null;
   piecesPerPallet: number;
