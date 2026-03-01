@@ -179,6 +179,8 @@ interface ShippingLoad {
   freight_invoice_number: string | null;
   freight_invoice_pdf_url: string | null;
   freight_invoice_amount: number | null;
+  carrier_tracking_url: string | null;
+  carrier_unit_number: string | null;
 }
 
 interface DeliveryDateEntry {
