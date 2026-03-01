@@ -81,6 +81,7 @@ interface Order {
   product_pt_code: string | null;
   product_customer: string | null;
   product_item_type: string | null;
+  product_tipo_empaque: string | null;
   product_dp_sales_csr: string | null;
   product_customer_item: string | null;
   product_item_description: string | null;
