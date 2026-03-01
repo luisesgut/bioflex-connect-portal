@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, ArrowRight, Clock } from "lucide-react";
+import { Loader2, ArrowRight, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,11 +15,12 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface ChangeRequest {
   id: string;
   purchase_order_id: string;
-  request_type: "volume_change" | "cancellation" | "do_not_delay";
+  request_type: "volume_change" | "cancellation" | "do_not_delay" | "hot_order";
   current_quantity: number;
   requested_quantity: number | null;
   reason: string;
@@ -87,6 +88,13 @@ export function ReviewChangeRequestDialog({
             .eq("id", request.purchase_order_id);
 
           if (poError) throw poError;
+        } else if (request.request_type === "hot_order") {
+          const { error: poError } = await supabase
+            .from("purchase_orders")
+            .update({ is_hot_order: true })
+            .eq("id", request.purchase_order_id);
+
+          if (poError) throw poError;
         }
       }
 
@@ -130,12 +138,17 @@ export function ReviewChangeRequestDialog({
               <span className="text-sm text-muted-foreground">Request Type</span>
               <Badge 
                 variant={request.request_type === "cancellation" ? "destructive" : "secondary"}
-                className={request.request_type === "do_not_delay" ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" : ""}
+                className={cn(
+                  request.request_type === "do_not_delay" && "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+                  request.request_type === "hot_order" && "bg-destructive/10 text-destructive border-destructive/20"
+                )}
               >
                 {request.request_type === "cancellation" 
                   ? "Cancellation" 
                   : request.request_type === "do_not_delay"
                   ? "Do Not Delay"
+                  : request.request_type === "hot_order"
+                  ? "Hot Order"
                   : "Volume Change"}
               </Badge>
             </div>
@@ -143,6 +156,12 @@ export function ReviewChangeRequestDialog({
               <div className="flex items-center gap-2 text-sm text-yellow-600">
                 <Clock className="h-4 w-4" />
                 <span>Customer requests this order not be delayed</span>
+              </div>
+            )}
+            {request.request_type === "hot_order" && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <Flame className="h-4 w-4" />
+                <span>Customer requests Hot Order priority for this PO</span>
               </div>
             )}
             {request.request_type === "volume_change" && (

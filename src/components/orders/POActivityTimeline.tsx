@@ -158,6 +158,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
             volume_change: "Volume Change",
             cancellation: "Cancellation",
             do_not_delay: "Do Not Delay",
+            hot_order: "Hot Order",
           };
 
           let description = `${requestTypeLabels[req.request_type] || req.request_type} request`;
@@ -172,7 +173,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
             description,
             timestamp: req.created_at,
             status: "pending",
-            icon: req.request_type === "cancellation" ? "cancel" : "change",
+            icon: req.request_type === "cancellation" ? "cancel" : req.request_type === "hot_order" ? "flame" : "change",
             metadata: { reason: req.reason },
           });
 

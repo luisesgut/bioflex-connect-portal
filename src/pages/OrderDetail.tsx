@@ -263,6 +263,36 @@ export default function OrderDetail() {
 
   const handleToggleHotOrder = async () => {
     if (!order) return;
+    // If order is already accepted and not yet hot, require change request approval
+    const needsApproval = !order.is_hot_order && order.status !== "pending" && order.status !== "submitted";
+    
+    if (needsApproval) {
+      setTogglingHot(true);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) throw new Error("Not authenticated");
+
+        const { error } = await supabase
+          .from("order_change_requests")
+          .insert({
+            purchase_order_id: order.id,
+            request_type: "hot_order" as any,
+            current_quantity: order.quantity,
+            reason: "Customer requests Hot Order priority",
+            requested_by: userData.user.id,
+          });
+
+        if (error) throw error;
+        toast.success("Hot Order request submitted for admin approval");
+      } catch (error) {
+        console.error("Error submitting hot order request:", error);
+        toast.error("Failed to submit hot order request");
+      }
+      setTogglingHot(false);
+      return;
+    }
+
+    // Direct toggle for pending/submitted orders or removing hot order
     setTogglingHot(true);
     const newValue = !order.is_hot_order;
     const { error } = await supabase
@@ -637,17 +667,19 @@ export default function OrderDetail() {
                   </div>
                 </div>
 
-                {!isAdmin && order.status !== "closed" && (
+                {!isAdmin && order.status !== "closed" && !order.is_hot_order && (
                   <div className="mt-4">
                     <Button
-                      variant={order.is_hot_order ? "outline" : "destructive"}
+                      variant="destructive"
                       size="sm"
                       onClick={handleToggleHotOrder}
                       disabled={togglingHot}
                       className="gap-1"
                     >
                       {togglingHot ? <Loader2 className="h-3 w-3 animate-spin" /> : <Flame className="h-3 w-3" />}
-                      {order.is_hot_order ? "Remove Hot Order" : "Mark as Hot Order"}
+                      {order.status !== "pending" && order.status !== "submitted"
+                        ? "Request Hot Order"
+                        : "Mark as Hot Order"}
                     </Button>
                   </div>
                 )}
