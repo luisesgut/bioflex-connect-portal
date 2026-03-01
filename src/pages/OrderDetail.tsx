@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Pencil,
+  CalendarIcon,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ import { POActivityTimeline } from "@/components/orders/POActivityTimeline";
 import { POComments } from "@/components/orders/POComments";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 
@@ -127,6 +130,10 @@ export default function OrderDetail() {
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [togglingHot, setTogglingHot] = useState(false);
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [savingDeliveryDate, setSavingDeliveryDate] = useState(false);
+  const [newDeliveryDate, setNewDeliveryDate] = useState<Date | undefined>(undefined);
   
 
   useEffect(() => {
@@ -252,6 +259,41 @@ export default function OrderDetail() {
     
     
     setLoading(false);
+  };
+
+  const handleToggleHotOrder = async () => {
+    if (!order) return;
+    setTogglingHot(true);
+    const newValue = !order.is_hot_order;
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ is_hot_order: newValue })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update hot order status");
+    } else {
+      toast.success(newValue ? "Order marked as Hot Order" : "Hot Order status removed");
+      setOrder({ ...order, is_hot_order: newValue });
+    }
+    setTogglingHot(false);
+  };
+
+  const handleSaveDeliveryDate = async () => {
+    if (!order || !newDeliveryDate) return;
+    setSavingDeliveryDate(true);
+    const dateStr = format(newDeliveryDate, "yyyy-MM-dd");
+    const { error } = await supabase
+      .from("purchase_orders")
+      .update({ requested_delivery_date: dateStr })
+      .eq("id", order.id);
+    if (error) {
+      toast.error("Failed to update delivery date");
+    } else {
+      toast.success("Delivery date updated");
+      setOrder({ ...order, requested_delivery_date: dateStr });
+      setEditingDeliveryDate(false);
+    }
+    setSavingDeliveryDate(false);
   };
 
 
@@ -551,13 +593,64 @@ export default function OrderDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground">Customer Delivery (Requested)</label>
-                    <p className="font-medium">{formatDate(order.requested_delivery_date)}</p>
+                    {!isAdmin && order.status !== "closed" && editingDeliveryDate ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className={cn("justify-start text-left font-normal", !newDeliveryDate && "text-muted-foreground")}>
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {newDeliveryDate ? format(newDeliveryDate, "MMM d, yyyy") : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={newDeliveryDate}
+                              onSelect={setNewDeliveryDate}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Button size="sm" onClick={handleSaveDeliveryDate} disabled={savingDeliveryDate || !newDeliveryDate}>
+                          {savingDeliveryDate ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingDeliveryDate(false)}>Cancel</Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{formatDate(order.requested_delivery_date)}</p>
+                        {!isAdmin && order.status !== "closed" && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+                            setNewDeliveryDate(order.requested_delivery_date ? new Date(order.requested_delivery_date) : undefined);
+                            setEditingDeliveryDate(true);
+                          }}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Bioflex Delivery (Estimated)</label>
                     <p className="font-medium">{formatDate(order.estimated_delivery_date)}</p>
                   </div>
                 </div>
+
+                {!isAdmin && order.status !== "closed" && (
+                  <div className="mt-4">
+                    <Button
+                      variant={order.is_hot_order ? "outline" : "destructive"}
+                      size="sm"
+                      onClick={handleToggleHotOrder}
+                      disabled={togglingHot}
+                      className="gap-1"
+                    >
+                      {togglingHot ? <Loader2 className="h-3 w-3 animate-spin" /> : <Flame className="h-3 w-3" />}
+                      {order.is_hot_order ? "Remove Hot Order" : "Mark as Hot Order"}
+                    </Button>
+                  </div>
+                )}
 
                 <Separator className="my-6" />
 
