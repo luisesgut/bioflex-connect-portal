@@ -197,7 +197,7 @@ export default function Orders() {
     let inventoryByPO: Record<string, { inFloor: number; shipped: number; palletIds: Set<string> }> = {};
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
     let shippedLoadDetailsByPO: Record<string, ShippedLoadDetail[]> = {};
-    let shippedPalletIds: Record<string, Set<string>> = {};
+    let shippedTraceability: Record<string, Set<string>> = {};
 
     const salesOrderToPO: Record<string, string> = {};
     (ordersData || []).forEach((order: any) => {
