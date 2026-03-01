@@ -2943,6 +2943,56 @@ export default function LoadDetail() {
           </Card>
         )}
 
+        {/* Carrier Tracking - Admin Only */}
+        {isAdmin && (load.status === "in_transit" || load.status === "delivered") && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Truck className="h-4 w-4 text-primary" />
+                Carrier Tracking
+              </CardTitle>
+              <CardDescription>Carrier-provided tracking link and unit number</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Unit Number</Label>
+                  <Input
+                    placeholder="e.g. UNIT-4521"
+                    value={carrierUnitNumber}
+                    onChange={(e) => setCarrierUnitNumber(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tracking URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://..."
+                      value={carrierTrackingUrl}
+                      onChange={(e) => setCarrierTrackingUrl(e.target.value)}
+                    />
+                    {carrierTrackingUrl.trim() && (
+                      <Button variant="outline" size="icon" className="shrink-0" asChild>
+                        <a href={carrierTrackingUrl.trim()} target="_blank" rel="noopener noreferrer">
+                          <Link2 className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleSaveCarrierInfo}
+                disabled={savingCarrierInfo}
+              >
+                {savingCarrierInfo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Carrier Info
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Invoice Section - In Transit / Delivered */}
         {(load.status === "in_transit" || load.status === "delivered") && (
           <Card>
