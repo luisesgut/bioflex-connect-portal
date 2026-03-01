@@ -530,7 +530,7 @@ export function CustomsReviewDialog({
                       className="h-8 text-sm mt-0.5 w-32"
                       type="number"
                       value={freightCostInput}
-                      onChange={e => setFreightCostInput(Number(e.target.value))}
+                      onChange={e => setFreightCostInput(e.target.value)}
                       disabled={isReadOnly}
                     />
                   </div>
