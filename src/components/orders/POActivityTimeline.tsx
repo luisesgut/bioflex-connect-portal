@@ -158,6 +158,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
             volume_change: "Volume Change",
             cancellation: "Cancellation",
             do_not_delay: "Do Not Delay",
+            hot_order: "Hot Order",
           };
 
           let description = `${requestTypeLabels[req.request_type] || req.request_type} request`;
