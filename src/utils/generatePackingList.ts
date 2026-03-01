@@ -208,7 +208,7 @@ export async function generatePackingList({
   // === TABLE (drawn manually) ===
   const tableTop = Math.max(leftY, rightY) + 6;
   const colWidths = [28, 22, 38, 80, 30, 20, 22]; // PO, LOT, ITEM, DESC, QTY, UNITS, PALLETS
-  const headers = ["PO #", "LOT #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
+  const headers = ["PO #", "RELEASE #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
   const rowHeight = 8;
   const tableLeft = margin;
 
