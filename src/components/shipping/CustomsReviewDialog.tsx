@@ -230,28 +230,21 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     }
 
     const group = grouped.get(key)!;
-    const isPartialPallet = (lp.pallet.pieces || 0) < 50;
 
-    group.totalPallets += isPartialPallet ? 0 : 1;
+    group.totalPallets += 1;
     group.totalUnits += lp.quantity;
     group.totalGrossWeight += lp.pallet.gross_weight || 0;
     group.totalNetWeight += lp.pallet.net_weight || 0;
 
     // Collect pallet detail for PDF breakdown
-    if (!isPartialPallet) {
-      group.palletDetails = group.palletDetails || [];
-      group.palletDetails.push({
-        palletIndex: group.palletDetails.length + 1,
-        grossWeight: lp.pallet.gross_weight || 0,
-        netWeight: lp.pallet.net_weight || 0,
-      });
-    }
+    group.palletDetails = group.palletDetails || [];
+    group.palletDetails.push({
+      palletIndex: group.palletDetails.length + 1,
+      grossWeight: lp.pallet.gross_weight || 0,
+      netWeight: lp.pallet.net_weight || 0,
+    });
 
-    if (!isPartialPallet) {
-      group.totalBoxesOrRolls += packagesPerBox;
-    } else {
-      group.totalBoxesOrRolls += lp.pallet.pieces || 0;
-    }
+    group.totalBoxesOrRolls += lp.pallet.pieces || 0;
 
     // Keep first non-null release number
     if (!group.releaseNumber && lp.release_number) {
