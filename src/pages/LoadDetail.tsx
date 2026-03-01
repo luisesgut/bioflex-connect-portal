@@ -1734,19 +1734,6 @@ export default function LoadDetail() {
       setInTransitConfirmOpen(false);
       return;
     }
-    // Update ship date first, then proceed with status change
-    if (inTransitShipDate && id) {
-      const { error: shipDateError } = await supabase
-        .from("shipping_loads")
-        .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
-        .eq("id", id);
-      
-      if (shipDateError) {
-        console.error("Error updating ship date:", shipDateError);
-        toast.error("Error updating ship date");
-        return;
-      }
-    }
     setInTransitConfirmOpen(false);
     await handleUpdateLoadStatus("in_transit");
   };
@@ -4076,39 +4063,11 @@ export default function LoadDetail() {
                 </span>
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Ship Date (departure date)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !inTransitShipDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {inTransitShipDate ? format(inTransitShipDate, "PPP") : "Select ship date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={inTransitShipDate}
-                      onSelect={setInTransitShipDate}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setInTransitConfirmOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleConfirmInTransit} disabled={!inTransitShipDate || updatingStatus}>
+              <Button onClick={handleConfirmInTransit} disabled={updatingStatus}>
                 {updatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm In Transit
               </Button>
