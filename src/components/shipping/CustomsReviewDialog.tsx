@@ -274,7 +274,7 @@ export function CustomsReviewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4 -mr-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-4 -mr-4">
           <div className="space-y-6">
             {products.map((product, idx) => (
               <div key={idx} className="border rounded-lg p-4 space-y-3">
