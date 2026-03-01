@@ -112,26 +112,47 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
   if (error) throw error;
   const pallets = (loadPallets || []) as unknown as LoadPalletRow[];
 
-  // Collect unique customer_lots and pt_codes
-  const customerLots = new Set<string>();
+  // Collect unique identifiers: customer_lot, bfx_order, and pt_codes
+  const poIdentifiers = new Set<string>();
   const ptCodes = new Set<string>();
   pallets.forEach(p => {
-    if (p.pallet.customer_lot) customerLots.add(p.pallet.customer_lot);
+    if (p.pallet.customer_lot) poIdentifiers.add(p.pallet.customer_lot);
+    if (p.pallet.bfx_order) poIdentifiers.add(p.pallet.bfx_order);
     ptCodes.add(p.pallet.pt_code);
   });
 
-  // Fetch PO info (sales_order_number, price_per_thousand)
-  const poMap = new Map<string, { sales_order_number: string | null; price_per_thousand: number }>();
-  if (customerLots.size > 0) {
+  // Fetch PO info matching by po_number (could be customer_lot or bfx_order)
+  const poMap = new Map<string, { sales_order_number: string | null; price_per_thousand: number; po_number: string }>();
+  if (poIdentifiers.size > 0) {
     const { data: pos } = await supabase
       .from("purchase_orders")
       .select("po_number, sales_order_number, price_per_thousand")
-      .in("po_number", Array.from(customerLots));
+      .in("po_number", Array.from(poIdentifiers));
     (pos || []).forEach((po: any) => {
       poMap.set(po.po_number, {
         sales_order_number: po.sales_order_number || null,
         price_per_thousand: po.price_per_thousand || 0,
+        po_number: po.po_number,
       });
+    });
+  }
+
+  // Also try matching POs by product pt_code for any pallets without direct match
+  if (ptCodes.size > 0) {
+    const { data: posByProduct } = await supabase
+      .from("purchase_orders")
+      .select("po_number, sales_order_number, price_per_thousand, product:products(codigo_producto, pt_code)")
+      .in("status", ["pending", "confirmed", "accepted", "in_production"]);
+    (posByProduct || []).forEach((po: any) => {
+      const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+      if (ptCode && ptCodes.has(ptCode) && !poMap.has(ptCode)) {
+        // Store by pt_code as fallback key
+        poMap.set(`__pt__${ptCode}`, {
+          sales_order_number: po.sales_order_number || null,
+          price_per_thousand: po.price_per_thousand || 0,
+          po_number: po.po_number,
+        });
+      }
     });
   }
 
@@ -160,7 +181,10 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
   pallets.forEach(lp => {
     const dest = lp.destination || "TBD";
     const key = `${lp.pallet.description}__${dest}`;
-    const poInfo = lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null;
+    // Try customer_lot first, then bfx_order, then pt_code fallback
+    const poInfo = (lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null)
+      || (lp.pallet.bfx_order ? poMap.get(lp.pallet.bfx_order) : null)
+      || poMap.get(`__pt__${lp.pallet.pt_code}`) || null;
     const prodInfo = productMap.get(lp.pallet.pt_code);
     const pricePerThousand = poInfo?.price_per_thousand || 0;
     const piecesPerPallet = prodInfo?.pieces_per_pallet || 50000;
@@ -172,7 +196,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         description: lp.pallet.description,
         destination: dest,
         salesOrder: poInfo?.sales_order_number || null,
-        poNumber: lp.pallet.customer_lot || null,
+        poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
         bfxSpecUrl: prodInfo?.bfx_spec_url || null,
         totalPallets: 0,
