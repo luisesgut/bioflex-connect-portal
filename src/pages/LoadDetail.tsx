@@ -2912,7 +2912,7 @@ export default function LoadDetail() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {isAdmin ? (
-                          <Input className="h-8 text-sm text-right w-36 ml-auto font-mono" placeholder="$0.00" value={invoiceAmount} onChange={(e) => { const raw = e.target.value.replace(/[^0-9.]/g, ""); setInvoiceAmount(raw); }} />
+                          <CurrencyInput value={invoiceAmount} onChange={setInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.invoice_amount ? `$${Number(load.invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
                         )}
