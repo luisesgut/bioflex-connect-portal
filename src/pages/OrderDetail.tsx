@@ -134,7 +134,8 @@ export default function OrderDetail() {
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [savingDeliveryDate, setSavingDeliveryDate] = useState(false);
   const [newDeliveryDate, setNewDeliveryDate] = useState<Date | undefined>(undefined);
-  
+  const [pendingHotRequest, setPendingHotRequest] = useState<{ id: string; reason: string; created_at: string } | null>(null);
+  const [reviewingHot, setReviewingHot] = useState(false);
 
   useEffect(() => {
     if (id) {
