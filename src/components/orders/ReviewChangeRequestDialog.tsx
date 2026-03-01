@@ -87,6 +87,13 @@ export function ReviewChangeRequestDialog({
             .eq("id", request.purchase_order_id);
 
           if (poError) throw poError;
+        } else if (request.request_type === "hot_order") {
+          const { error: poError } = await supabase
+            .from("purchase_orders")
+            .update({ is_hot_order: true })
+            .eq("id", request.purchase_order_id);
+
+          if (poError) throw poError;
         }
       }
 
