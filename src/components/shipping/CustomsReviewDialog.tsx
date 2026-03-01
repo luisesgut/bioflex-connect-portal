@@ -303,12 +303,11 @@ export function CustomsReviewDialog({
 
   const totalPalletCount = products.reduce((s, p) => s + p.totalPallets, 0);
   const totalProductValue = products.reduce((s, p) => s + p.totalPrice, 0);
-  const freightCost =
-    totalPalletCount < FULL_LOAD_PALLETS
-      ? (totalPalletCount / FULL_LOAD_PALLETS) * FREIGHT_COST
-      : 0;
+  const freightCost = freightCostInput;
   const totalGrossWeight = products.reduce((s, p) => s + p.totalGrossWeight, 0);
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
+  const grandTotalUSD = totalProductValue + freightCost;
+  const grandTotalMXN = grandTotalUSD * exchangeRate;
 
   const updateProduct = (index: number, field: keyof CustomsProductSummary, value: any) => {
     setProducts(prev => {
