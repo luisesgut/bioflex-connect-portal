@@ -148,13 +148,16 @@ export default function OrderDetail() {
 
   const fetchPendingHotRequest = async () => {
     if (!id) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("order_change_requests")
       .select("id, reason, created_at")
       .eq("purchase_order_id", id)
       .eq("request_type", "hot_order" as any)
       .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
+    if (error) console.error("Error fetching pending hot request:", error);
     setPendingHotRequest(data || null);
   };
 
