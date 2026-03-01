@@ -211,19 +211,34 @@ export function EditableOrderRow({
         setUploadingPdf(false);
       }
 
+      // Auto-accept if sales_order_number is being set for the first time
+      const autoAccept = editedOrder.sales_order_number.trim() !== "" &&
+        (!order.sales_order_number || order.sales_order_number.trim() === "") &&
+        (order.status === "pending" || order.status === "submitted");
+
+      const effectiveStatus = autoAccept ? "accepted" : editedOrder.status;
+
+      const updateData: Record<string, any> = {
+        quantity: editedOrder.quantity,
+        total_price: editedOrder.total_price,
+        status: effectiveStatus,
+        is_hot_order: editedOrder.is_hot_order,
+        do_not_delay: editedOrder.do_not_delay,
+        requested_delivery_date: editedOrder.requested_delivery_date || null,
+        estimated_delivery_date: editedOrder.estimated_delivery_date || null,
+        sales_order_number: editedOrder.sales_order_number || null,
+        pdf_url: pdfUrl,
+      };
+
+      if (autoAccept) {
+        const { data: userData } = await supabase.auth.getUser();
+        updateData.accepted_at = new Date().toISOString();
+        updateData.accepted_by = userData.user?.id || null;
+      }
+
       const { error } = await supabase
         .from("purchase_orders")
-        .update({
-          quantity: editedOrder.quantity,
-          total_price: editedOrder.total_price,
-          status: editedOrder.status,
-          is_hot_order: editedOrder.is_hot_order,
-          do_not_delay: editedOrder.do_not_delay,
-          requested_delivery_date: editedOrder.requested_delivery_date || null,
-          estimated_delivery_date: editedOrder.estimated_delivery_date || null,
-          sales_order_number: editedOrder.sales_order_number || null,
-          pdf_url: pdfUrl,
-        })
+        .update(updateData)
         .eq("id", order.id);
 
       setSaving(false);
