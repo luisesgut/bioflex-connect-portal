@@ -129,15 +129,9 @@ export function generateCustomsPDF(
 
       // Totals row
       checkPage(8);
-      doc.setFillColor(220, 50, 50);
-      doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
-      doc.setTextColor(255, 255, 255);
-      addText(String(p.palletDetails.length), colTarima, y, { bold: true, size: 8 });
-      doc.setTextColor(0, 0, 0);
-      y += 6;
-
       doc.setFillColor(240, 240, 240);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
+      addText(String(p.palletDetails.length), colTarima, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalGrossWeight), colBruto + 25, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalNetWeight), colNeto + 25, y, { bold: true, size: 8 });
       y += 6;
