@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,13 +10,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Save, FileDown, Pencil, Check } from "lucide-react";
+import { Loader2, Save, FileDown, Pencil, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
+import { openStorageFile } from "@/hooks/useOpenStorageFile";
 
 const FREIGHT_COST = 5000;
 const FULL_LOAD_PALLETS = 24;
@@ -24,44 +24,29 @@ const FULL_LOAD_PALLETS = 24;
 export interface CustomsProductSummary {
   description: string;
   destination: string;
-  pallets: { palletNumber: number | string; grossWeight: number; netWeight: number }[];
+  salesOrder: string | null;
+  poNumber: string | null;
+  releaseNumber: string | null;
+  bfxSpecUrl: string | null;
   totalPallets: number;
+  totalUnits: number;
   totalGrossWeight: number;
   totalNetWeight: number;
+  pricePerThousand: number;
+  totalPrice: number;
+  ce: number;
+  ceTruncated: number;
+  customsValue: number;
+  unit: string;
+  // Legacy compat fields for PDF
   sapNumber: string | null;
-  poNumber: string | null;
   piecesPerPallet: number;
   palletsPerBox: number;
   totalPiecesPerPallet: number;
   totalBoxesOrRolls: number;
   totalPieces: number;
   pricePerPiece: number;
-  pricePerThousand: number;
-  totalPrice: number;
   customsEquivalent: number;
-  customsValue: number;
-  unit: string;
-}
-
-interface PalletData {
-  pt_code: string;
-  description: string;
-  destination: string | null;
-  quantity: number;
-  gross_weight: number | null;
-  net_weight: number | null;
-  pieces: number | null;
-  unit: string;
-  customer_lot: string | null;
-  bfx_order: string | null;
-}
-
-interface OrderInfo {
-  customer_lot: string;
-  sales_order_number: string | null;
-  price_per_thousand: number | null;
-  pieces_per_pallet: number | null;
-  piezas_por_paquete: number | null;
 }
 
 interface CustomsReviewDialogProps {
@@ -70,8 +55,6 @@ interface CustomsReviewDialogProps {
   loadId: string;
   loadNumber: string;
   shippingDate: string;
-  pallets: PalletData[];
-  orderInfo: Map<string, OrderInfo>;
   existingData: CustomsProductSummary[] | null;
   validationId: string | null;
   userId: string;
@@ -79,79 +62,169 @@ interface CustomsReviewDialogProps {
   onSaved: () => void;
 }
 
-function buildProductSummaries(
-  pallets: PalletData[],
-  orderInfo: Map<string, OrderInfo>
-): CustomsProductSummary[] {
+interface LoadPalletRow {
+  id: string;
+  destination: string | null;
+  quantity: number;
+  release_number: string | null;
+  is_on_hold: boolean;
+  pallet: {
+    pt_code: string;
+    description: string;
+    customer_lot: string | null;
+    bfx_order: string | null;
+    unit: string;
+    gross_weight: number | null;
+    net_weight: number | null;
+    pieces: number | null;
+  };
+}
+
+function recalcDerived(p: CustomsProductSummary): CustomsProductSummary {
+  p.pricePerPiece = p.pricePerThousand / 1000;
+  p.totalPrice = (p.totalUnits / 1000) * p.pricePerThousand;
+  p.totalPieces = p.totalUnits;
+  if (p.totalNetWeight > 0) {
+    p.ce = p.totalPrice / p.totalNetWeight;
+    p.ceTruncated = Math.floor(p.ce * 100) / 100;
+    p.customsValue = p.ceTruncated * p.totalNetWeight;
+    p.customsEquivalent = p.ce;
+  } else {
+    p.ce = 0;
+    p.ceTruncated = 0;
+    p.customsValue = 0;
+    p.customsEquivalent = 0;
+  }
+  return p;
+}
+
+async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductSummary[]> {
+  // Fetch released (non-held) pallets
+  const { data: loadPallets, error } = await supabase
+    .from("load_pallets")
+    .select(`
+      id, destination, quantity, release_number, is_on_hold,
+      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces)
+    `)
+    .eq("load_id", loadId)
+    .eq("is_on_hold", false);
+
+  if (error) throw error;
+  const pallets = (loadPallets || []) as unknown as LoadPalletRow[];
+
+  // Collect unique customer_lots and pt_codes
+  const customerLots = new Set<string>();
+  const ptCodes = new Set<string>();
+  pallets.forEach(p => {
+    if (p.pallet.customer_lot) customerLots.add(p.pallet.customer_lot);
+    ptCodes.add(p.pallet.pt_code);
+  });
+
+  // Fetch PO info (sales_order_number, price_per_thousand)
+  const poMap = new Map<string, { sales_order_number: string | null; price_per_thousand: number }>();
+  if (customerLots.size > 0) {
+    const { data: pos } = await supabase
+      .from("purchase_orders")
+      .select("po_number, sales_order_number, price_per_thousand")
+      .in("po_number", Array.from(customerLots));
+    (pos || []).forEach((po: any) => {
+      poMap.set(po.po_number, {
+        sales_order_number: po.sales_order_number || null,
+        price_per_thousand: po.price_per_thousand || 0,
+      });
+    });
+  }
+
+  // Fetch product info (bfx_spec_url, pieces_per_pallet, piezas_por_paquete, paquete_por_caja)
+  const productMap = new Map<string, { bfx_spec_url: string | null; pieces_per_pallet: number | null; piezas_por_paquete: number | null; paquete_por_caja: number | null }>();
+  if (ptCodes.size > 0) {
+    const ptArr = Array.from(ptCodes);
+    const { data: products } = await supabase
+      .from("products")
+      .select("codigo_producto, pt_code, bfx_spec_url, pieces_per_pallet, piezas_por_paquete, paquete_por_caja")
+      .or(ptArr.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
+    (products || []).forEach((p: any) => {
+      const key = p.codigo_producto || p.pt_code;
+      if (key) productMap.set(key, {
+        bfx_spec_url: p.bfx_spec_url || null,
+        pieces_per_pallet: p.pieces_per_pallet || null,
+        piezas_por_paquete: p.piezas_por_paquete || null,
+        paquete_por_caja: p.paquete_por_caja || null,
+      });
+    });
+  }
+
+  // Group by description + destination
   const grouped = new Map<string, CustomsProductSummary>();
 
-  pallets.forEach((pallet) => {
-    const key = `${pallet.description}__${pallet.destination || "tbd"}`;
-    const order = pallet.customer_lot ? orderInfo.get(pallet.customer_lot) : null;
+  pallets.forEach(lp => {
+    const dest = lp.destination || "TBD";
+    const key = `${lp.pallet.description}__${dest}`;
+    const poInfo = lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null;
+    const prodInfo = productMap.get(lp.pallet.pt_code);
+    const pricePerThousand = poInfo?.price_per_thousand || 0;
+    const piecesPerPallet = prodInfo?.pieces_per_pallet || 50000;
+    const piecesPerPackage = prodInfo?.piezas_por_paquete || 1000;
+    const packagesPerBox = prodInfo?.paquete_por_caja || 50;
 
     if (!grouped.has(key)) {
-      const pricePerThousand = order?.price_per_thousand || 0;
-      const piecesPerPallet = order?.pieces_per_pallet || 50000;
-      const piecesPerPackage = order?.piezas_por_paquete || 1000;
-
       grouped.set(key, {
-        description: pallet.description,
-        destination: pallet.destination || "TBD",
-        pallets: [],
+        description: lp.pallet.description,
+        destination: dest,
+        salesOrder: poInfo?.sales_order_number || null,
+        poNumber: lp.pallet.customer_lot || null,
+        releaseNumber: lp.release_number || null,
+        bfxSpecUrl: prodInfo?.bfx_spec_url || null,
         totalPallets: 0,
+        totalUnits: 0,
         totalGrossWeight: 0,
         totalNetWeight: 0,
-        sapNumber: order?.sales_order_number || null,
-        poNumber: pallet.customer_lot,
+        pricePerThousand,
+        totalPrice: 0,
+        ce: 0,
+        ceTruncated: 0,
+        customsValue: 0,
+        unit: lp.pallet.unit,
+        // Legacy
+        sapNumber: poInfo?.sales_order_number || null,
         piecesPerPallet: piecesPerPackage,
-        palletsPerBox: Math.floor(piecesPerPallet / piecesPerPackage) || 50,
+        palletsPerBox: packagesPerBox,
         totalPiecesPerPallet: piecesPerPallet,
         totalBoxesOrRolls: 0,
         totalPieces: 0,
         pricePerPiece: pricePerThousand / 1000,
-        pricePerThousand,
-        totalPrice: 0,
         customsEquivalent: 0,
-        customsValue: 0,
-        unit: pallet.unit,
       });
     }
 
     const group = grouped.get(key)!;
-    const isPartialPallet = (pallet.pieces || 0) < 50;
-    const palletNumber = isPartialPallet
-      ? `${pallet.pieces || 0} ${pallet.unit === "bags" ? "bxs" : "rolls"}`
-      : group.pallets.length + 1;
+    const isPartialPallet = (lp.pallet.pieces || 0) < 50;
 
-    group.pallets.push({
-      palletNumber,
-      grossWeight: pallet.gross_weight || 0,
-      netWeight: pallet.net_weight || 0,
-    });
-
-    group.totalPallets = group.pallets.filter((p) => typeof p.palletNumber === "number").length;
-    group.totalGrossWeight += pallet.gross_weight || 0;
-    group.totalNetWeight += pallet.net_weight || 0;
-    group.totalPieces += pallet.quantity;
+    group.totalPallets += isPartialPallet ? 0 : 1;
+    group.totalUnits += lp.quantity;
+    group.totalGrossWeight += lp.pallet.gross_weight || 0;
+    group.totalNetWeight += lp.pallet.net_weight || 0;
 
     if (!isPartialPallet) {
-      group.totalBoxesOrRolls += group.palletsPerBox;
+      group.totalBoxesOrRolls += packagesPerBox;
     } else {
-      group.totalBoxesOrRolls += pallet.pieces || 0;
+      group.totalBoxesOrRolls += lp.pallet.pieces || 0;
+    }
+
+    // Keep first non-null release number
+    if (!group.releaseNumber && lp.release_number) {
+      group.releaseNumber = lp.release_number;
     }
   });
 
-  // Calculate totals
-  grouped.forEach((product) => {
-    product.totalPrice = (product.totalPieces / 1000) * product.pricePerThousand;
-    if (product.totalNetWeight > 0) {
-      product.customsEquivalent = product.totalPrice / product.totalNetWeight;
-      product.customsValue =
-        (Math.floor(product.customsEquivalent * 100) / 100) * product.totalNetWeight;
-    }
+  // Calculate derived fields
+  const results: CustomsProductSummary[] = [];
+  grouped.forEach(product => {
+    recalcDerived(product);
+    results.push(product);
   });
 
-  return Array.from(grouped.values());
+  return results;
 }
 
 export function CustomsReviewDialog({
@@ -160,8 +233,6 @@ export function CustomsReviewDialog({
   loadId,
   loadNumber,
   shippingDate,
-  pallets,
-  orderInfo,
   existingData,
   validationId,
   userId,
@@ -170,20 +241,30 @@ export function CustomsReviewDialog({
 }: CustomsReviewDialogProps) {
   const [products, setProducts] = useState<CustomsProductSummary[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (open) {
-      if (existingData && existingData.length > 0) {
-        setProducts(existingData);
-      } else {
-        setProducts(buildProductSummaries(pallets, orderInfo));
-      }
-      setEditingIndex(null);
-    }
-  }, [open, existingData, pallets, orderInfo]);
+    if (!open) return;
+    setEditingIndex(null);
 
-  const totalPalletCount = pallets.length;
+    if (existingData && existingData.length > 0) {
+      setProducts(existingData);
+      return;
+    }
+
+    // Build from released pallets
+    setLoadingData(true);
+    buildFromReleasedPallets(loadId)
+      .then(data => setProducts(data))
+      .catch(err => {
+        console.error("Error building product summaries:", err);
+        toast.error("Error loading released pallet data");
+      })
+      .finally(() => setLoadingData(false));
+  }, [open, existingData, loadId]);
+
+  const totalPalletCount = products.reduce((s, p) => s + p.totalPallets, 0);
   const totalProductValue = products.reduce((s, p) => s + p.totalPrice, 0);
   const freightCost =
     totalPalletCount < FULL_LOAD_PALLETS
@@ -193,18 +274,10 @@ export function CustomsReviewDialog({
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
 
   const updateProduct = (index: number, field: keyof CustomsProductSummary, value: any) => {
-    setProducts((prev) => {
+    setProducts(prev => {
       const updated = [...prev];
       const p = { ...updated[index], [field]: value };
-
-      // Recalculate derived fields
-      p.pricePerPiece = p.pricePerThousand / 1000;
-      p.totalPrice = (p.totalPieces / 1000) * p.pricePerThousand;
-      if (p.totalNetWeight > 0) {
-        p.customsEquivalent = p.totalPrice / p.totalNetWeight;
-        p.customsValue =
-          (Math.floor(p.customsEquivalent * 100) / 100) * p.totalNetWeight;
-      }
+      recalcDerived(p);
       updated[index] = p;
       return updated;
     });
@@ -214,7 +287,6 @@ export function CustomsReviewDialog({
     setSaving(true);
     try {
       if (validationId) {
-        // Update existing validation
         const { error } = await supabase
           .from("load_billing_validations")
           .update({
@@ -226,7 +298,6 @@ export function CustomsReviewDialog({
           .eq("id", validationId);
         if (error) throw error;
       } else {
-        // Create new validation with data
         const { error } = await supabase
           .from("load_billing_validations")
           .insert({
@@ -239,12 +310,12 @@ export function CustomsReviewDialog({
           });
         if (error) throw error;
       }
-      toast.success("Datos de facturación validados y guardados");
+      toast.success("Billing data validated and saved");
       onSaved();
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving validation:", error);
-      toast.error("Error al guardar la validación");
+      toast.error("Error saving validation");
     } finally {
       setSaving(false);
     }
@@ -257,218 +328,204 @@ export function CustomsReviewDialog({
       totalPalletCount,
       freightCost
     );
-    toast.success("PDF descargado");
+    toast.success("PDF downloaded");
   };
+
+  const fmt = (n: number, decimals = 2) =>
+    n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Revisión de Documento de Exportación — {loadNumber}
+          <DialogTitle>
+            Export Document Review — {loadNumber}
           </DialogTitle>
           <DialogDescription>
             {isReadOnly
-              ? "Los datos han sido validados. Puedes descargar el PDF."
-              : "Revisa y modifica los campos necesarios antes de aprobar."}
+              ? "Data has been validated. You can download the PDF."
+              : "Review and modify fields as needed before approving."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto pr-4 -mr-4">
-          <div className="space-y-6">
-            {products.map((product, idx) => (
-              <div key={idx} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-sm">{product.description}</h4>
-                    <Badge variant="outline" className="text-xs mt-1">
-                      {product.destination}
-                    </Badge>
+          {loadingData ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading released pallet data...</span>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {products.map((product, idx) => (
+                <div key={idx} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h4 className="font-semibold text-sm">{product.description}</h4>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-xs">
+                          {product.destination}
+                        </Badge>
+                        {product.releaseNumber && (
+                          <Badge variant="secondary" className="text-xs">
+                            Release: {product.releaseNumber}
+                          </Badge>
+                        )}
+                        {product.bfxSpecUrl && (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="p-0 h-auto text-xs"
+                            onClick={() => openStorageFile(product.bfxSpecUrl!, 'print-cards')}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            BFX Spec
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    {!isReadOnly && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingIndex(editingIndex === idx ? null : idx)}
+                      >
+                        {editingIndex === idx ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Pencil className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
-                  {!isReadOnly && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingIndex(editingIndex === idx ? null : idx)}
-                    >
-                      {editingIndex === idx ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Pencil className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <FieldRow
+                      label="Sales Order"
+                      value={product.salesOrder || "-"}
+                      editing={editingIndex === idx}
+                      onChange={v => updateProduct(idx, "salesOrder", v || null)}
+                    />
+                    <FieldRow
+                      label="Customer PO"
+                      value={product.poNumber || "-"}
+                      editing={editingIndex === idx}
+                      onChange={v => updateProduct(idx, "poNumber", v || null)}
+                    />
+                    <FieldRow
+                      label="Total Pallets"
+                      value={String(product.totalPallets)}
+                      editing={editingIndex === idx}
+                      type="number"
+                      onChange={v => updateProduct(idx, "totalPallets", Number(v))}
+                    />
+                    <FieldRow
+                      label="Total Units"
+                      value={product.totalUnits.toLocaleString()}
+                      editing={editingIndex === idx}
+                      type="number"
+                      onChange={v => updateProduct(idx, "totalUnits", Number(v))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <FieldRow
+                      label="Price / Thousand"
+                      value={fmt(product.pricePerThousand)}
+                      editing={editingIndex === idx}
+                      type="number"
+                      onChange={v => updateProduct(idx, "pricePerThousand", Number(v))}
+                    />
+                    <div>
+                      <span className="text-muted-foreground text-xs">Total Amount</span>
+                      <p className="font-medium">${fmt(product.totalPrice)}</p>
+                    </div>
+                    <FieldRow
+                      label="Gross Weight"
+                      value={fmt(product.totalGrossWeight)}
+                      editing={editingIndex === idx}
+                      type="number"
+                      onChange={v => updateProduct(idx, "totalGrossWeight", Number(v))}
+                    />
+                    <FieldRow
+                      label="Net Weight"
+                      value={fmt(product.totalNetWeight)}
+                      editing={editingIndex === idx}
+                      type="number"
+                      onChange={v => updateProduct(idx, "totalNetWeight", Number(v))}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground text-xs">CE (Amount / Net Weight)</span>
+                      <p className="font-medium">{product.ce.toFixed(6)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">CE Truncated (2 decimals)</span>
+                      <p className="font-medium">{product.ceTruncated.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Customs Value</span>
+                      <p className="font-semibold">${fmt(product.customsValue)}</p>
+                    </div>
+                  </div>
                 </div>
+              ))}
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  <FieldRow
-                    label="SAP"
-                    value={product.sapNumber || "-"}
-                    editing={editingIndex === idx}
-                    onChange={(v) => updateProduct(idx, "sapNumber", v || null)}
-                  />
-                  <FieldRow
-                    label="PO"
-                    value={product.poNumber || "-"}
-                    editing={editingIndex === idx}
-                    onChange={(v) => updateProduct(idx, "poNumber", v || null)}
-                  />
-                  <FieldRow
-                    label="Tarimas"
-                    value={String(product.totalPallets)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalPallets", Number(v))}
-                  />
-                  <FieldRow
-                    label="Pzas x caja"
-                    value={String(product.piecesPerPallet)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "piecesPerPallet", Number(v))}
-                  />
-                  <FieldRow
-                    label="Cajas x tarima"
-                    value={String(product.palletsPerBox)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "palletsPerBox", Number(v))}
-                  />
-                  <FieldRow
-                    label="Total pzas x tarima"
-                    value={String(product.totalPiecesPerPallet)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalPiecesPerPallet", Number(v))}
-                  />
-                  <FieldRow
-                    label={product.unit === "bags" ? "Total cajas" : "Total rollos"}
-                    value={String(product.totalBoxesOrRolls)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalBoxesOrRolls", Number(v))}
-                  />
-                  <FieldRow
-                    label="Total piezas"
-                    value={product.totalPieces.toLocaleString()}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalPieces", Number(v))}
-                  />
-                  <FieldRow
-                    label="Precio x millar"
-                    value={product.pricePerThousand.toFixed(2)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "pricePerThousand", Number(v))}
-                  />
-                </div>
-
-                <Separator />
-
+              {/* Load Summary */}
+              <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+                <h4 className="font-semibold text-sm">Load Summary</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  <FieldRow
-                    label="Peso Bruto"
-                    value={product.totalGrossWeight.toFixed(2)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalGrossWeight", Number(v))}
-                  />
-                  <FieldRow
-                    label="Peso Neto"
-                    value={product.totalNetWeight.toFixed(2)}
-                    editing={editingIndex === idx}
-                    type="number"
-                    onChange={(v) => updateProduct(idx, "totalNetWeight", Number(v))}
-                  />
                   <div>
-                    <span className="text-muted-foreground text-xs">Total $</span>
-                    <p className="font-medium">
-                      ${product.totalPrice.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+                    <span className="text-muted-foreground text-xs">Total Pallets</span>
+                    <p className="font-medium">{totalPalletCount}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-xs">Valor Aduana</span>
-                    <p className="font-medium">
-                      ${product.customsValue.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
+                    <span className="text-muted-foreground text-xs">Product Value</span>
+                    <p className="font-medium">${fmt(totalProductValue)}</p>
                   </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Summary */}
-            <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
-              <h4 className="font-semibold text-sm">Resumen General</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground text-xs">Total Tarimas</span>
-                  <p className="font-medium">{totalPalletCount}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">$ Producto</span>
-                  <p className="font-medium">
-                    ${totalProductValue.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Flete</span>
-                  <p className="font-medium">
-                    ${freightCost.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Total</span>
-                  <p className="font-semibold">
-                    ${(totalProductValue + freightCost).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Peso Bruto Total</span>
-                  <p className="font-medium">{totalGrossWeight.toFixed(2)} kg</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground text-xs">Peso Neto Total</span>
-                  <p className="font-medium">{totalNetWeight.toFixed(2)} kg</p>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Freight</span>
+                    <p className="font-medium">${fmt(freightCost)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Grand Total</span>
+                    <p className="font-semibold">${fmt(totalProductValue + freightCost)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Total Gross Weight</span>
+                    <p className="font-medium">{fmt(totalGrossWeight)} kg</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Total Net Weight</span>
+                    <p className="font-medium">{fmt(totalNetWeight)} kg</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
           {existingData && existingData.length > 0 && (
             <Button variant="outline" onClick={handleDownloadPDF}>
               <FileDown className="mr-2 h-4 w-4" />
-              Descargar PDF
+              Download PDF
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            Cancel
           </Button>
           {!isReadOnly && (
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || loadingData}>
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Validar y Guardar
+              Validate & Save
             </Button>
           )}
         </DialogFooter>
@@ -498,7 +555,7 @@ function FieldRow({
           className="h-8 text-sm mt-0.5"
           type={type}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={e => onChange(e.target.value)}
         />
       </div>
     );

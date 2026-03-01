@@ -2469,36 +2469,6 @@ export default function LoadDetail() {
             isAdmin={isAdmin}
             isBillingTeam={isBillingTeam}
             userId={user.id}
-            pallets={pallets.filter(p => !p.is_on_hold).map(p => ({
-              pt_code: p.pallet.pt_code,
-              description: p.pallet.description,
-              destination: p.destination,
-              quantity: p.quantity,
-              gross_weight: p.pallet.gross_weight,
-              net_weight: p.pallet.net_weight,
-              pieces: p.pallet.pieces,
-              unit: p.pallet.unit,
-              customer_lot: p.pallet.customer_lot,
-              bfx_order: p.pallet.bfx_order,
-            }))}
-            orderInfo={(() => {
-              const map = new Map();
-              pallets.forEach(p => {
-                const lot = p.pallet.customer_lot;
-                if (lot && !map.has(lot)) {
-                  const price = poPriceMap.get(lot);
-                  const salesInfo = poSalesOrderMap.get(lot);
-                  map.set(lot, {
-                    customer_lot: lot,
-                    sales_order_number: salesInfo?.sales_order_number || null,
-                    price_per_thousand: price || null,
-                    pieces_per_pallet: productsMap.get(p.pallet.pt_code)?.pieces_per_pallet || null,
-                    piezas_por_paquete: null,
-                  });
-                }
-              });
-              return map;
-            })()}
             loadNumber={load.load_number}
             shippingDate={load.shipping_date}
             onValidationChange={fetchBillingValidationStatus}
