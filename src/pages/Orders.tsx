@@ -151,7 +151,7 @@ export default function Orders() {
   const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
   // View mode toggle
-  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">("list");
+  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">(isAdmin ? "board" : "list");
 
   const fetchOrders = async () => {
     if (!user) return;
