@@ -1085,6 +1085,20 @@ export default function OrderDetail() {
             onSaved={fetchOrderDetails}
           />
         )}
+        {/* Accept Order Dialog */}
+        {isAdmin && order && (
+          <AcceptOrderDialog
+            open={acceptDialogOpen}
+            onOpenChange={setAcceptDialogOpen}
+            order={{
+              id: order.id,
+              po_number: order.po_number,
+              is_hot_order: order.is_hot_order,
+              product_name: order.product?.name || null,
+            }}
+            onAccepted={fetchOrderDetails}
+          />
+        )}
       </div>
     </MainLayout>
   );
