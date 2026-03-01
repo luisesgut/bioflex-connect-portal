@@ -1734,19 +1734,6 @@ export default function LoadDetail() {
       setInTransitConfirmOpen(false);
       return;
     }
-    // Update ship date first, then proceed with status change
-    if (inTransitShipDate && id) {
-      const { error: shipDateError } = await supabase
-        .from("shipping_loads")
-        .update({ shipping_date: format(inTransitShipDate, "yyyy-MM-dd") })
-        .eq("id", id);
-      
-      if (shipDateError) {
-        console.error("Error updating ship date:", shipDateError);
-        toast.error("Error updating ship date");
-        return;
-      }
-    }
     setInTransitConfirmOpen(false);
     await handleUpdateLoadStatus("in_transit");
   };
