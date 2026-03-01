@@ -98,6 +98,29 @@ import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualP
 import { LinkVirtualPalletDialog } from "@/components/inventory/LinkVirtualPalletDialog";
 import { BillingValidationCard } from "@/components/shipping/BillingValidationCard";
 
+const formatCurrency = (v: string) => {
+  const n = Number(v);
+  if (!v || isNaN(n)) return "";
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+function CurrencyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <Input
+      className="h-8 text-sm text-right w-36 ml-auto font-mono"
+      placeholder="$0.00"
+      value={editing ? value : formatCurrency(value)}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/[^0-9.]/g, "");
+        onChange(raw);
+      }}
+    />
+  );
+}
+
 interface InventoryFilters {
   fecha: string[];
   pt_code: string[];
