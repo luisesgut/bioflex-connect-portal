@@ -480,6 +480,15 @@ export default function OrderDetail() {
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
+              {(order.status === "pending" || order.status === "submitted") && (
+                <Button
+                  variant="default"
+                  onClick={() => setAcceptDialogOpen(true)}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Accept PO
+                </Button>
+              )}
               {order.status !== "closed" && (
                 <Button
                   variant="outline"
