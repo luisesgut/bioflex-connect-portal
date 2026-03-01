@@ -511,7 +511,7 @@ export function CustomsReviewDialog({
               ))}
 
               {/* Load Summary */}
-              <div className="border rounded-lg p-4 space-y-2 bg-muted/30">
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
                 <h4 className="font-semibold text-sm">Load Summary</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
@@ -523,12 +523,18 @@ export function CustomsReviewDialog({
                     <p className="font-medium">${fmt(totalProductValue)}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-xs">Freight</span>
-                    <p className="font-medium">${fmt(freightCost)}</p>
+                    <Label className="text-xs text-muted-foreground">Freight (USD)</Label>
+                    <Input
+                      className="h-8 text-sm mt-0.5 w-32"
+                      type="number"
+                      value={freightCostInput}
+                      onChange={e => setFreightCostInput(Number(e.target.value))}
+                      disabled={isReadOnly}
+                    />
                   </div>
                   <div>
-                    <span className="text-muted-foreground text-xs">Grand Total</span>
-                    <p className="font-semibold">${fmt(totalProductValue + freightCost)}</p>
+                    <span className="text-muted-foreground text-xs">Grand Total (USD)</span>
+                    <p className="font-semibold">${fmt(grandTotalUSD)}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs">Total Gross Weight</span>
@@ -537,6 +543,21 @@ export function CustomsReviewDialog({
                   <div>
                     <span className="text-muted-foreground text-xs">Total Net Weight</span>
                     <p className="font-medium">{fmt(totalNetWeight)} kg</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Exchange Rate (MXN/USD)</Label>
+                    <Input
+                      className="h-8 text-sm mt-0.5 w-32"
+                      type="number"
+                      step="0.01"
+                      value={exchangeRate}
+                      onChange={e => setExchangeRate(Number(e.target.value))}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground text-xs">Grand Total (MXN)</span>
+                    <p className="font-semibold text-primary">${fmt(grandTotalMXN)}</p>
                   </div>
                 </div>
               </div>
