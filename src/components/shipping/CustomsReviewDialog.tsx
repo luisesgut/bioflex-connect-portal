@@ -303,7 +303,8 @@ export function CustomsReviewDialog({
 
   const totalPalletCount = products.reduce((s, p) => s + p.totalPallets, 0);
   const totalProductValue = products.reduce((s, p) => s + p.totalPrice, 0);
-  const freightCost = freightCostInput;
+  const freightCost = Number(freightCostInput) || 0;
+  const exchangeRate = Number(exchangeRateInput) || 0;
   const totalGrossWeight = products.reduce((s, p) => s + p.totalGrossWeight, 0);
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
   const grandTotalUSD = totalProductValue + freightCost;
