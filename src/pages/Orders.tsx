@@ -368,7 +368,11 @@ export default function Orders() {
 
     const formattedOrders = (ordersData || []).map((order: any) => {
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
-      const produced = stats.inFloor + stats.shipped;
+      const hasSalesOrder = Boolean(order.sales_order_number && order.sales_order_number.trim() !== "" && order.po_number);
+      // When SAP verification will run, use 0 as placeholder — SAP is the source of truth
+      const effectiveInFloor = hasSalesOrder ? 0 : stats.inFloor;
+      const effectiveShipped = hasSalesOrder ? 0 : stats.shipped;
+      const produced = effectiveInFloor + effectiveShipped;
       const pending = Math.max(0, order.quantity - produced);
       const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
@@ -401,15 +405,15 @@ export default function Orders() {
         sales_order_number: order.sales_order_number,
         accepted_at: order.accepted_at || null,
         inventoryStats: {
-          inFloor: stats.inFloor,
-          shipped: stats.shipped,
+          inFloor: effectiveInFloor,
+          shipped: effectiveShipped,
           pending,
           percentProduced,
           loadDetails,
           shippedLoadDetails,
           excessStock,
           sapStockAvailable: null,
-          sapVerificationLoading: Boolean(order.sales_order_number && order.sales_order_number.trim() !== "" && order.po_number),
+          sapVerificationLoading: hasSalesOrder,
         },
       };
     });
