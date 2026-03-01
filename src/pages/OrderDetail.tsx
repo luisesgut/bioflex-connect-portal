@@ -667,17 +667,19 @@ export default function OrderDetail() {
                   </div>
                 </div>
 
-                {!isAdmin && order.status !== "closed" && (
+                {!isAdmin && order.status !== "closed" && !order.is_hot_order && (
                   <div className="mt-4">
                     <Button
-                      variant={order.is_hot_order ? "outline" : "destructive"}
+                      variant="destructive"
                       size="sm"
                       onClick={handleToggleHotOrder}
                       disabled={togglingHot}
                       className="gap-1"
                     >
                       {togglingHot ? <Loader2 className="h-3 w-3 animate-spin" /> : <Flame className="h-3 w-3" />}
-                      {order.is_hot_order ? "Remove Hot Order" : "Mark as Hot Order"}
+                      {order.status !== "pending" && order.status !== "submitted"
+                        ? "Request Hot Order"
+                        : "Mark as Hot Order"}
                     </Button>
                   </div>
                 )}
