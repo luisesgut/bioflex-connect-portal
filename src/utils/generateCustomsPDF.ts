@@ -9,6 +9,7 @@ interface PalletDetail {
   palletIndex: number;
   grossWeight: number;
   netWeight: number;
+  pieces: number;
 }
 
 interface ProductSummary {
