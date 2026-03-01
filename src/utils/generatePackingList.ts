@@ -239,7 +239,7 @@ export async function generatePackingList({
     xPos = tableLeft;
     const vals = [
       product.poNumber,
-      product.lotNumber,
+      product.releaseNumber,
       product.itemNumber,
       product.description,
       product.quantity.toLocaleString(),
