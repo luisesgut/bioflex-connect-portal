@@ -18,6 +18,7 @@ import { ResizableTableHeader } from "@/components/orders/ResizableTableHeader";
 import { differenceInHours } from "date-fns";
 import { ProductionTimeline } from "@/components/orders/ProductionTimeline";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import { OrdersCanvas } from "@/components/orders/OrdersCanvas";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
