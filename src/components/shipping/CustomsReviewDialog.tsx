@@ -449,7 +449,8 @@ export function CustomsReviewDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+          </div>
+        </div>
 
         <DialogFooter className="gap-2">
           {existingData && existingData.length > 0 && (
