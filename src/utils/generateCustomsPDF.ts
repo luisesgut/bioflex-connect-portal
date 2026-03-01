@@ -183,7 +183,9 @@ export function generateCustomsPDF(
     ["Total Tarimas", String(totalPallets)],
     ["$ Producto", `$${fmt(totalProductValue)}`],
     ["Flete", `$${fmt(freightCost)}`],
-    ["Total", `$${fmt(totalProductValue + freightCost)}`],
+    ["Total (USD)", `$${fmt(totalProductValue + freightCost)}`],
+    ["Tipo de Cambio", fmt(exchangeRate, 4)],
+    ["Total (MXN)", `$${fmt((totalProductValue + freightCost) * exchangeRate)}`],
     ["Peso Bruto Total", `${fmt(totalGross)} kg`],
     ["Peso Neto Total", `${fmt(totalNet)} kg`],
   ];

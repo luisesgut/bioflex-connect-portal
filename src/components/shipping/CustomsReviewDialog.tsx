@@ -362,7 +362,8 @@ export function CustomsReviewDialog({
       { loadNumber, shippingDate },
       products,
       totalPalletCount,
-      freightCost
+      freightCost,
+      exchangeRate
     );
     toast.success("PDF downloaded");
   };
