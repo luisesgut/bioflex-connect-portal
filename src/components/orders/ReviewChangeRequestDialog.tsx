@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, ArrowRight, Clock } from "lucide-react";
+import { Loader2, ArrowRight, Clock, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
