@@ -1800,7 +1800,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       change_request_status: "pending" | "approved" | "rejected"
-      change_request_type: "volume_change" | "cancellation" | "do_not_delay"
+      change_request_type:
+        | "volume_change"
+        | "cancellation"
+        | "do_not_delay"
+        | "hot_order"
       customer_location:
         | "salinas"
         | "bakersfield"
@@ -1980,7 +1984,12 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       change_request_status: ["pending", "approved", "rejected"],
-      change_request_type: ["volume_change", "cancellation", "do_not_delay"],
+      change_request_type: [
+        "volume_change",
+        "cancellation",
+        "do_not_delay",
+        "hot_order",
+      ],
       customer_location: ["salinas", "bakersfield", "coachella", "yuma", "tbd"],
       engineering_review_status: [
         "pending",
