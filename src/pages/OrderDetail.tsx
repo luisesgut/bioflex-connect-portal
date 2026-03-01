@@ -134,6 +134,7 @@ export default function OrderDetail() {
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [togglingHot, setTogglingHot] = useState(false);
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [savingDeliveryDate, setSavingDeliveryDate] = useState(false);
