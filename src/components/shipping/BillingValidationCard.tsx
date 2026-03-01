@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, Clock, FileDown, FileCheck, Eye, Undo2 } from "lucide-react";
 import { format } from "date-fns";
-import { CustomsReviewDialog, type CustomsProductSummary } from "./CustomsReviewDialog";
+import { CustomsReviewDialog } from "./CustomsReviewDialog";
 
 interface BillingValidation {
   id: string;
@@ -30,35 +30,12 @@ interface BillingValidation {
   validated_data: any;
 }
 
-interface PalletData {
-  pt_code: string;
-  description: string;
-  destination: string | null;
-  quantity: number;
-  gross_weight: number | null;
-  net_weight: number | null;
-  pieces: number | null;
-  unit: string;
-  customer_lot: string | null;
-  bfx_order: string | null;
-}
-
-interface OrderInfo {
-  customer_lot: string;
-  sales_order_number: string | null;
-  price_per_thousand: number | null;
-  pieces_per_pallet: number | null;
-  piezas_por_paquete: number | null;
-}
-
 interface BillingValidationCardProps {
   loadId: string;
   loadStatus: string;
   isAdmin: boolean;
   isBillingTeam: boolean;
   userId: string;
-  pallets: PalletData[];
-  orderInfo: Map<string, OrderInfo>;
   loadNumber: string;
   shippingDate: string;
   onValidationChange: () => void;
@@ -70,8 +47,6 @@ export function BillingValidationCard({
   isAdmin,
   isBillingTeam,
   userId,
-  pallets,
-  orderInfo,
   loadNumber,
   shippingDate,
   onValidationChange,
@@ -82,7 +57,6 @@ export function BillingValidationCard({
   const [undoDialogOpen, setUndoDialogOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [reviewerName, setReviewerName] = useState<string | null>(null);
-  const [submitterName, setSubmitterName] = useState<string | null>(null);
 
   const fetchValidation = useCallback(async () => {
     try {
@@ -95,7 +69,7 @@ export function BillingValidationCard({
       if (error) throw error;
       setValidation(data);
 
-      const userIds = [data?.submitted_by, data?.reviewed_by].filter(Boolean) as string[];
+      const userIds = [data?.reviewed_by].filter(Boolean) as string[];
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -103,7 +77,6 @@ export function BillingValidationCard({
           .in("user_id", userIds);
 
         (profiles || []).forEach((p: any) => {
-          if (p.user_id === data?.submitted_by) setSubmitterName(p.full_name);
           if (p.user_id === data?.reviewed_by) setReviewerName(p.full_name);
         });
       }
@@ -128,13 +101,13 @@ export function BillingValidationCard({
         .eq("id", validation.id);
 
       if (error) throw error;
-      toast.success("Validación de facturación deshecha");
+      toast.success("Billing validation undone");
       setValidation(null);
       setUndoDialogOpen(false);
       onValidationChange();
     } catch (error) {
       console.error("Error undoing validation:", error);
-      toast.error("Error al deshacer la validación");
+      toast.error("Error undoing validation");
     } finally {
       setUndoing(false);
     }
@@ -151,15 +124,10 @@ export function BillingValidationCard({
   if (!showCard || loading) return null;
 
   const statusConfig: Record<string, { icon: any; label: string; color: string }> = {
-    pending: { icon: Clock, label: "Pendiente", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-    approved: { icon: CheckCircle, label: "Aprobado", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-    rejected: { icon: XCircle, label: "Rechazado", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+    pending: { icon: Clock, label: "Pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+    approved: { icon: CheckCircle, label: "Approved", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+    rejected: { icon: XCircle, label: "Rejected", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
   };
-
-  const existingData: CustomsProductSummary[] | null =
-    validation?.validated_data
-      ? (validation.validated_data as CustomsProductSummary[])
-      : null;
 
   const isApproved = validation?.status === "approved";
 
@@ -169,7 +137,7 @@ export function BillingValidationCard({
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <FileCheck className="h-4 w-4" />
-            Validación de Facturación
+            Billing Validation
           </CardTitle>
           {validation && (
             <Badge className={statusConfig[validation.status]?.color} variant="secondary">
@@ -181,11 +149,11 @@ export function BillingValidationCard({
           {!validation ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Revisa el desglose del documento de exportación y valida los datos antes de marcar como In Transit.
+                Review the export document breakdown and validate the data before marking as In Transit.
               </p>
               <Button size="sm" onClick={() => setReviewDialogOpen(true)}>
                 <Eye className="mr-2 h-4 w-4" />
-                Revisar y Validar
+                Review & Validate
               </Button>
             </div>
           ) : (
@@ -193,9 +161,9 @@ export function BillingValidationCard({
               <div className="text-sm space-y-1">
                 {validation.reviewed_at && (
                   <p className="text-muted-foreground">
-                    {validation.status === "approved" ? "Aprobado" : "Revisado"} por{" "}
+                    {validation.status === "approved" ? "Approved" : "Reviewed"} by{" "}
                     <span className="font-medium text-foreground">{reviewerName || "..."}</span>
-                    {" "}el {format(new Date(validation.reviewed_at), "d MMM yyyy 'a las' h:mm a")}
+                    {" "}on {format(new Date(validation.reviewed_at), "MMM d, yyyy 'at' h:mm a")}
                   </p>
                 )}
               </div>
@@ -207,24 +175,20 @@ export function BillingValidationCard({
                   onClick={() => setReviewDialogOpen(true)}
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  {isApproved ? "Ver Desglose" : "Revisar"}
+                  {isApproved ? "View Breakdown" : "Review"}
                 </Button>
 
-                {isApproved && existingData && (
+                {isApproved && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      // Trigger PDF download directly from the dialog
-                      setReviewDialogOpen(true);
-                    }}
+                    onClick={() => setReviewDialogOpen(true)}
                   >
                     <FileDown className="mr-2 h-4 w-4" />
-                    Descargar PDF
+                    Download PDF
                   </Button>
                 )}
 
-                {/* Undo validation - available for admins and billing team */}
                 {(isAdmin || isBillingTeam) && validation && (
                   <Button
                     variant="ghost"
@@ -233,7 +197,7 @@ export function BillingValidationCard({
                     onClick={() => setUndoDialogOpen(true)}
                   >
                     <Undo2 className="mr-2 h-4 w-4" />
-                    Deshacer
+                    Undo
                   </Button>
                 )}
               </div>
@@ -242,36 +206,32 @@ export function BillingValidationCard({
         </CardContent>
       </Card>
 
-      {/* Customs Review Dialog */}
       <CustomsReviewDialog
         open={reviewDialogOpen}
         onOpenChange={setReviewDialogOpen}
         loadId={loadId}
         loadNumber={loadNumber}
         shippingDate={shippingDate}
-        pallets={pallets}
-        orderInfo={orderInfo}
-        existingData={existingData}
+        existingData={validation?.validated_data || null}
         validationId={validation?.id || null}
         userId={userId}
         isReadOnly={isApproved}
         onSaved={handleSaved}
       />
 
-      {/* Undo Confirmation */}
       <AlertDialog open={undoDialogOpen} onOpenChange={setUndoDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Deshacer validación de facturación?</AlertDialogTitle>
+            <AlertDialogTitle>Undo Billing Validation?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esto eliminará la validación y los datos editados. Podrás volver a crear una nueva validación después.
+              This will delete the validation and any edited data. You can create a new validation afterwards.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleUndo} disabled={undoing}>
               {undoing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Deshacer
+              Undo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
