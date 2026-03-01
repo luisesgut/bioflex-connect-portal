@@ -389,6 +389,7 @@ export default function Orders() {
         product_pt_code: productPtCode,
         product_customer: order.products?.customer || null,
         product_item_type: order.products?.item_type || null,
+        product_tipo_empaque: order.products?.tipo_empaque || null,
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         product_customer_item: order.products?.customer_item || null,
         product_item_description: order.products?.item_description || null,
