@@ -45,7 +45,8 @@ export function generateCustomsPDF(
   loadInfo: LoadInfo,
   products: ProductSummary[],
   totalPallets: number,
-  freightCost: number
+  freightCost: number,
+  exchangeRate: number = 17.5
 ): void {
   const doc = new jsPDF();
   let y = MARGIN;
