@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
-import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock } from "lucide-react";
+import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CanvasOrder {
@@ -23,6 +23,7 @@ interface CanvasOrder {
     inFloor: number;
     shipped: number;
     pending: number;
+    sapVerificationLoading?: boolean;
   };
 }
 
@@ -115,9 +116,11 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
           // Summary calculations
           const totalVolume = familyOrders.reduce((sum, o) => sum + o.quantity, 0);
           const totalAmount = familyOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
-          const totalShipped = familyOrders.reduce((sum, o) => sum + o.inventoryStats.shipped, 0);
-          const totalInWarehouse = familyOrders.reduce((sum, o) => sum + o.inventoryStats.inFloor, 0);
-          const totalPending = familyOrders.reduce((sum, o) => sum + o.inventoryStats.pending, 0);
+          const verifiedOrders = familyOrders.filter(o => !o.inventoryStats.sapVerificationLoading);
+          const anyLoading = familyOrders.some(o => o.inventoryStats.sapVerificationLoading);
+          const totalShipped = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.shipped, 0);
+          const totalInWarehouse = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.inFloor, 0);
+          const totalPending = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.pending, 0);
 
           return (
             <div key={family} className="flex-shrink-0 w-80">
@@ -148,15 +151,15 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Truck className="h-3 w-3" />
-                      <span>Shipped: <strong className="text-foreground">{formatNumber(totalShipped)}</strong></span>
+                      <span>Shipped: <strong className="text-foreground">{formatNumber(totalShipped)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Package className="h-3 w-3" />
-                      <span>In WH: <strong className="text-foreground">{formatNumber(totalInWarehouse)}</strong></span>
+                      <span>In WH: <strong className="text-foreground">{formatNumber(totalInWarehouse)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground col-span-2">
                       <Clock className="h-3 w-3" />
-                      <span>Pending: <strong className="text-foreground">{formatNumber(totalPending)}</strong></span>
+                      <span>Pending: <strong className="text-foreground">{formatNumber(totalPending)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                   </div>
                 </div>
@@ -222,25 +225,34 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
                               </div>
                               {/* Mini progress bar */}
                               <div className="mt-2">
-                                <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
-                                  <span>Shipped {formatNumber(order.inventoryStats.shipped)}</span>
-                                  <span>WH {formatNumber(order.inventoryStats.inFloor)}</span>
-                                  <span>Pend {formatNumber(order.inventoryStats.pending)}</span>
-                                </div>
-                                <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
-                                  {order.quantity > 0 && (
-                                    <>
-                                      <div
-                                        className="bg-success h-full"
-                                        style={{ width: `${(order.inventoryStats.shipped / order.quantity) * 100}%` }}
-                                      />
-                                      <div
-                                        className="bg-info h-full"
-                                        style={{ width: `${(order.inventoryStats.inFloor / order.quantity) * 100}%` }}
-                                      />
-                                    </>
-                                  )}
-                                </div>
+                                {order.inventoryStats.sapVerificationLoading ? (
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span>Verifying with SAP...</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                                      <span>Shipped {formatNumber(order.inventoryStats.shipped)}</span>
+                                      <span>WH {formatNumber(order.inventoryStats.inFloor)}</span>
+                                      <span>Pend {formatNumber(order.inventoryStats.pending)}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
+                                      {order.quantity > 0 && (
+                                        <>
+                                          <div
+                                            className="bg-success h-full"
+                                            style={{ width: `${(order.inventoryStats.shipped / order.quantity) * 100}%` }}
+                                          />
+                                          <div
+                                            className="bg-info h-full"
+                                            style={{ width: `${(order.inventoryStats.inFloor / order.quantity) * 100}%` }}
+                                          />
+                                        </>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </CardContent>
                           </Card>

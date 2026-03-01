@@ -230,33 +230,25 @@ export default function Orders() {
 
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
-        .select("id, bfx_order, quantity, traceability")
+        .select("id, bfx_order, quantity")
         .in("bfx_order", salesOrderNumbers);
 
       if (!shippedError && shippedData) {
-        // Deduplicate by traceability+bfx_order to avoid counting duplicate records
-        const seenTraceability: Record<string, Set<string>> = {};
         shippedData.forEach((pallet: any) => {
           const salesOrder = pallet.bfx_order;
           if (!salesOrder) return;
           const poNum = salesOrderToPO[salesOrder];
           if (!poNum) return;
-          // Deduplicate by traceability within the same PO
-          const traceKey = pallet.traceability || pallet.id;
-          if (!seenTraceability[poNum]) {
-            seenTraceability[poNum] = new Set();
-          }
-          if (seenTraceability[poNum].has(traceKey)) return;
-          seenTraceability[poNum].add(traceKey);
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
           if (!shippedPalletIds[poNum]) {
             shippedPalletIds[poNum] = new Set();
           }
-          shippedPalletIds[poNum].add(pallet.id);
-          inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          if (!shippedPalletIds[poNum].has(pallet.id)) {
+            shippedPalletIds[poNum].add(pallet.id);
+            inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          }
         });
       }
     }
@@ -322,7 +314,6 @@ export default function Orders() {
           id,
           customer_lot,
           quantity,
-          traceability,
           load_id,
           delivery_date,
           shipped_at,
@@ -334,26 +325,19 @@ export default function Orders() {
         .in("customer_lot", poNumbers);
 
       if (!shippedByLotError && shippedByLotData) {
-        const seenTraceabilityByLot: Record<string, Set<string>> = {};
         shippedByLotData.forEach((pallet: any) => {
           const poNum = pallet.customer_lot;
           if (!poNum) return;
-          // Deduplicate by traceability within the same PO
-          const traceKey = pallet.traceability || pallet.id;
-          if (!seenTraceabilityByLot[poNum]) {
-            seenTraceabilityByLot[poNum] = new Set();
-          }
-          if (seenTraceabilityByLot[poNum].has(traceKey)) return;
-          seenTraceabilityByLot[poNum].add(traceKey);
-
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
           if (!shippedPalletIds[poNum]) {
             shippedPalletIds[poNum] = new Set();
           }
-          shippedPalletIds[poNum].add(pallet.id);
-          inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          if (!shippedPalletIds[poNum].has(pallet.id)) {
+            shippedPalletIds[poNum].add(pallet.id);
+            inventoryByPO[poNum].shipped += pallet.quantity || 0;
+          }
           const loadInfo = pallet.shipping_loads;
           if (loadInfo) {
             if (!shippedLoadDetailsByPO[poNum]) {
