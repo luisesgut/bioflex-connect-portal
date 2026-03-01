@@ -397,10 +397,12 @@ export default function OrderDetail() {
                     <label className="text-sm text-muted-foreground">Item Type</label>
                     <p className="font-medium">{order.product?.item_type || "—"}</p>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Tipo Empaque</label>
-                    <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
-                  </div>
+                  {isAdmin && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Tipo Empaque</label>
+                      <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
+                    </div>
+                  )}
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PT Code</label>
