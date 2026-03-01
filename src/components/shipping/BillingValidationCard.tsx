@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, Clock, FileDown, FileCheck, Eye, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { CustomsReviewDialog } from "./CustomsReviewDialog";
+import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
 
 interface BillingValidation {
   id: string;
