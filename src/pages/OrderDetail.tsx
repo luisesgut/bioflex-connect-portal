@@ -637,7 +637,7 @@ export default function OrderDetail() {
                       })()}
                     </p>
                   </div>
-                  {order.accepted_at && (
+                  {order.accepted_at && isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">SO Age (Days)</label>
                       <p className="font-medium">
