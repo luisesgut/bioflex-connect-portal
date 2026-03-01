@@ -278,8 +278,8 @@ export function CustomsReviewDialog({
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [freightCostInput, setFreightCostInput] = useState(FREIGHT_COST);
-  const [exchangeRate, setExchangeRate] = useState(17.5);
+  const [freightCostInput, setFreightCostInput] = useState(String(FREIGHT_COST));
+  const [exchangeRateInput, setExchangeRateInput] = useState("17.5");
 
   useEffect(() => {
     if (!open) return;
@@ -303,7 +303,8 @@ export function CustomsReviewDialog({
 
   const totalPalletCount = products.reduce((s, p) => s + p.totalPallets, 0);
   const totalProductValue = products.reduce((s, p) => s + p.totalPrice, 0);
-  const freightCost = freightCostInput;
+  const freightCost = Number(freightCostInput) || 0;
+  const exchangeRate = Number(exchangeRateInput) || 0;
   const totalGrossWeight = products.reduce((s, p) => s + p.totalGrossWeight, 0);
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
   const grandTotalUSD = totalProductValue + freightCost;
@@ -529,7 +530,7 @@ export function CustomsReviewDialog({
                       className="h-8 text-sm mt-0.5 w-32"
                       type="number"
                       value={freightCostInput}
-                      onChange={e => setFreightCostInput(Number(e.target.value))}
+                      onChange={e => setFreightCostInput(e.target.value)}
                       disabled={isReadOnly}
                     />
                   </div>
@@ -551,8 +552,8 @@ export function CustomsReviewDialog({
                       className="h-8 text-sm mt-0.5 w-32"
                       type="number"
                       step="0.01"
-                      value={exchangeRate}
-                      onChange={e => setExchangeRate(Number(e.target.value))}
+                      value={exchangeRateInput}
+                      onChange={e => setExchangeRateInput(e.target.value)}
                       disabled={isReadOnly}
                     />
                   </div>
