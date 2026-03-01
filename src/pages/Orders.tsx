@@ -18,6 +18,7 @@ import { ResizableTableHeader } from "@/components/orders/ResizableTableHeader";
 import { differenceInHours } from "date-fns";
 import { ProductionTimeline } from "@/components/orders/ProductionTimeline";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import { OrdersCanvas } from "@/components/orders/OrdersCanvas";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
@@ -95,6 +96,7 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
+  accepted_at: string | null;
   inventoryStats: InventoryStats;
 }
 
@@ -148,7 +150,7 @@ export default function Orders() {
   const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
   // View mode toggle
-  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board">("list");
+  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">("list");
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -172,6 +174,7 @@ export default function Orders() {
         created_at,
         pdf_url,
         sales_order_number,
+        accepted_at,
         products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `)
       .order("created_at", { ascending: false });
@@ -417,6 +420,7 @@ export default function Orders() {
         created_at: order.created_at,
         pdf_url: order.pdf_url,
         sales_order_number: order.sales_order_number,
+        accepted_at: order.accepted_at || null,
         inventoryStats: {
           inFloor: stats.inFloor,
           shipped: stats.shipped,
@@ -834,7 +838,7 @@ export default function Orders() {
             )}
             
             {/* View Mode Toggle */}
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board")} className="w-auto">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board" | "canvas")} className="w-auto">
               <TabsList>
                 <TabsTrigger value="list" className="gap-2">
                   <List className="h-4 w-4" />
@@ -848,6 +852,12 @@ export default function Orders() {
                   <LayoutGrid className="h-4 w-4" />
                   Board
                 </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="canvas" className="gap-2">
+                    <Package className="h-4 w-4" />
+                    Canvas
+                  </TabsTrigger>
+                )}
               </TabsList>
             </Tabs>
           </div>
@@ -881,6 +891,11 @@ export default function Orders() {
         {/* Board View */}
         {!loading && viewMode === "board" && (
           <OrdersKanban orders={activeOrders} isAdmin={isAdmin} />
+        )}
+
+        {/* Canvas View (Admin only) */}
+        {!loading && viewMode === "canvas" && isAdmin && (
+          <OrdersCanvas orders={activeOrders} />
         )}
 
         {/* Active Orders Table */}
