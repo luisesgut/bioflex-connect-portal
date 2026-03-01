@@ -717,7 +717,47 @@ export default function OrderDetail() {
                   </div>
                 </div>
 
-                {!isAdmin && order.status !== "closed" && !order.is_hot_order && (
+                {/* Pending Hot Order Request Banner */}
+                {pendingHotRequest && (
+                  <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 p-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Flame className="h-4 w-4 text-warning" />
+                        <div>
+                          <p className="text-sm font-medium">Hot Order Request — Pending Approval</p>
+                          <p className="text-xs text-muted-foreground">
+                            Submitted {formatDate(pendingHotRequest.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleReviewHotOrder(false)}
+                            disabled={reviewingHot}
+                          >
+                            {reviewingHot ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                            Reject
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleReviewHotOrder(true)}
+                            disabled={reviewingHot}
+                          >
+                            {reviewingHot ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                            Approve
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Customer button to request hot order (only if no pending request) */}
+                {!isAdmin && order.status !== "closed" && !order.is_hot_order && !pendingHotRequest && (
                   <div className="mt-4">
                     <Button
                       variant="destructive"
