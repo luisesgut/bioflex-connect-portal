@@ -223,25 +223,34 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
                               </div>
                               {/* Mini progress bar */}
                               <div className="mt-2">
-                                <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
-                                  <span>Shipped {formatNumber(order.inventoryStats.shipped)}</span>
-                                  <span>WH {formatNumber(order.inventoryStats.inFloor)}</span>
-                                  <span>Pend {formatNumber(order.inventoryStats.pending)}</span>
-                                </div>
-                                <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
-                                  {order.quantity > 0 && (
-                                    <>
-                                      <div
-                                        className="bg-success h-full"
-                                        style={{ width: `${(order.inventoryStats.shipped / order.quantity) * 100}%` }}
-                                      />
-                                      <div
-                                        className="bg-info h-full"
-                                        style={{ width: `${(order.inventoryStats.inFloor / order.quantity) * 100}%` }}
-                                      />
-                                    </>
-                                  )}
-                                </div>
+                                {order.inventoryStats.sapVerificationLoading ? (
+                                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span>Verifying with SAP...</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                                      <span>Shipped {formatNumber(order.inventoryStats.shipped)}</span>
+                                      <span>WH {formatNumber(order.inventoryStats.inFloor)}</span>
+                                      <span>Pend {formatNumber(order.inventoryStats.pending)}</span>
+                                    </div>
+                                    <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
+                                      {order.quantity > 0 && (
+                                        <>
+                                          <div
+                                            className="bg-success h-full"
+                                            style={{ width: `${(order.inventoryStats.shipped / order.quantity) * 100}%` }}
+                                          />
+                                          <div
+                                            className="bg-info h-full"
+                                            style={{ width: `${(order.inventoryStats.inFloor / order.quantity) * 100}%` }}
+                                          />
+                                        </>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </CardContent>
                           </Card>
