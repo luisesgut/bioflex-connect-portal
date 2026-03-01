@@ -116,9 +116,11 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
           // Summary calculations
           const totalVolume = familyOrders.reduce((sum, o) => sum + o.quantity, 0);
           const totalAmount = familyOrders.reduce((sum, o) => sum + (o.total_price || 0), 0);
-          const totalShipped = familyOrders.reduce((sum, o) => sum + o.inventoryStats.shipped, 0);
-          const totalInWarehouse = familyOrders.reduce((sum, o) => sum + o.inventoryStats.inFloor, 0);
-          const totalPending = familyOrders.reduce((sum, o) => sum + o.inventoryStats.pending, 0);
+          const verifiedOrders = familyOrders.filter(o => !o.inventoryStats.sapVerificationLoading);
+          const anyLoading = familyOrders.some(o => o.inventoryStats.sapVerificationLoading);
+          const totalShipped = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.shipped, 0);
+          const totalInWarehouse = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.inFloor, 0);
+          const totalPending = verifiedOrders.reduce((sum, o) => sum + o.inventoryStats.pending, 0);
 
           return (
             <div key={family} className="flex-shrink-0 w-80">
