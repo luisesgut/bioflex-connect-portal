@@ -140,8 +140,56 @@ export default function OrderDetail() {
   useEffect(() => {
     if (id) {
       fetchOrderDetails();
+      fetchPendingHotRequest();
     }
   }, [id]);
+
+  const fetchPendingHotRequest = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("order_change_requests")
+      .select("id, reason, created_at")
+      .eq("purchase_order_id", id)
+      .eq("request_type", "hot_order" as any)
+      .eq("status", "pending")
+      .maybeSingle();
+    setPendingHotRequest(data || null);
+  };
+
+  const handleReviewHotOrder = async (approved: boolean) => {
+    if (!pendingHotRequest || !order) return;
+    setReviewingHot(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not authenticated");
+
+      const { error: updateError } = await supabase
+        .from("order_change_requests")
+        .update({
+          status: approved ? "approved" : "rejected",
+          reviewed_by: userData.user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", pendingHotRequest.id);
+      if (updateError) throw updateError;
+
+      if (approved) {
+        const { error: poError } = await supabase
+          .from("purchase_orders")
+          .update({ is_hot_order: true })
+          .eq("id", order.id);
+        if (poError) throw poError;
+        setOrder({ ...order, is_hot_order: true });
+      }
+
+      toast.success(approved ? "Hot Order approved" : "Hot Order request rejected");
+      setPendingHotRequest(null);
+    } catch (error) {
+      console.error("Error reviewing hot order:", error);
+      toast.error("Failed to process request");
+    }
+    setReviewingHot(false);
+  };
 
   useEffect(() => {
     if (!order?.sales_order_number || !order?.po_number) {
