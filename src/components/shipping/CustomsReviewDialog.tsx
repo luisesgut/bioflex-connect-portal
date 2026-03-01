@@ -449,7 +449,6 @@ export function CustomsReviewDialog({
               </div>
             </div>
           </div>
-          </div>
         </div>
 
         <DialogFooter className="gap-2">
