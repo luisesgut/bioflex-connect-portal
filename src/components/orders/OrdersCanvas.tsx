@@ -151,15 +151,15 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Truck className="h-3 w-3" />
-                      <span>Shipped: <strong className="text-foreground">{formatNumber(totalShipped)}</strong></span>
+                      <span>Shipped: <strong className="text-foreground">{formatNumber(totalShipped)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Package className="h-3 w-3" />
-                      <span>In WH: <strong className="text-foreground">{formatNumber(totalInWarehouse)}</strong></span>
+                      <span>In WH: <strong className="text-foreground">{formatNumber(totalInWarehouse)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground col-span-2">
                       <Clock className="h-3 w-3" />
-                      <span>Pending: <strong className="text-foreground">{formatNumber(totalPending)}</strong></span>
+                      <span>Pending: <strong className="text-foreground">{formatNumber(totalPending)}</strong>{anyLoading && <Loader2 className="inline h-2.5 w-2.5 animate-spin ml-0.5" />}</span>
                     </div>
                   </div>
                 </div>
