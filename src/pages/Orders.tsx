@@ -96,6 +96,7 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
+  accepted_at: string | null;
   inventoryStats: InventoryStats;
 }
 
