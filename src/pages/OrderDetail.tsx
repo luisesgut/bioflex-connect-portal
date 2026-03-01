@@ -333,6 +333,7 @@ export default function OrderDetail() {
 
         if (error) throw error;
         toast.success("Hot Order request submitted for admin approval");
+        fetchPendingHotRequest();
       } catch (error) {
         console.error("Error submitting hot order request:", error);
         toast.error("Failed to submit hot order request");
