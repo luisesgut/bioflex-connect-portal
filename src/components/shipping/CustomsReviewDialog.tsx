@@ -262,7 +262,7 @@ export function CustomsReviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Revisión de Documento de Exportación — {loadNumber}
@@ -274,7 +274,7 @@ export function CustomsReviewDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4 -mr-4">
+        <ScrollArea className="flex-1 min-h-0 pr-4 -mr-4">
           <div className="space-y-6">
             {products.map((product, idx) => (
               <div key={idx} className="border rounded-lg p-4 space-y-3">
