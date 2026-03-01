@@ -81,6 +81,7 @@ interface Order {
   product_pt_code: string | null;
   product_customer: string | null;
   product_item_type: string | null;
+  product_tipo_empaque: string | null;
   product_dp_sales_csr: string | null;
   product_customer_item: string | null;
   product_item_description: string | null;
@@ -175,7 +176,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, sku, customer, item_type, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, sku, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `)
       .order("created_at", { ascending: false });
 
@@ -388,6 +389,7 @@ export default function Orders() {
         product_pt_code: productPtCode,
         product_customer: order.products?.customer || null,
         product_item_type: order.products?.item_type || null,
+        product_tipo_empaque: order.products?.tipo_empaque || null,
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         product_customer_item: order.products?.customer_item || null,
         product_item_description: order.products?.item_description || null,
@@ -842,12 +844,10 @@ export default function Orders() {
                   <LayoutGrid className="h-4 w-4" />
                   Board
                 </TabsTrigger>
-                {isAdmin && (
-                  <TabsTrigger value="canvas" className="gap-2">
-                    <Package className="h-4 w-4" />
-                    Canvas
-                  </TabsTrigger>
-                )}
+                <TabsTrigger value="canvas" className="gap-2">
+                  <Package className="h-4 w-4" />
+                  Canvas
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -878,14 +878,14 @@ export default function Orders() {
           />
         )}
 
-        {/* Board View */}
+        {/* Board View - grouped by tipo_empaque */}
         {!loading && viewMode === "board" && (
-          <OrdersKanban orders={activeOrders} isAdmin={isAdmin} />
+          <OrdersCanvas orders={activeOrders} groupBy="product_tipo_empaque" />
         )}
 
-        {/* Canvas View (Admin only) */}
-        {!loading && viewMode === "canvas" && isAdmin && (
-          <OrdersCanvas orders={activeOrders} />
+        {/* Canvas View - grouped by item_type */}
+        {!loading && viewMode === "canvas" && (
+          <OrdersCanvas orders={activeOrders} groupBy="product_item_type" />
         )}
 
         {/* Active Orders Table */}

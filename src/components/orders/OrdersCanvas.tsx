@@ -10,6 +10,7 @@ interface CanvasOrder {
   po_number: string;
   product_name: string | null;
   product_item_type: string | null;
+  product_tipo_empaque: string | null;
   product_customer: string | null;
   quantity: number;
   total_price: number | null;
@@ -29,6 +30,7 @@ interface CanvasOrder {
 
 interface OrdersCanvasProps {
   orders: CanvasOrder[];
+  groupBy?: "product_item_type" | "product_tipo_empaque";
 }
 
 const columnColors: string[] = [
@@ -87,7 +89,7 @@ function sortOrders(orders: CanvasOrder[]): CanvasOrder[] {
   });
 }
 
-export function OrdersCanvas({ orders }: OrdersCanvasProps) {
+export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCanvasProps) {
   const navigate = useNavigate();
 
   // Only accepted (active) orders, exclude closed
@@ -95,9 +97,11 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
     (o) => o.status !== "closed" && o.status !== "delivered"
   );
 
-  // Group by item_type (tipo empaque)
+  const getGroupValue = (o: CanvasOrder) => o[groupBy] || "Unassigned";
+
+  // Group by selected field
   const families = Array.from(
-    new Set(activeOrders.map((o) => o.product_item_type || "Unassigned"))
+    new Set(activeOrders.map(getGroupValue))
   ).sort((a, b) => {
     if (a === "Unassigned") return 1;
     if (b === "Unassigned") return -1;
@@ -105,7 +109,7 @@ export function OrdersCanvas({ orders }: OrdersCanvasProps) {
   });
 
   const getOrdersByFamily = (family: string) =>
-    sortOrders(activeOrders.filter((o) => (o.product_item_type || "Unassigned") === family));
+    sortOrders(activeOrders.filter((o) => getGroupValue(o) === family));
 
   return (
     <ScrollArea className="w-full">
