@@ -197,7 +197,7 @@ export default function Orders() {
     let inventoryByPO: Record<string, { inFloor: number; shipped: number; palletIds: Set<string> }> = {};
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
     let shippedLoadDetailsByPO: Record<string, ShippedLoadDetail[]> = {};
-    let shippedPalletIds: Record<string, Set<string>> = {};
+    let shippedTraceability: Record<string, Set<string>> = {};
 
     const salesOrderToPO: Record<string, string> = {};
     (ordersData || []).forEach((order: any) => {
@@ -230,7 +230,7 @@ export default function Orders() {
 
       const { data: shippedData, error: shippedError } = await supabase
         .from("shipped_pallets")
-        .select("id, bfx_order, quantity")
+        .select("id, bfx_order, quantity, traceability")
         .in("bfx_order", salesOrderNumbers);
 
       if (!shippedError && shippedData) {
@@ -242,11 +242,12 @@ export default function Orders() {
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          if (!shippedPalletIds[poNum]) {
-            shippedPalletIds[poNum] = new Set();
+          if (!shippedTraceability[poNum]) {
+            shippedTraceability[poNum] = new Set();
           }
-          if (!shippedPalletIds[poNum].has(pallet.id)) {
-            shippedPalletIds[poNum].add(pallet.id);
+          const traceKey = pallet.traceability || pallet.id;
+          if (!shippedTraceability[poNum].has(traceKey)) {
+            shippedTraceability[poNum].add(traceKey);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
           }
         });
@@ -314,13 +315,10 @@ export default function Orders() {
           id,
           customer_lot,
           quantity,
+          traceability,
           load_id,
           delivery_date,
-          shipped_at,
-          shipping_loads:load_id (
-            id,
-            load_number
-          )
+          shipped_at
         `)
         .in("customer_lot", poNumbers);
 
@@ -331,32 +329,13 @@ export default function Orders() {
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          if (!shippedPalletIds[poNum]) {
-            shippedPalletIds[poNum] = new Set();
+          if (!shippedTraceability[poNum]) {
+            shippedTraceability[poNum] = new Set();
           }
-          if (!shippedPalletIds[poNum].has(pallet.id)) {
-            shippedPalletIds[poNum].add(pallet.id);
+          const traceKey = pallet.traceability || pallet.id;
+          if (!shippedTraceability[poNum].has(traceKey)) {
+            shippedTraceability[poNum].add(traceKey);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
-          }
-          const loadInfo = pallet.shipping_loads;
-          if (loadInfo) {
-            if (!shippedLoadDetailsByPO[poNum]) {
-              shippedLoadDetailsByPO[poNum] = [];
-            }
-            const existingLoad = shippedLoadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
-            if (existingLoad) {
-              existingLoad.pallet_count += 1;
-              existingLoad.quantity += pallet.quantity || 0;
-            } else {
-              shippedLoadDetailsByPO[poNum].push({
-                load_id: loadInfo.id,
-                load_number: loadInfo.load_number,
-                pallet_count: 1,
-                quantity: pallet.quantity || 0,
-                delivery_date: pallet.delivery_date,
-                shipped_at: pallet.shipped_at,
-              });
-            }
           }
         });
       }
