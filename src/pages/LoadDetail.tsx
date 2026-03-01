@@ -2243,10 +2243,19 @@ export default function LoadDetail() {
                 </SelectContent>
               </Select>
             )}
-            {isAdmin && (load.status === "in_transit" || load.status === "delivered") && pallets.length > 0 && (
-              <Button variant="outline" onClick={handleGenerateCustomsDocument}>
+            {isAdmin && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                const totalPalletCount = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
+                generateCustomsPDF(
+                  { loadNumber: load.load_number, shippingDate: load.shipping_date },
+                  billingValidatedData,
+                  totalPalletCount,
+                  5000
+                );
+                toast.success("PDF downloaded");
+              }}>
                 <FileDown className="mr-2 h-4 w-4" />
-                Customs Document
+                Billing PDF
               </Button>
             )}
             {isAdmin && (
