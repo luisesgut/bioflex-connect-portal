@@ -893,6 +893,11 @@ export default function Orders() {
           <OrdersKanban orders={activeOrders} isAdmin={isAdmin} />
         )}
 
+        {/* Canvas View (Admin only) */}
+        {!loading && viewMode === "canvas" && isAdmin && (
+          <OrdersCanvas orders={activeOrders} />
+        )}
+
         {/* Active Orders Table */}
         {!loading && viewMode === "list" && (
           <div className="space-y-4">
