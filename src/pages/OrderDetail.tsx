@@ -50,6 +50,7 @@ interface OrderDetails {
   conversion_date: string | null;
   created_at: string;
   accepted_at: string | null;
+  updated_at: string;
   pdf_url: string | null;
   notes: string | null;
   sales_order_number: string | null;
