@@ -106,6 +106,7 @@ const statusStyles: Record<string, string> = {
   shipped: "bg-accent/10 text-accent border-accent/20",
   delivered: "bg-success/10 text-success border-success/20",
   closed: "bg-muted text-muted-foreground border-muted",
+  "pending-hot-approval": "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const statusLabels: Record<string, string> = {
@@ -116,6 +117,7 @@ const statusLabels: Record<string, string> = {
   shipped: "Shipped",
   delivered: "Delivered",
   closed: "Closed",
+  "pending-hot-approval": "Pending Hot Order Approval",
 };
 
 export default function OrderDetail() {
