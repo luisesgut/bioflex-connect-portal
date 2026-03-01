@@ -662,6 +662,33 @@ export default function LoadDetail() {
     }
   }, [load?.invoice_number, load?.invoice_amount, load?.freight_invoice_number, load?.freight_invoice_amount, billingValidatedData]);
 
+  // Sync carrier info from load data
+  useEffect(() => {
+    if (load?.carrier_tracking_url) setCarrierTrackingUrl(load.carrier_tracking_url);
+    if (load?.carrier_unit_number) setCarrierUnitNumber(load.carrier_unit_number);
+  }, [load?.carrier_tracking_url, load?.carrier_unit_number]);
+
+  const handleSaveCarrierInfo = async () => {
+    if (!id) return;
+    setSavingCarrierInfo(true);
+    try {
+      const { error } = await supabase
+        .from("shipping_loads")
+        .update({
+          carrier_tracking_url: carrierTrackingUrl.trim() || null,
+          carrier_unit_number: carrierUnitNumber.trim() || null,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Carrier info saved");
+      fetchLoadData();
+    } catch (err: any) {
+      toast.error("Error saving carrier info: " + err.message);
+    } finally {
+      setSavingCarrierInfo(false);
+    }
+  };
+
   const handleSaveInvoice = async () => {
     if (!id) return;
     setSavingInvoice(true);
