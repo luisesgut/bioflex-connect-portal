@@ -181,7 +181,10 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
   pallets.forEach(lp => {
     const dest = lp.destination || "TBD";
     const key = `${lp.pallet.description}__${dest}`;
-    const poInfo = lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null;
+    // Try customer_lot first, then bfx_order, then pt_code fallback
+    const poInfo = (lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null)
+      || (lp.pallet.bfx_order ? poMap.get(lp.pallet.bfx_order) : null)
+      || poMap.get(`__pt__${lp.pallet.pt_code}`) || null;
     const prodInfo = productMap.get(lp.pallet.pt_code);
     const pricePerThousand = poInfo?.price_per_thousand || 0;
     const piecesPerPallet = prodInfo?.pieces_per_pallet || 50000;
@@ -193,7 +196,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         description: lp.pallet.description,
         destination: dest,
         salesOrder: poInfo?.sales_order_number || null,
-        poNumber: lp.pallet.customer_lot || null,
+        poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
         bfxSpecUrl: prodInfo?.bfx_spec_url || null,
         totalPallets: 0,
