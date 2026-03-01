@@ -315,13 +315,10 @@ export default function Orders() {
           id,
           customer_lot,
           quantity,
+          traceability,
           load_id,
           delivery_date,
-          shipped_at,
-          shipping_loads:load_id (
-            id,
-            load_number
-          )
+          shipped_at
         `)
         .in("customer_lot", poNumbers);
 
@@ -332,32 +329,13 @@ export default function Orders() {
           if (!inventoryByPO[poNum]) {
             inventoryByPO[poNum] = { inFloor: 0, shipped: 0, palletIds: new Set() };
           }
-          if (!shippedPalletIds[poNum]) {
-            shippedPalletIds[poNum] = new Set();
+          if (!shippedTraceability[poNum]) {
+            shippedTraceability[poNum] = new Set();
           }
-          if (!shippedPalletIds[poNum].has(pallet.id)) {
-            shippedPalletIds[poNum].add(pallet.id);
+          const traceKey = pallet.traceability || pallet.id;
+          if (!shippedTraceability[poNum].has(traceKey)) {
+            shippedTraceability[poNum].add(traceKey);
             inventoryByPO[poNum].shipped += pallet.quantity || 0;
-          }
-          const loadInfo = pallet.shipping_loads;
-          if (loadInfo) {
-            if (!shippedLoadDetailsByPO[poNum]) {
-              shippedLoadDetailsByPO[poNum] = [];
-            }
-            const existingLoad = shippedLoadDetailsByPO[poNum].find(l => l.load_id === loadInfo.id);
-            if (existingLoad) {
-              existingLoad.pallet_count += 1;
-              existingLoad.quantity += pallet.quantity || 0;
-            } else {
-              shippedLoadDetailsByPO[poNum].push({
-                load_id: loadInfo.id,
-                load_number: loadInfo.load_number,
-                pallet_count: 1,
-                quantity: pallet.quantity || 0,
-                delivery_date: pallet.delivery_date,
-                shipped_at: pallet.shipped_at,
-              });
-            }
           }
         });
       }
