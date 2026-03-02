@@ -263,7 +263,7 @@ export default function CreateRFQ() {
             notes: item.notes || null,
             sort_order: i,
             // New fields
-            dp_sales_csr_name: item.dp_sales_csr_name || null,
+            dp_sales_csr_name: item.dp_sales_csr_names.join(", ") || null,
             film_type: item.film_type || null,
             finish: item.finish || null,
             printing_side: item.printing_side || null,
