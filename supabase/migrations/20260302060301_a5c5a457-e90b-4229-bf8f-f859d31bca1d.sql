@@ -1,0 +1,27 @@
+
+-- Add new fields to rfq_items for the restructured 5-section form
+ALTER TABLE public.rfq_items
+  ADD COLUMN IF NOT EXISTS dp_sales_csr_name TEXT,
+  ADD COLUMN IF NOT EXISTS film_type TEXT,
+  ADD COLUMN IF NOT EXISTS finish TEXT,
+  ADD COLUMN IF NOT EXISTS printing_side TEXT,
+  ADD COLUMN IF NOT EXISTS ink_type TEXT,
+  ADD COLUMN IF NOT EXISTS wire_type TEXT,
+  ADD COLUMN IF NOT EXISTS wicket_type TEXT,
+  ADD COLUMN IF NOT EXISTS pallet_dimensions TEXT,
+  ADD COLUMN IF NOT EXISTS max_pallet_height TEXT,
+  ADD COLUMN IF NOT EXISTS perforations TEXT,
+  ADD COLUMN IF NOT EXISTS perforation_size TEXT,
+  ADD COLUMN IF NOT EXISTS pre_cut_wicket BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS pre_cut_dotted BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS wicket_separation TEXT,
+  ADD COLUMN IF NOT EXISTS pantone_base BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sample_base BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS client_visit BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS color_proof BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS editable_files_needed BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS physical_samples_needed BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS prepress_cost_by TEXT,
+  ADD COLUMN IF NOT EXISTS observations TEXT,
+  ADD COLUMN IF NOT EXISTS pieces_per_wicket INTEGER,
+  ADD COLUMN IF NOT EXISTS pieces_per_case INTEGER;
