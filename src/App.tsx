@@ -28,6 +28,7 @@ import POTRImport from "./pages/POTRImport";
 import ProductRequests from "./pages/ProductRequests";
 import NewProductRequest from "./pages/NewProductRequest";
 import ProductRequestDetail from "./pages/ProductRequestDetail";
+import CreateRFQ from "./pages/CreateRFQ";
 
 const queryClient = new QueryClient();
 
