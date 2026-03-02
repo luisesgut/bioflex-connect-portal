@@ -186,10 +186,13 @@ export function generateCustomsPDF(
   doc.setTextColor(0, 0, 0);
   y += 8;
 
+  const freightWithoutIVA = freightCost / 1.16;
+
   const summary: [string, string][] = [
     ["Total Tarimas", String(totalPallets)],
     ["$ Producto", `$${fmt(totalProductValue)}`],
     ["Flete", `$${fmt(freightCost)}`],
+    ["Flete sin IVA", `$${fmt(freightWithoutIVA)}`],
     ["Total (USD)", `$${fmt(totalProductValue + freightCost)}`],
     ["Tipo de Cambio", fmt(exchangeRate, 4)],
     ["Total (MXN)", `$${fmt((totalProductValue + freightCost) * exchangeRate)}`],
