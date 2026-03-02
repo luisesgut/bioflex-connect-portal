@@ -282,6 +282,7 @@ export function CustomsReviewDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [freightCostInput, setFreightCostInput] = useState(String(FREIGHT_COST));
   const [exchangeRateInput, setExchangeRateInput] = useState("17.5");
+  const [freightSalesOrder, setFreightSalesOrder] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -306,6 +307,7 @@ export function CustomsReviewDialog({
   const totalPalletCount = products.reduce((s, p) => s + p.totalPallets, 0);
   const totalProductValue = products.reduce((s, p) => s + p.totalPrice, 0);
   const freightCost = Number(freightCostInput) || 0;
+  const freightWithoutIVA = freightCost / 1.16;
   const exchangeRate = Number(exchangeRateInput) || 0;
   const totalGrossWeight = products.reduce((s, p) => s + p.totalGrossWeight, 0);
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
@@ -535,10 +537,24 @@ export function CustomsReviewDialog({
                       onChange={e => setFreightCostInput(e.target.value)}
                       disabled={isReadOnly}
                     />
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sin IVA: ${fmt(freightWithoutIVA)}
+                    </p>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs">Grand Total (USD)</span>
                     <p className="font-semibold">${fmt(grandTotalUSD)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Freight SAP Order</Label>
+                    <Input
+                      className="h-8 text-sm mt-0.5 w-32"
+                      type="text"
+                      value={freightSalesOrder}
+                      onChange={e => setFreightSalesOrder(e.target.value)}
+                      placeholder="OV number"
+                      disabled={isReadOnly}
+                    />
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs">Total Gross Weight</span>
