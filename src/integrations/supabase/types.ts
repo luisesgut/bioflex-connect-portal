@@ -1500,6 +1500,221 @@ export type Database = {
           },
         ]
       }
+      rfq_item_volumes: {
+        Row: {
+          created_at: string
+          final_price: number | null
+          id: string
+          notes: string | null
+          quoted_price: number | null
+          rfq_item_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["rfq_volume_status"]
+          target_price: number | null
+          unit: string
+          updated_at: string
+          volume_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          notes?: string | null
+          quoted_price?: number | null
+          rfq_item_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["rfq_volume_status"]
+          target_price?: number | null
+          unit?: string
+          updated_at?: string
+          volume_quantity: number
+        }
+        Update: {
+          created_at?: string
+          final_price?: number | null
+          id?: string
+          notes?: string | null
+          quoted_price?: number | null
+          rfq_item_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["rfq_volume_status"]
+          target_price?: number | null
+          unit?: string
+          updated_at?: string
+          volume_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_item_volumes_rfq_item_id_fkey"
+            columns: ["rfq_item_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_items: {
+        Row: {
+          bags_per_case: number | null
+          bags_per_wicket: number | null
+          cases_per_pallet: number | null
+          created_at: string
+          flip_size_inches: number | null
+          gusset_inches: number | null
+          id: string
+          item_description: string | null
+          length_inches: number | null
+          lip_back_inches: number | null
+          lip_front_inches: number | null
+          material: string | null
+          notes: string | null
+          product_name: string
+          product_request_id: string | null
+          product_type: Database["public"]["Enums"]["rfq_product_type"]
+          reference_files: string[] | null
+          reference_image_url: string | null
+          rfq_id: string
+          seal_type: string | null
+          sort_order: number
+          status: Database["public"]["Enums"]["rfq_item_status"]
+          structure: string | null
+          thickness_unit: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value: number | null
+          updated_at: string
+          vent_size: string | null
+          vents_count: number | null
+          wicket_hole: string | null
+          wicket_size: string | null
+          width_inches: number | null
+          zipper_inches: number | null
+        }
+        Insert: {
+          bags_per_case?: number | null
+          bags_per_wicket?: number | null
+          cases_per_pallet?: number | null
+          created_at?: string
+          flip_size_inches?: number | null
+          gusset_inches?: number | null
+          id?: string
+          item_description?: string | null
+          length_inches?: number | null
+          lip_back_inches?: number | null
+          lip_front_inches?: number | null
+          material?: string | null
+          notes?: string | null
+          product_name: string
+          product_request_id?: string | null
+          product_type: Database["public"]["Enums"]["rfq_product_type"]
+          reference_files?: string[] | null
+          reference_image_url?: string | null
+          rfq_id: string
+          seal_type?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["rfq_item_status"]
+          structure?: string | null
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
+          updated_at?: string
+          vent_size?: string | null
+          vents_count?: number | null
+          wicket_hole?: string | null
+          wicket_size?: string | null
+          width_inches?: number | null
+          zipper_inches?: number | null
+        }
+        Update: {
+          bags_per_case?: number | null
+          bags_per_wicket?: number | null
+          cases_per_pallet?: number | null
+          created_at?: string
+          flip_size_inches?: number | null
+          gusset_inches?: number | null
+          id?: string
+          item_description?: string | null
+          length_inches?: number | null
+          lip_back_inches?: number | null
+          lip_front_inches?: number | null
+          material?: string | null
+          notes?: string | null
+          product_name?: string
+          product_request_id?: string | null
+          product_type?: Database["public"]["Enums"]["rfq_product_type"]
+          reference_files?: string[] | null
+          reference_image_url?: string | null
+          rfq_id?: string
+          seal_type?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["rfq_item_status"]
+          structure?: string | null
+          thickness_unit?: Database["public"]["Enums"]["thickness_unit"] | null
+          thickness_value?: number | null
+          updated_at?: string
+          vent_size?: string | null
+          vents_count?: number | null
+          wicket_hole?: string | null
+          wicket_size?: string | null
+          width_inches?: number | null
+          zipper_inches?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_items_product_request_id_fkey"
+            columns: ["product_request_id"]
+            isOneToOne: false
+            referencedRelation: "product_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_items_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfqs: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer: string | null
+          customer_user_id: string | null
+          id: string
+          notes: string | null
+          reference_files: string[] | null
+          response_deadline: string | null
+          rfq_number: string
+          status: Database["public"]["Enums"]["rfq_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer?: string | null
+          customer_user_id?: string | null
+          id?: string
+          notes?: string | null
+          reference_files?: string[] | null
+          response_deadline?: string | null
+          rfq_number: string
+          status?: Database["public"]["Enums"]["rfq_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer?: string | null
+          customer_user_id?: string | null
+          id?: string
+          notes?: string | null
+          reference_files?: string[] | null
+          response_deadline?: string | null
+          rfq_number?: string
+          status?: Database["public"]["Enums"]["rfq_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sap_inventory: {
         Row: {
           bfx_order: string | null
@@ -1852,6 +2067,23 @@ export type Database = {
         | "sap_registered"
         | "completed"
       release_status: "pending" | "approved" | "on_hold" | "shipped"
+      rfq_item_status:
+        | "pending"
+        | "quoted"
+        | "negotiating"
+        | "accepted"
+        | "rejected"
+      rfq_product_type: "wicket" | "side_seal" | "pouch" | "film"
+      rfq_status:
+        | "draft"
+        | "submitted"
+        | "quoting"
+        | "negotiating"
+        | "partially_accepted"
+        | "accepted"
+        | "closed"
+        | "cancelled"
+      rfq_volume_status: "pending" | "quoted" | "accepted" | "rejected"
       team_role:
         | "sales_rep"
         | "engineering_leader"
@@ -2036,6 +2268,25 @@ export const Constants = {
         "completed",
       ],
       release_status: ["pending", "approved", "on_hold", "shipped"],
+      rfq_item_status: [
+        "pending",
+        "quoted",
+        "negotiating",
+        "accepted",
+        "rejected",
+      ],
+      rfq_product_type: ["wicket", "side_seal", "pouch", "film"],
+      rfq_status: [
+        "draft",
+        "submitted",
+        "quoting",
+        "negotiating",
+        "partially_accepted",
+        "accepted",
+        "closed",
+        "cancelled",
+      ],
+      rfq_volume_status: ["pending", "quoted", "accepted", "rejected"],
       team_role: [
         "sales_rep",
         "engineering_leader",
