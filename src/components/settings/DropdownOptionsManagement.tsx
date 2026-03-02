@@ -168,7 +168,7 @@ export function DropdownOptionsManagement() {
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">Product Dropdown Options</h2>
           <p className="text-sm text-muted-foreground">
-            Manage options for Final Customer, Item Type (with weekly capacity), and Tipo Empaque
+            Manage options for Final Customer and Item Type (with weekly capacity)
           </p>
         </div>
       </div>
