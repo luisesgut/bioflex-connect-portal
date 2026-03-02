@@ -17,7 +17,6 @@ import {
 const CATEGORIES = [
   { key: "final_customer", label: "Final Customer" },
   { key: "item_type", label: "Item Type" },
-  { key: "tipo_empaque", label: "Tipo Empaque" },
 ] as const;
 
 type Category = (typeof CATEGORIES)[number]["key"];
