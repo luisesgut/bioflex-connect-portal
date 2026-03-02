@@ -537,10 +537,24 @@ export function CustomsReviewDialog({
                       onChange={e => setFreightCostInput(e.target.value)}
                       disabled={isReadOnly}
                     />
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sin IVA: ${fmt(freightWithoutIVA)}
+                    </p>
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs">Grand Total (USD)</span>
                     <p className="font-semibold">${fmt(grandTotalUSD)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Freight SAP Order</Label>
+                    <Input
+                      className="h-8 text-sm mt-0.5 w-32"
+                      type="text"
+                      value={freightSalesOrder}
+                      onChange={e => setFreightSalesOrder(e.target.value)}
+                      placeholder="OV number"
+                      disabled={isReadOnly}
+                    />
                   </div>
                   <div>
                     <span className="text-muted-foreground text-xs">Total Gross Weight</span>
