@@ -269,17 +269,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               <div className="space-y-2">
                 <Label>Item Description *</Label>
                 <Input
-                  value={data.item_description}
-                  onChange={(e) => update({ item_description: e.target.value })}
-                  placeholder="Product description"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Product Name *</Label>
-                <Input
                   value={data.product_name}
                   onChange={(e) => update({ product_name: e.target.value })}
-                  placeholder="e.g., Romaine Hearts 3 Count"
+                  placeholder="e.g., 61370-17 TA Romaine Hearts 3 Count"
                 />
               </div>
               <div className="space-y-2">
@@ -297,23 +289,32 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
                 <Label>DP Sales/CSR Name</Label>
-                <Select
-                  value={data.dp_sales_csr_name}
-                  onValueChange={(v) => update({ dp_sales_csr_name: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select contact" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dpContacts.map((c) => (
-                      <SelectItem key={c.label} value={c.label}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="border rounded-md p-3 max-h-36 overflow-y-auto space-y-2">
+                  {dpContacts.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No contacts available</p>
+                  )}
+                  {dpContacts.map((c) => (
+                    <div key={c.label} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={data.dp_sales_csr_names.includes(c.label)}
+                        onCheckedChange={(checked) => {
+                          const names = checked
+                            ? [...data.dp_sales_csr_names, c.label]
+                            : data.dp_sales_csr_names.filter((n) => n !== c.label);
+                          update({ dp_sales_csr_names: names });
+                        }}
+                      />
+                      <Label className="text-xs font-normal cursor-pointer">{c.label}</Label>
+                    </div>
+                  ))}
+                </div>
+                {data.dp_sales_csr_names.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {data.dp_sales_csr_names.length} selected
+                  </p>
+                )}
               </div>
             </div>
           </div>
