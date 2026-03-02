@@ -84,7 +84,7 @@ export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) 
   return (
     <div className="space-y-5">
       {/* Basic info */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <Label>Product Name *</Label>
           <Input
@@ -94,7 +94,15 @@ export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) 
           />
         </div>
         <div className="space-y-2">
-          <Label>Product Type *</Label>
+          <Label>Item Code</Label>
+          <Input
+            value={data.item_code}
+            onChange={(e) => update({ item_code: e.target.value })}
+            placeholder="Optional"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Item Type *</Label>
           <Select value={data.product_type} onValueChange={(v) => update({ product_type: v })}>
             <SelectTrigger>
               <SelectValue />
