@@ -231,27 +231,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
   return (
     <div className="space-y-2">
-      {/* Unit toggle */}
-      <div className="flex justify-end mb-2">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <Button
-            variant={measureUnit === "in" ? "default" : "ghost"}
-            size="sm"
-            className="h-7 text-xs px-3"
-            onClick={() => setMeasureUnit("in")}
-          >
-            Inches
-          </Button>
-          <Button
-            variant={measureUnit === "mm" ? "default" : "ghost"}
-            size="sm"
-            className="h-7 text-xs px-3"
-            onClick={() => setMeasureUnit("mm")}
-          >
-            mm
-          </Button>
-        </div>
-      </div>
 
       {/* ═══════════ SECTION 1: Product Information ═══════════ */}
       <Collapsible open={openSections.includes(1)} onOpenChange={() => toggleSection(1)}>
