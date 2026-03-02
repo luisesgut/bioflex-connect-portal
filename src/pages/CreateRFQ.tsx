@@ -31,26 +31,50 @@ const EMPTY_ITEM: RFQItemData = {
   product_name: "",
   product_type: "",
   item_code: "",
-  width_inches: "",
-  length_inches: "",
+  item_description: "",
+  dp_sales_csr_name: "",
+  width: "",
+  length: "",
   thickness_value: "",
   thickness_unit: "gauge",
   structure: "",
   material: "",
   seal_type: "",
-  gusset_inches: "",
-  zipper_inches: "",
-  lip_front_inches: "",
-  lip_back_inches: "",
-  flip_size_inches: "",
+  gusset: "",
+  zipper: "",
+  lip_front: "",
+  lip_back: "",
+  flip_size: "",
+  film_type: "",
+  finish: "",
+  printing_side: "",
+  ink_type: "",
+  perforations: "",
+  perforation_size: "",
+  pre_cut_wicket: false,
+  pre_cut_dotted: false,
+  wicket_separation: "",
   wicket_hole: "",
   wicket_size: "",
+  wicket_type: "",
+  wire_type: "",
   vent_size: "",
   vents_count: "",
   bags_per_wicket: "",
   bags_per_case: "",
   cases_per_pallet: "",
-  item_description: "",
+  pallet_dimensions: "",
+  max_pallet_height: "",
+  pieces_per_wicket: "",
+  pieces_per_case: "",
+  pantone_base: false,
+  sample_base: false,
+  client_visit: false,
+  color_proof: false,
+  editable_files_needed: false,
+  physical_samples_needed: false,
+  prepress_cost_by: "",
+  observations: "",
   notes: "",
   reference_files: [],
   volumes: [{ volume_quantity: "", unit: "MIL", notes: "" }],
@@ -76,12 +100,14 @@ export default function CreateRFQ() {
   // Dropdown data
   const [customerOptions, setCustomerOptions] = useState<DropdownOption[]>([]);
   const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
+  const [dpContacts, setDpContacts] = useState<{ label: string }[]>([]);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [addingCustomer, setAddingCustomer] = useState(false);
 
   useEffect(() => {
     fetchDropdownOptions();
     fetchProductTypes();
+    fetchDpContacts();
   }, []);
 
   const fetchDropdownOptions = async () => {
@@ -104,13 +130,20 @@ export default function CreateRFQ() {
     }
   };
 
+  const fetchDpContacts = async () => {
+    const { data } = await supabase
+      .from("dp_contacts")
+      .select("full_name")
+      .eq("is_active", true)
+      .order("full_name");
+    if (data) setDpContacts(data.map((d) => ({ label: d.full_name })));
+  };
+
   const handleAddCustomer = async () => {
     if (!newCustomerName.trim()) return;
     setAddingCustomer(true);
     try {
-      const maxSort = customerOptions.length > 0
-        ? Math.max(...customerOptions.map(() => 0)) + 1
-        : 0;
+      const maxSort = customerOptions.length;
       const { data, error } = await supabase
         .from("dropdown_options")
         .insert({
@@ -198,6 +231,9 @@ export default function CreateRFQ() {
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
+        // Values are stored in the unit the user entered; DB columns are _inches
+        // The form stores values in whatever unit the user picked, but DB expects inches
+        // Since the form fields are generic (width, length), we store as-is
         const { data: rfqItem, error: itemError } = await supabase
           .from("rfq_items")
           .insert({
@@ -205,18 +241,19 @@ export default function CreateRFQ() {
             product_name: item.product_name.trim(),
             product_type: item.product_type,
             item_code: item.item_code.trim() || null,
-            width_inches: item.width_inches ? Number(item.width_inches) : null,
-            length_inches: item.length_inches ? Number(item.length_inches) : null,
+            item_description: item.item_description || null,
+            width_inches: item.width ? Number(item.width) : null,
+            length_inches: item.length ? Number(item.length) : null,
             thickness_value: item.thickness_value ? Number(item.thickness_value) : null,
             thickness_unit: item.thickness_unit || null,
             structure: item.structure || null,
             material: item.material || null,
             seal_type: item.seal_type || null,
-            gusset_inches: item.gusset_inches ? Number(item.gusset_inches) : null,
-            zipper_inches: item.zipper_inches ? Number(item.zipper_inches) : null,
-            lip_front_inches: item.lip_front_inches ? Number(item.lip_front_inches) : null,
-            lip_back_inches: item.lip_back_inches ? Number(item.lip_back_inches) : null,
-            flip_size_inches: item.flip_size_inches ? Number(item.flip_size_inches) : null,
+            gusset_inches: item.gusset ? Number(item.gusset) : null,
+            zipper_inches: item.zipper ? Number(item.zipper) : null,
+            lip_front_inches: item.lip_front ? Number(item.lip_front) : null,
+            lip_back_inches: item.lip_back ? Number(item.lip_back) : null,
+            flip_size_inches: item.flip_size ? Number(item.flip_size) : null,
             wicket_hole: item.wicket_hole || null,
             wicket_size: item.wicket_size || null,
             vent_size: item.vent_size || null,
@@ -224,9 +261,33 @@ export default function CreateRFQ() {
             bags_per_wicket: item.bags_per_wicket ? Number(item.bags_per_wicket) : null,
             bags_per_case: item.bags_per_case ? Number(item.bags_per_case) : null,
             cases_per_pallet: item.cases_per_pallet ? Number(item.cases_per_pallet) : null,
-            item_description: item.item_description || null,
             notes: item.notes || null,
             sort_order: i,
+            // New fields
+            dp_sales_csr_name: item.dp_sales_csr_name || null,
+            film_type: item.film_type || null,
+            finish: item.finish || null,
+            printing_side: item.printing_side || null,
+            ink_type: item.ink_type || null,
+            wire_type: item.wire_type || null,
+            wicket_type: item.wicket_type || null,
+            pallet_dimensions: item.pallet_dimensions || null,
+            max_pallet_height: item.max_pallet_height || null,
+            perforations: item.perforations || null,
+            perforation_size: item.perforation_size || null,
+            pre_cut_wicket: item.pre_cut_wicket,
+            pre_cut_dotted: item.pre_cut_dotted,
+            wicket_separation: item.wicket_separation || null,
+            pantone_base: item.pantone_base,
+            sample_base: item.sample_base,
+            client_visit: item.client_visit,
+            color_proof: item.color_proof,
+            editable_files_needed: item.editable_files_needed,
+            physical_samples_needed: item.physical_samples_needed,
+            prepress_cost_by: item.prepress_cost_by || null,
+            observations: item.observations || null,
+            pieces_per_wicket: item.pieces_per_wicket ? Number(item.pieces_per_wicket) : null,
+            pieces_per_case: item.pieces_per_case ? Number(item.pieces_per_case) : null,
           } as any)
           .select()
           .single();
@@ -318,7 +379,6 @@ export default function CreateRFQ() {
                         {opt.label}
                       </SelectItem>
                     ))}
-                    {/* Inline add new customer */}
                     <div className="border-t p-2 mt-1">
                       <div className="flex items-center gap-2">
                         <Input
@@ -374,7 +434,6 @@ export default function CreateRFQ() {
               />
             </div>
 
-            {/* RFQ-level reference files */}
             <div className="space-y-2">
               <Label>Reference Documents</Label>
               <div className="flex items-center gap-2">
@@ -414,9 +473,7 @@ export default function CreateRFQ() {
         {/* Items */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              Products ({items.length})
-            </h2>
+            <h2 className="text-xl font-semibold">Products ({items.length})</h2>
             <Button onClick={addItem} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-1" /> Add Product
             </Button>
@@ -474,6 +531,7 @@ export default function CreateRFQ() {
                       data={item}
                       onChange={(data) => updateItem(index, data)}
                       productTypes={productTypes}
+                      dpContacts={dpContacts}
                     />
                   </CardContent>
                 )}

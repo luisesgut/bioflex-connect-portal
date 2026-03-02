@@ -1558,23 +1558,44 @@ export type Database = {
           bags_per_case: number | null
           bags_per_wicket: number | null
           cases_per_pallet: number | null
+          client_visit: boolean | null
+          color_proof: boolean | null
           created_at: string
+          dp_sales_csr_name: string | null
+          editable_files_needed: boolean | null
+          film_type: string | null
+          finish: string | null
           flip_size_inches: number | null
           gusset_inches: number | null
           id: string
+          ink_type: string | null
           item_code: string | null
           item_description: string | null
           length_inches: number | null
           lip_back_inches: number | null
           lip_front_inches: number | null
           material: string | null
+          max_pallet_height: string | null
           notes: string | null
+          observations: string | null
+          pallet_dimensions: string | null
+          pantone_base: boolean | null
+          perforation_size: string | null
+          perforations: string | null
+          physical_samples_needed: boolean | null
+          pieces_per_case: number | null
+          pieces_per_wicket: number | null
+          pre_cut_dotted: boolean | null
+          pre_cut_wicket: boolean | null
+          prepress_cost_by: string | null
+          printing_side: string | null
           product_name: string
           product_request_id: string | null
           product_type: Database["public"]["Enums"]["rfq_product_type"]
           reference_files: string[] | null
           reference_image_url: string | null
           rfq_id: string
+          sample_base: boolean | null
           seal_type: string | null
           sort_order: number
           status: Database["public"]["Enums"]["rfq_item_status"]
@@ -1585,31 +1606,55 @@ export type Database = {
           vent_size: string | null
           vents_count: number | null
           wicket_hole: string | null
+          wicket_separation: string | null
           wicket_size: string | null
+          wicket_type: string | null
           width_inches: number | null
+          wire_type: string | null
           zipper_inches: number | null
         }
         Insert: {
           bags_per_case?: number | null
           bags_per_wicket?: number | null
           cases_per_pallet?: number | null
+          client_visit?: boolean | null
+          color_proof?: boolean | null
           created_at?: string
+          dp_sales_csr_name?: string | null
+          editable_files_needed?: boolean | null
+          film_type?: string | null
+          finish?: string | null
           flip_size_inches?: number | null
           gusset_inches?: number | null
           id?: string
+          ink_type?: string | null
           item_code?: string | null
           item_description?: string | null
           length_inches?: number | null
           lip_back_inches?: number | null
           lip_front_inches?: number | null
           material?: string | null
+          max_pallet_height?: string | null
           notes?: string | null
+          observations?: string | null
+          pallet_dimensions?: string | null
+          pantone_base?: boolean | null
+          perforation_size?: string | null
+          perforations?: string | null
+          physical_samples_needed?: boolean | null
+          pieces_per_case?: number | null
+          pieces_per_wicket?: number | null
+          pre_cut_dotted?: boolean | null
+          pre_cut_wicket?: boolean | null
+          prepress_cost_by?: string | null
+          printing_side?: string | null
           product_name: string
           product_request_id?: string | null
           product_type: Database["public"]["Enums"]["rfq_product_type"]
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id: string
+          sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["rfq_item_status"]
@@ -1620,31 +1665,55 @@ export type Database = {
           vent_size?: string | null
           vents_count?: number | null
           wicket_hole?: string | null
+          wicket_separation?: string | null
           wicket_size?: string | null
+          wicket_type?: string | null
           width_inches?: number | null
+          wire_type?: string | null
           zipper_inches?: number | null
         }
         Update: {
           bags_per_case?: number | null
           bags_per_wicket?: number | null
           cases_per_pallet?: number | null
+          client_visit?: boolean | null
+          color_proof?: boolean | null
           created_at?: string
+          dp_sales_csr_name?: string | null
+          editable_files_needed?: boolean | null
+          film_type?: string | null
+          finish?: string | null
           flip_size_inches?: number | null
           gusset_inches?: number | null
           id?: string
+          ink_type?: string | null
           item_code?: string | null
           item_description?: string | null
           length_inches?: number | null
           lip_back_inches?: number | null
           lip_front_inches?: number | null
           material?: string | null
+          max_pallet_height?: string | null
           notes?: string | null
+          observations?: string | null
+          pallet_dimensions?: string | null
+          pantone_base?: boolean | null
+          perforation_size?: string | null
+          perforations?: string | null
+          physical_samples_needed?: boolean | null
+          pieces_per_case?: number | null
+          pieces_per_wicket?: number | null
+          pre_cut_dotted?: boolean | null
+          pre_cut_wicket?: boolean | null
+          prepress_cost_by?: string | null
+          printing_side?: string | null
           product_name?: string
           product_request_id?: string | null
           product_type?: Database["public"]["Enums"]["rfq_product_type"]
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id?: string
+          sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
           status?: Database["public"]["Enums"]["rfq_item_status"]
@@ -1655,8 +1724,11 @@ export type Database = {
           vent_size?: string | null
           vents_count?: number | null
           wicket_hole?: string | null
+          wicket_separation?: string | null
           wicket_size?: string | null
+          wicket_type?: string | null
           width_inches?: number | null
+          wire_type?: string | null
           zipper_inches?: number | null
         }
         Relationships: [
