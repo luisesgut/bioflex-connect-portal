@@ -424,12 +424,11 @@ export default function CreateRFQ() {
 
             <div className="space-y-2">
               <Label htmlFor="rfq_notes">Notes</Label>
-              <Textarea
+              <Input
                 id="rfq_notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="General notes about this RFQ..."
-                rows={2}
               />
             </div>
 

@@ -586,16 +586,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   <Checkbox checked={data.physical_samples_needed} onCheckedChange={(c) => update({ physical_samples_needed: !!c })} />
                   <Label className="text-xs">Physical Samples</Label>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Prepress Cost By</Label>
-                  <Select value={data.prepress_cost_by} onValueChange={(v) => update({ prepress_cost_by: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bioflex">Bioflex</SelectItem>
-                      <SelectItem value="client">Client</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </div>
 
