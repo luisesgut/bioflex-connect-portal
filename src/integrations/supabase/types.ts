@@ -1562,6 +1562,7 @@ export type Database = {
           flip_size_inches: number | null
           gusset_inches: number | null
           id: string
+          item_code: string | null
           item_description: string | null
           length_inches: number | null
           lip_back_inches: number | null
@@ -1596,6 +1597,7 @@ export type Database = {
           flip_size_inches?: number | null
           gusset_inches?: number | null
           id?: string
+          item_code?: string | null
           item_description?: string | null
           length_inches?: number | null
           lip_back_inches?: number | null
@@ -1630,6 +1632,7 @@ export type Database = {
           flip_size_inches?: number | null
           gusset_inches?: number | null
           id?: string
+          item_code?: string | null
           item_description?: string | null
           length_inches?: number | null
           lip_back_inches?: number | null

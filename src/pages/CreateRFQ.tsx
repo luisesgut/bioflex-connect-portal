@@ -13,14 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, X, FileText, Loader2, Plus, Trash2, ChevronDown, ChevronUp, Package } from "lucide-react";
+import { Upload, X, FileText, Loader2, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { RFQItemForm, type RFQItemData } from "@/components/rfq/RFQItemForm";
+import { RFQItemForm, type RFQItemData, type ProductTypeOption } from "@/components/rfq/RFQItemForm";
 
 interface DropdownOption {
   id: string;
@@ -29,7 +29,8 @@ interface DropdownOption {
 
 const EMPTY_ITEM: RFQItemData = {
   product_name: "",
-  product_type: "side_seal",
+  product_type: "",
+  item_code: "",
   width_inches: "",
   length_inches: "",
   thickness_value: "",
@@ -74,9 +75,13 @@ export default function CreateRFQ() {
 
   // Dropdown data
   const [customerOptions, setCustomerOptions] = useState<DropdownOption[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [addingCustomer, setAddingCustomer] = useState(false);
 
   useEffect(() => {
     fetchDropdownOptions();
+    fetchProductTypes();
   }, []);
 
   const fetchDropdownOptions = async () => {
@@ -87,6 +92,46 @@ export default function CreateRFQ() {
       .eq("is_active", true)
       .order("sort_order");
     if (data) setCustomerOptions(data);
+  };
+
+  const fetchProductTypes = async () => {
+    const { data } = await supabase
+      .from("production_capacity")
+      .select("item_type")
+      .order("item_type");
+    if (data) {
+      setProductTypes(data.map((d) => ({ value: d.item_type, label: d.item_type })));
+    }
+  };
+
+  const handleAddCustomer = async () => {
+    if (!newCustomerName.trim()) return;
+    setAddingCustomer(true);
+    try {
+      const maxSort = customerOptions.length > 0
+        ? Math.max(...customerOptions.map(() => 0)) + 1
+        : 0;
+      const { data, error } = await supabase
+        .from("dropdown_options")
+        .insert({
+          category: "final_customer",
+          label: newCustomerName.trim(),
+          sort_order: maxSort,
+        })
+        .select("id, label")
+        .single();
+      if (error) throw error;
+      if (data) {
+        setCustomerOptions((prev) => [...prev, data]);
+        setCustomer(data.label);
+        setNewCustomerName("");
+        toast.success("Customer added");
+      }
+    } catch {
+      toast.error("Failed to add customer");
+    } finally {
+      setAddingCustomer(false);
+    }
   };
 
   const addItem = () => {
@@ -123,7 +168,6 @@ export default function CreateRFQ() {
 
     setUploading(true);
     try {
-      // Create RFQ
       const { data: rfq, error: rfqError } = await supabase
         .from("rfqs")
         .insert({
@@ -139,7 +183,6 @@ export default function CreateRFQ() {
 
       if (rfqError) throw rfqError;
 
-      // Upload RFQ-level reference files
       if (referenceFiles.length > 0) {
         const fileUrls: string[] = [];
         for (const file of referenceFiles) {
@@ -153,7 +196,6 @@ export default function CreateRFQ() {
         }
       }
 
-      // Create items
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const { data: rfqItem, error: itemError } = await supabase
@@ -162,6 +204,7 @@ export default function CreateRFQ() {
             rfq_id: rfq.id,
             product_name: item.product_name.trim(),
             product_type: item.product_type,
+            item_code: item.item_code.trim() || null,
             width_inches: item.width_inches ? Number(item.width_inches) : null,
             length_inches: item.length_inches ? Number(item.length_inches) : null,
             thickness_value: item.thickness_value ? Number(item.thickness_value) : null,
@@ -190,7 +233,6 @@ export default function CreateRFQ() {
 
         if (itemError) throw itemError;
 
-        // Upload item reference files
         if (item.reference_files.length > 0) {
           const itemFileUrls: string[] = [];
           for (const file of item.reference_files) {
@@ -207,7 +249,6 @@ export default function CreateRFQ() {
           }
         }
 
-        // Create volumes
         const validVolumes = item.volumes.filter((v) => v.volume_quantity);
         if (validVolumes.length > 0) {
           const volumeInserts = validVolumes.map((v, vi) => ({
@@ -234,11 +275,9 @@ export default function CreateRFQ() {
     }
   };
 
-  const productTypeLabels: Record<string, string> = {
-    wicket: "Wicket",
-    side_seal: "Side Seal",
-    pouch: "Pouch",
-    film: "Film",
+  const getItemTypeLabel = (type: string) => {
+    const found = productTypes.find((t) => t.value === type);
+    return found ? found.label : type || "No type";
   };
 
   return (
@@ -279,6 +318,34 @@ export default function CreateRFQ() {
                         {opt.label}
                       </SelectItem>
                     ))}
+                    {/* Inline add new customer */}
+                    <div className="border-t p-2 mt-1">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="New customer..."
+                          value={newCustomerName}
+                          onChange={(e) => setNewCustomerName(e.target.value)}
+                          className="h-8 text-sm"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === "Enter") handleAddCustomer();
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 shrink-0"
+                          disabled={!newCustomerName.trim() || addingCustomer}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddCustomer();
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Add
+                        </Button>
+                      </div>
+                    </div>
                   </SelectContent>
                 </Select>
               </div>
@@ -359,7 +426,6 @@ export default function CreateRFQ() {
             const isExpanded = expandedItems.includes(index);
             return (
               <Card key={index} className="overflow-hidden">
-                {/* Collapsed header */}
                 <button
                   className="w-full flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors"
                   onClick={() => toggleExpanded(index)}
@@ -370,15 +436,17 @@ export default function CreateRFQ() {
                     </div>
                     <div className="text-left">
                       <p className="font-medium">
-                        {item.product_name || `Product ${index + 1}`}
+                        {item.item_code && item.product_name
+                          ? `${item.item_code} - ${item.product_name}`
+                          : item.product_name || `Product ${index + 1}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {productTypeLabels[item.product_type]} · {item.volumes.filter((v) => v.volume_quantity).length} volume(s)
+                        {getItemTypeLabel(item.product_type)} · {item.volumes.filter((v) => v.volume_quantity).length} volume(s)
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{productTypeLabels[item.product_type]}</Badge>
+                    <Badge variant="outline">{getItemTypeLabel(item.product_type)}</Badge>
                     {items.length > 1 && (
                       <Button
                         variant="ghost"
@@ -400,12 +468,12 @@ export default function CreateRFQ() {
                   </div>
                 </button>
 
-                {/* Expanded form */}
                 {isExpanded && (
                   <CardContent className="border-t pt-4">
                     <RFQItemForm
                       data={item}
                       onChange={(data) => updateItem(index, data)}
+                      productTypes={productTypes}
                     />
                   </CardContent>
                 )}

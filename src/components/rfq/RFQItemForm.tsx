@@ -20,6 +20,7 @@ export interface VolumeData {
 export interface RFQItemData {
   product_name: string;
   product_type: string;
+  item_code: string;
   width_inches: string;
   length_inches: string;
   thickness_value: string;
@@ -45,19 +46,18 @@ export interface RFQItemData {
   volumes: VolumeData[];
 }
 
+export interface ProductTypeOption {
+  value: string;
+  label: string;
+}
+
 interface RFQItemFormProps {
   data: RFQItemData;
   onChange: (data: RFQItemData) => void;
+  productTypes: ProductTypeOption[];
 }
 
-const PRODUCT_TYPES = [
-  { value: "wicket", label: "Wicket" },
-  { value: "side_seal", label: "Side Seal" },
-  { value: "pouch", label: "Pouch" },
-  { value: "film", label: "Film" },
-];
-
-export function RFQItemForm({ data, onChange }: RFQItemFormProps) {
+export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) {
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
   const updateVolume = (index: number, partial: Partial<VolumeData>) => {
@@ -74,17 +74,18 @@ export function RFQItemForm({ data, onChange }: RFQItemFormProps) {
     update({ volumes: data.volumes.filter((_, i) => i !== index) });
   };
 
-  const showGusset = data.product_type === "wicket" || data.product_type === "pouch";
-  const showZipper = data.product_type === "pouch" || data.product_type === "side_seal";
-  const showLips = data.product_type === "pouch" || data.product_type === "side_seal";
-  const showWicket = data.product_type === "wicket";
-  const showVents = data.product_type === "wicket";
-  const showFlip = data.product_type === "pouch";
+  const pt = data.product_type.toLowerCase();
+  const showGusset = pt.includes("wicket") || pt.includes("pouch");
+  const showZipper = pt.includes("pouch") || pt.includes("zipper") || pt.includes("no wicket");
+  const showLips = pt.includes("pouch") || pt.includes("no wicket");
+  const showWicket = pt.includes("wicket") && !pt.includes("no wicket");
+  const showVents = pt.includes("wicket") && !pt.includes("no wicket");
+  const showFlip = pt.includes("pouch");
 
   return (
     <div className="space-y-5">
       {/* Basic info */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <Label>Product Name *</Label>
           <Input
@@ -94,13 +95,21 @@ export function RFQItemForm({ data, onChange }: RFQItemFormProps) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Product Type *</Label>
+          <Label>Item Code</Label>
+          <Input
+            value={data.item_code}
+            onChange={(e) => update({ item_code: e.target.value })}
+            placeholder="Optional"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Item Type *</Label>
           <Select value={data.product_type} onValueChange={(v) => update({ product_type: v })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PRODUCT_TYPES.map((t) => (
+              {productTypes.map((t) => (
                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
             </SelectContent>

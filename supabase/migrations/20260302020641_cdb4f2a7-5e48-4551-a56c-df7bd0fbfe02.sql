@@ -1,0 +1,1 @@
+ALTER TABLE public.rfq_items ADD COLUMN item_code TEXT;
