@@ -17,7 +17,6 @@ import {
 const CATEGORIES = [
   { key: "final_customer", label: "Final Customer" },
   { key: "item_type", label: "Item Type" },
-  { key: "tipo_empaque", label: "Tipo Empaque" },
 ] as const;
 
 type Category = (typeof CATEGORIES)[number]["key"];
@@ -42,7 +41,6 @@ export function DropdownOptionsManagement() {
   const [newLabels, setNewLabels] = useState<Record<Category, string>>({
     final_customer: "",
     item_type: "",
-    tipo_empaque: "",
   });
   const [capacityEdits, setCapacityEdits] = useState<Record<string, number>>({});
 
@@ -170,7 +168,7 @@ export function DropdownOptionsManagement() {
         <div>
           <h2 className="text-lg font-semibold text-card-foreground">Product Dropdown Options</h2>
           <p className="text-sm text-muted-foreground">
-            Manage options for Final Customer, Item Type (with weekly capacity), and Tipo Empaque
+            Manage options for Final Customer and Item Type (with weekly capacity)
           </p>
         </div>
       </div>
