@@ -291,30 +291,42 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               </div>
               <div className="space-y-2">
                 <Label>DP Sales/CSR Name</Label>
-                <div className="border rounded-md p-3 max-h-36 overflow-y-auto space-y-2">
-                  {dpContacts.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No contacts available</p>
-                  )}
-                  {dpContacts.map((c) => (
-                    <div key={c.label} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={data.dp_sales_csr_names.includes(c.label)}
-                        onCheckedChange={(checked) => {
-                          const names = checked
-                            ? [...data.dp_sales_csr_names, c.label]
-                            : data.dp_sales_csr_names.filter((n) => n !== c.label);
-                          update({ dp_sales_csr_names: names });
-                        }}
-                      />
-                      <Label className="text-xs font-normal cursor-pointer">{c.label}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between font-normal h-10">
+                      <span className="truncate text-sm">
+                        {data.dp_sales_csr_names.length > 0
+                          ? data.dp_sales_csr_names.join(", ")
+                          : "Select contacts..."}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {dpContacts.length === 0 && (
+                        <p className="text-xs text-muted-foreground p-2">No contacts available</p>
+                      )}
+                      {dpContacts.map((c) => (
+                        <label
+                          key={c.label}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={data.dp_sales_csr_names.includes(c.label)}
+                            onCheckedChange={(checked) => {
+                              const names = checked
+                                ? [...data.dp_sales_csr_names, c.label]
+                                : data.dp_sales_csr_names.filter((n) => n !== c.label);
+                              update({ dp_sales_csr_names: names });
+                            }}
+                          />
+                          <span className="text-sm">{c.label}</span>
+                        </label>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                {data.dp_sales_csr_names.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {data.dp_sales_csr_names.length} selected
-                  </p>
-                )}
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
