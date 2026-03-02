@@ -20,6 +20,7 @@ export interface VolumeData {
 export interface RFQItemData {
   product_name: string;
   product_type: string;
+  item_code: string;
   width_inches: string;
   length_inches: string;
   thickness_value: string;
