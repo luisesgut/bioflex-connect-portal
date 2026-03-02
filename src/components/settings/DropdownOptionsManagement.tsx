@@ -41,7 +41,6 @@ export function DropdownOptionsManagement() {
   const [newLabels, setNewLabels] = useState<Record<Category, string>>({
     final_customer: "",
     item_type: "",
-    tipo_empaque: "",
   });
   const [capacityEdits, setCapacityEdits] = useState<Record<string, number>>({});
 
