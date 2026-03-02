@@ -74,12 +74,13 @@ export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) 
     update({ volumes: data.volumes.filter((_, i) => i !== index) });
   };
 
-  const showGusset = data.product_type === "wicket" || data.product_type === "pouch";
-  const showZipper = data.product_type === "pouch" || data.product_type === "side_seal";
-  const showLips = data.product_type === "pouch" || data.product_type === "side_seal";
-  const showWicket = data.product_type === "wicket";
-  const showVents = data.product_type === "wicket";
-  const showFlip = data.product_type === "pouch";
+  const pt = data.product_type.toLowerCase();
+  const showGusset = pt.includes("wicket") || pt.includes("pouch");
+  const showZipper = pt.includes("pouch") || pt.includes("zipper") || pt.includes("no wicket");
+  const showLips = pt.includes("pouch") || pt.includes("no wicket");
+  const showWicket = pt.includes("wicket") && !pt.includes("no wicket");
+  const showVents = pt.includes("wicket") && !pt.includes("no wicket");
+  const showFlip = pt.includes("pouch");
 
   return (
     <div className="space-y-5">
