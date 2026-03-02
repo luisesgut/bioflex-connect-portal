@@ -65,8 +65,9 @@ const App = () => (
                 
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />
-                <Route path="/product-requests/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
+                <Route path="/product-requests/new" element={<ProtectedRoute><CreateRFQ /></ProtectedRoute>} />
                 <Route path="/product-requests/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
+                <Route path="/products/request/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </LanguageProvider>
