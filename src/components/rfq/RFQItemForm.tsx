@@ -30,8 +30,7 @@ export interface RFQItemData {
   product_name: string;
   product_type: string;
   item_code: string;
-  item_description: string;
-  dp_sales_csr_name: string;
+  dp_sales_csr_names: string[];
 
   // Section 2 - Dimensions & Structure
   width: string;
