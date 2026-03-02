@@ -46,19 +46,18 @@ export interface RFQItemData {
   volumes: VolumeData[];
 }
 
+export interface ProductTypeOption {
+  value: string;
+  label: string;
+}
+
 interface RFQItemFormProps {
   data: RFQItemData;
   onChange: (data: RFQItemData) => void;
+  productTypes: ProductTypeOption[];
 }
 
-const PRODUCT_TYPES = [
-  { value: "wicket", label: "Wicket" },
-  { value: "side_seal", label: "Side Seal" },
-  { value: "pouch", label: "Pouch" },
-  { value: "film", label: "Film" },
-];
-
-export function RFQItemForm({ data, onChange }: RFQItemFormProps) {
+export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) {
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
   const updateVolume = (index: number, partial: Partial<VolumeData>) => {
