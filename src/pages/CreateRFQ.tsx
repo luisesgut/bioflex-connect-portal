@@ -240,7 +240,7 @@ export default function CreateRFQ() {
             product_name: item.product_name.trim(),
             product_type: item.product_type,
             item_code: item.item_code.trim() || null,
-            item_description: item.item_description || null,
+            item_description: item.product_name || null,
             width_inches: item.width ? Number(item.width) : null,
             length_inches: item.length ? Number(item.length) : null,
             thickness_value: item.thickness_value ? Number(item.thickness_value) : null,
