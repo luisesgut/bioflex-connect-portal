@@ -566,7 +566,7 @@ export default function Products() {
           </div>
           <Button variant="accent" className="gap-2" onClick={() => navigate("/products/new")}>
             <Plus className="h-5 w-5" />
-            Request New Product
+            New RFQ
           </Button>
         </div>
 
