@@ -231,27 +231,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
   return (
     <div className="space-y-2">
-      {/* Unit toggle */}
-      <div className="flex justify-end mb-2">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <Button
-            variant={measureUnit === "in" ? "default" : "ghost"}
-            size="sm"
-            className="h-7 text-xs px-3"
-            onClick={() => setMeasureUnit("in")}
-          >
-            Inches
-          </Button>
-          <Button
-            variant={measureUnit === "mm" ? "default" : "ghost"}
-            size="sm"
-            className="h-7 text-xs px-3"
-            onClick={() => setMeasureUnit("mm")}
-          >
-            mm
-          </Button>
-        </div>
-      </div>
 
       {/* ═══════════ SECTION 1: Product Information ═══════════ */}
       <Collapsible open={openSections.includes(1)} onOpenChange={() => toggleSection(1)}>
@@ -339,6 +318,27 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         <SectionHeader title="Dimensions & Structure" number={2} open={openSections.includes(2)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2 space-y-4">
+            {/* Unit toggle */}
+            <div className="flex justify-end">
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                <Button
+                  variant={measureUnit === "in" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs px-3"
+                  onClick={() => setMeasureUnit("in")}
+                >
+                  Inches
+                </Button>
+                <Button
+                  variant={measureUnit === "mm" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs px-3"
+                  onClick={() => setMeasureUnit("mm")}
+                >
+                  mm
+                </Button>
+              </div>
+            </div>
             {/* Core dimensions */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <MeasureField label="Width" value={data.width} onChange={(v) => update({ width: v })} unit={measureUnit} />
