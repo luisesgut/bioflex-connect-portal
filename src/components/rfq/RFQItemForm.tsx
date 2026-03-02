@@ -100,7 +100,7 @@ export function RFQItemForm({ data, onChange, productTypes }: RFQItemFormProps) 
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PRODUCT_TYPES.map((t) => (
+              {productTypes.map((t) => (
                 <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
             </SelectContent>
