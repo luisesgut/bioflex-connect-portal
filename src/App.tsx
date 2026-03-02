@@ -45,8 +45,9 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-                <Route path="/products/new" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
-                <Route path="/products/request/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
+                <Route path="/products/new" element={<ProtectedRoute><CreateRFQ /></ProtectedRoute>} />
+                <Route path="/products/new-legacy" element={<ProtectedRoute><NewProductRequest /></ProtectedRoute>} />
+                <Route path="/products/rfq/:id" element={<ProtectedRoute><ProductRequestDetail /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
                 <Route path="/orders/new" element={<ProtectedRoute><CreateOrder /></ProtectedRoute>} />
