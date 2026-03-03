@@ -74,6 +74,15 @@ interface StockVerificationItem {
   stockOtrasPOs?: number;
 }
 
+interface CatOrdenOpenItem {
+  pedido?: number | string | null;
+  u_PO2?: string | null;
+  clave?: string | null;
+  producto?: string | null;
+  cantidad?: number | string | null;
+  precio?: number | string | null;
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -98,8 +107,23 @@ interface Order {
   pdf_url: string | null;
   sales_order_number: string | null;
   accepted_at: string | null;
+  is_external?: boolean;
   inventoryStats: InventoryStats;
 }
+
+const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+
+const parseApiNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const cleaned = value.trim().replace(/[^0-9.-]/g, "");
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
 
 const statusStyles: Record<string, string> = {
   pending: "bg-info/10 text-info border-info/20",
@@ -187,13 +211,99 @@ export default function Orders() {
       return;
     }
 
-    const salesOrderNumbers = (ordersData || [])
-      .map((o: any) => o.sales_order_number)
-      .filter((son: string | null): son is string => son !== null && son !== "");
+    let catOrdenByPO: Record<string, CatOrdenOpenItem> = {};
+    let catOrdenLoaded = false;
+    try {
+      const catOrdenResponse = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+        signal: AbortSignal.timeout(30000),
+      });
 
-    const poNumbers = (ordersData || [])
+      if (catOrdenResponse.ok) {
+        const catOrdenPayload = (await catOrdenResponse.json()) as CatOrdenOpenItem[];
+        if (Array.isArray(catOrdenPayload)) {
+          catOrdenLoaded = true;
+          catOrdenByPO = catOrdenPayload.reduce<Record<string, CatOrdenOpenItem>>((acc, item) => {
+            const po2 = item.u_PO2?.trim();
+            if (po2) {
+              acc[po2] = item;
+            }
+            return acc;
+          }, {});
+        } else {
+          console.warn("Unexpected CatOrden open-with-orden response format");
+        }
+      } else {
+        console.warn(`CatOrden open-with-orden unavailable (status: ${catOrdenResponse.status})`);
+      }
+    } catch (catOrdenError) {
+      console.warn("Failed to fetch CatOrden open-with-orden:", catOrdenError);
+    }
+
+    const poByNumber = new Map<string, any>();
+    (ordersData || []).forEach((order: any) => {
+      const po = order.po_number?.trim?.();
+      if (po) poByNumber.set(po, order);
+    });
+
+    const activeOrdersSourceFromEndpoint: any[] = Object.values(catOrdenByPO).map((catOrder) => {
+      const po = catOrder.u_PO2?.trim() || "";
+      const matchedOrder = poByNumber.get(po);
+      if (matchedOrder) return matchedOrder;
+
+      const syntheticCantidad = parseApiNumber(catOrder.cantidad);
+      const syntheticPrecio = parseApiNumber(catOrder.precio);
+      const syntheticQuantity = syntheticCantidad !== null ? syntheticCantidad * 1000 : 0;
+      const syntheticTotalPrice =
+        syntheticCantidad !== null && syntheticPrecio !== null
+          ? syntheticCantidad * syntheticPrecio
+          : null;
+      const syntheticSalesOrder =
+        catOrder.pedido !== null && catOrder.pedido !== undefined
+          ? String(catOrder.pedido)
+          : null;
+
+      return {
+        id: `external-${po || Date.now()}`,
+        po_number: po,
+        quantity: syntheticQuantity,
+        total_price: syntheticTotalPrice,
+        status: "submitted",
+        is_hot_order: false,
+        do_not_delay: false,
+        requested_delivery_date: null,
+        estimated_delivery_date: null,
+        printing_date: null,
+        conversion_date: null,
+        created_at: new Date().toISOString(),
+        pdf_url: null,
+        sales_order_number: syntheticSalesOrder,
+        accepted_at: null,
+        products: null,
+        is_external: true,
+      };
+    });
+    const activeOrdersSource: any[] = catOrdenLoaded
+      ? activeOrdersSourceFromEndpoint
+      : (ordersData || []).filter((order: any) => order.status !== "closed");
+
+    const endpointPOs = new Set(
+      Object.keys(catOrdenByPO)
+        .map((po) => po.trim())
+        .filter(Boolean)
+    );
+    const closedOrdersSource = (ordersData || []).filter((order: any) => {
+      const po = order.po_number?.trim?.() || "";
+      return order.status === "closed" && !endpointPOs.has(po);
+    });
+    const combinedOrdersSource = [...activeOrdersSource, ...closedOrdersSource];
+
+    const salesOrderNumbers = combinedOrdersSource
+      .map((o: any) => o.sales_order_number)
+      .filter((son: unknown): son is string => typeof son === "string" && son.trim() !== "");
+
+    const poNumbers = combinedOrdersSource
       .map((o: any) => o.po_number)
-      .filter((po: string | null): po is string => po !== null && po !== "");
+      .filter((po: unknown): po is string => typeof po === "string" && po.trim() !== "");
 
     let inventoryByPO: Record<string, { inFloor: number; shipped: number; palletIds: Set<string> }> = {};
     let loadDetailsByPO: Record<string, LoadDetail[]> = {};
@@ -201,7 +311,7 @@ export default function Orders() {
     let shippedTraceability: Record<string, Set<string>> = {};
 
     const salesOrderToPO: Record<string, string> = {};
-    (ordersData || []).forEach((order: any) => {
+    combinedOrdersSource.forEach((order: any) => {
       if (order.sales_order_number && order.po_number) {
         salesOrderToPO[order.sales_order_number] = order.po_number;
       }
@@ -342,7 +452,7 @@ export default function Orders() {
       }
     }
 
-    const ptCodes = (ordersData || [])
+    const ptCodes = combinedOrdersSource
       .map((o: any) => o.products?.sku)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
     
@@ -367,15 +477,27 @@ export default function Orders() {
       }
     }
 
-    const formattedOrders = (ordersData || []).map((order: any) => {
+    const formattedOrders = combinedOrdersSource.map((order: any) => {
+      const catOrdenItem = catOrdenByPO[order.po_number];
+      const apiCantidad = parseApiNumber(catOrdenItem?.cantidad);
+      const apiPrecio = parseApiNumber(catOrdenItem?.precio);
+      const quantityFromApi = apiCantidad !== null ? apiCantidad * 1000 : null;
+      const totalPriceFromApi =
+        apiCantidad !== null && apiPrecio !== null ? apiCantidad * apiPrecio : null;
+      const salesOrderFromApi =
+        catOrdenItem?.pedido !== null && catOrdenItem?.pedido !== undefined
+          ? String(catOrdenItem.pedido)
+          : null;
+      const mergedQuantity = quantityFromApi ?? order.quantity;
+      const mergedSalesOrder = salesOrderFromApi || order.sales_order_number || null;
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
-      const hasSalesOrder = Boolean(order.sales_order_number && order.sales_order_number.trim() !== "" && order.po_number);
+      const hasSalesOrder = Boolean(mergedSalesOrder && mergedSalesOrder.trim() !== "" && order.po_number);
       // When SAP verification will run, use 0 as placeholder — SAP is the source of truth
       const effectiveInFloor = hasSalesOrder ? 0 : stats.inFloor;
       const effectiveShipped = hasSalesOrder ? 0 : stats.shipped;
       const produced = effectiveInFloor + effectiveShipped;
-      const pending = Math.max(0, order.quantity - produced);
-      const percentProduced = order.quantity > 0 ? Math.round((produced / order.quantity) * 100) : 0;
+      const pending = Math.max(0, mergedQuantity - produced);
+      const percentProduced = mergedQuantity > 0 ? Math.round((produced / mergedQuantity) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       const productSkuForInventory = order.products?.sku || null;
@@ -385,16 +507,16 @@ export default function Orders() {
       return {
         id: order.id,
         po_number: order.po_number,
-        product_name: order.products?.name || null,
-        product_pt_code: productPtCode,
+        product_name: catOrdenItem?.producto || order.products?.name || null,
+        product_pt_code: catOrdenItem?.clave || productPtCode,
         product_customer: order.products?.customer || null,
         product_item_type: order.products?.item_type || null,
         product_tipo_empaque: order.products?.tipo_empaque || null,
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         product_customer_item: order.products?.customer_item || null,
         product_item_description: order.products?.item_description || null,
-        quantity: order.quantity,
-        total_price: order.total_price,
+        quantity: mergedQuantity,
+        total_price: totalPriceFromApi ?? order.total_price,
         status: order.status,
         is_hot_order: order.is_hot_order,
         do_not_delay: order.do_not_delay ?? false,
@@ -404,8 +526,9 @@ export default function Orders() {
         conversion_date: order.conversion_date || null,
         created_at: order.created_at,
         pdf_url: order.pdf_url,
-        sales_order_number: order.sales_order_number,
+        sales_order_number: mergedSalesOrder,
         accepted_at: order.accepted_at || null,
+        is_external: Boolean(order.is_external),
         inventoryStats: {
           inFloor: effectiveInFloor,
           shipped: effectiveShipped,

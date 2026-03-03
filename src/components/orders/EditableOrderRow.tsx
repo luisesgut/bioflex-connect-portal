@@ -93,6 +93,7 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
+  is_external?: boolean;
   inventoryStats: InventoryStats;
 }
 
@@ -134,6 +135,7 @@ export function EditableOrderRow({
   columnWidths,
 }: EditableOrderRowProps) {
   const navigate = useNavigate();
+  const isExternalOrder = Boolean(order.is_external || order.id.startsWith("external-"));
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -277,6 +279,7 @@ export function EditableOrderRow({
   };
 
   const handleRowClick = (e: React.MouseEvent) => {
+    if (isExternalOrder) return;
     const target = e.target as HTMLElement;
     if (
       target.closest('button') ||
@@ -559,10 +562,14 @@ export function EditableOrderRow({
   const buildViewCells = (): Record<string, React.ReactNode> => ({
     po_number: (
       <div className="flex items-center gap-2">
-        <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
-          onClick={(e) => e.stopPropagation()}>
-          {order.po_number}
-        </Link>
+        {isExternalOrder ? (
+          <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
+        ) : (
+          <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}>
+            {order.po_number}
+          </Link>
+        )}
         {order.pdf_url && (
           <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
             className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
@@ -623,6 +630,10 @@ export function EditableOrderRow({
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">
+        {isExternalOrder ? (
+          <span className="text-xs text-muted-foreground">External</span>
+        ) : (
+          <>
         {isAdmin && (order.status === "pending" || order.status === "submitted") && (
           <Button size="sm" variant="default" className="gap-1" onClick={() => onAcceptOrder(order)}>
             <CheckCircle2 className="h-4 w-4" /> Accept
@@ -707,6 +718,8 @@ export function EditableOrderRow({
             is_hot_order: order.is_hot_order,
           }}
         />
+          </>
+        )}
       </div>
     ),
   });
@@ -726,7 +739,7 @@ export function EditableOrderRow({
           isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
         )}
         onClick={isAdmin && isEditing ? undefined : handleRowClick}
-        onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
+        onDoubleClick={isAdmin && !isEditing && !isExternalOrder ? () => setIsEditing(true) : undefined}
       >
         {columnOrder.map((colId) => (
           <td
@@ -775,7 +788,7 @@ export function EditableOrderRow({
 
   return (
     <tr className="transition-colors hover:bg-muted/20 cursor-pointer" onClick={handleRowClick}
-      onDoubleClick={() => isAdmin && setIsEditing(true)}>
+      onDoubleClick={() => isAdmin && !isExternalOrder && setIsEditing(true)}>
       {defaultViewOrder.map((colId) => (
         <td key={colId} className={cn("whitespace-nowrap px-6 py-4 text-sm", rightAlignedColumns.has(colId) && "text-right")}>
           {viewCells[colId] ?? null}
