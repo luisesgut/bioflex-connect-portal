@@ -269,10 +269,12 @@ export default function Products() {
 
   // Apply search + filters to products
   const filteredProducts = tabProducts.filter((product) => {
+    const ptCode = product.codigo_producto || product.pt_code || "";
     const matchesSearch =
       !searchQuery ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.item_description?.toLowerCase().includes(searchQuery.toLowerCase());
+      product.item_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ptCode.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesFilters =
       (filters.customer_item.length === 0 || (product.customer_item && filters.customer_item.includes(product.customer_item))) &&
