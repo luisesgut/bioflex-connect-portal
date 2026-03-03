@@ -170,7 +170,7 @@ export default function CreateRFQ() {
 
   const addItem = () => {
     const newIndex = items.length;
-    setItems((prev) => [...prev, { ...EMPTY_ITEM, volumes: [{ volume_quantity: "", unit: "MIL", notes: "" }] }]);
+    setItems((prev) => [...prev, { ...EMPTY_ITEM, structure_layers: [createEmptyLayer()], volumes: [{ volume_quantity: "", unit: "MIL", notes: "" }] }]);
     setExpandedItems((prev) => [...prev, newIndex]);
   };
 
