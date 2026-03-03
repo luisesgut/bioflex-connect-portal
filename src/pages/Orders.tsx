@@ -125,7 +125,7 @@ const statusFilters = ["All", "Submitted", "Accepted", "In Production", "Shipped
 
 export default function Orders() {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isInternalUser } = useAdmin();
   const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ export default function Orders() {
   const [bioflexDeliverySort, setBioflexDeliverySort] = useState<"asc" | "desc" | null>(null);
 
   // View mode toggle
-  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">(isAdmin ? "board" : "list");
+  const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">((isAdmin || isInternalUser) ? "board" : "list");
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -832,7 +832,7 @@ export default function Orders() {
             {/* View Mode Toggle */}
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board" | "canvas")} className="w-auto">
               <TabsList>
-                {isAdmin && (
+                {(isAdmin || isInternalUser) && (
                   <TabsTrigger value="board" className="gap-2">
                     <LayoutGrid className="h-4 w-4" />
                     Board
