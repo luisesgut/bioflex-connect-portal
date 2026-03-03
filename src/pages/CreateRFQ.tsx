@@ -267,7 +267,7 @@ export default function CreateRFQ() {
             // New fields
             dp_sales_csr_name: item.dp_sales_csr_names.join(", ") || null,
             film_type: item.film_type || null,
-            finish: item.finish || null,
+            finish: item.structure_layers.map(l => l.finish).filter(Boolean).join(" / ") || item.finish || null,
             printing_side: item.printing_side || null,
             ink_type: item.ink_type || null,
             wire_type: item.wire_type || null,
