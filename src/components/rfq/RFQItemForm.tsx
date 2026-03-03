@@ -381,19 +381,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                 <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Finish</Label>
-                <Select value={data.finish} onValueChange={(v) => update({ finish: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="natural">Natural</SelectItem>
-                    <SelectItem value="white">White</SelectItem>
-                    <SelectItem value="pigmented">Pigmented</SelectItem>
-                    <SelectItem value="metallic">Metallic</SelectItem>
-                    <SelectItem value="matte">Matte</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
                 <Label className="text-xs">Seal Type</Label>
                 <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
               </div>
