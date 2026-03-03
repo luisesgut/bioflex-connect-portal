@@ -39,6 +39,7 @@ const EMPTY_ITEM: RFQItemData = {
   thickness_unit: "gauge",
   structure: "",
   material: "",
+  structure_layers: [createEmptyLayer()],
   seal_type: "",
   gusset: "",
   zipper: "",
