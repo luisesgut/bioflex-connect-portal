@@ -832,7 +832,7 @@ export default function Orders() {
             {/* View Mode Toggle */}
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "timeline" | "board" | "canvas")} className="w-auto">
               <TabsList>
-                {isAdmin && (
+                {(isAdmin || isInternalUser) && (
                   <TabsTrigger value="board" className="gap-2">
                     <LayoutGrid className="h-4 w-4" />
                     Board
