@@ -44,6 +44,7 @@ export function createEmptyLayer(): StructureLayer {
     finish: "",
     thickness_value: "",
     thickness_unit: "gauge",
+    print_side: "",
   };
 }
 
