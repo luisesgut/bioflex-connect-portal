@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createEmptyLayer, layersToStructureString } from "@/components/rfq/StructureLayersInput";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ const EMPTY_ITEM: RFQItemData = {
   thickness_unit: "gauge",
   structure: "",
   material: "",
+  structure_layers: [createEmptyLayer()],
   seal_type: "",
   gusset: "",
   zipper: "",
@@ -168,7 +170,7 @@ export default function CreateRFQ() {
 
   const addItem = () => {
     const newIndex = items.length;
-    setItems((prev) => [...prev, { ...EMPTY_ITEM, volumes: [{ volume_quantity: "", unit: "MIL", notes: "" }] }]);
+    setItems((prev) => [...prev, { ...EMPTY_ITEM, structure_layers: [createEmptyLayer()], volumes: [{ volume_quantity: "", unit: "MIL", notes: "" }] }]);
     setExpandedItems((prev) => [...prev, newIndex]);
   };
 
@@ -243,10 +245,10 @@ export default function CreateRFQ() {
             item_description: item.product_name || null,
             width_inches: item.width ? Number(item.width) : null,
             length_inches: item.length ? Number(item.length) : null,
-            thickness_value: item.thickness_value ? Number(item.thickness_value) : null,
-            thickness_unit: item.thickness_unit || null,
-            structure: item.structure || null,
-            material: item.material || null,
+            thickness_value: item.structure_layers[0]?.thickness_value ? Number(item.structure_layers[0].thickness_value) : null,
+            thickness_unit: item.structure_layers[0]?.thickness_unit || null,
+            structure: layersToStructureString(item.structure_layers) || null,
+            material: item.structure_layers.map(l => l.material).filter(Boolean).join(" / ") || null,
             seal_type: item.seal_type || null,
             gusset_inches: item.gusset ? Number(item.gusset) : null,
             zipper_inches: item.zipper ? Number(item.zipper) : null,
@@ -265,7 +267,7 @@ export default function CreateRFQ() {
             // New fields
             dp_sales_csr_name: item.dp_sales_csr_names.join(", ") || null,
             film_type: item.film_type || null,
-            finish: item.finish || null,
+            finish: item.structure_layers.map(l => l.finish).filter(Boolean).join(" / ") || item.finish || null,
             printing_side: item.printing_side || null,
             ink_type: item.ink_type || null,
             wire_type: item.wire_type || null,

@@ -19,6 +19,12 @@ import {
 } from "@/components/ui/collapsible";
 import { FileText, Plus, Trash2, Upload, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  StructureLayersInput,
+  type StructureLayer,
+  createEmptyLayer,
+  layersToStructureString,
+} from "@/components/rfq/StructureLayersInput";
 
 export interface VolumeData {
   volume_quantity: string;
@@ -40,6 +46,7 @@ export interface RFQItemData {
   thickness_unit: string;
   structure: string;
   material: string;
+  structure_layers: StructureLayer[];
   seal_type: string;
   gusset: string;
   zipper: string;
@@ -360,59 +367,18 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               )}
             </div>
 
-            {/* Thickness */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Thickness</Label>
-                <div className="flex gap-1">
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={data.thickness_value}
-                    onChange={(e) => update({ thickness_value: e.target.value })}
-                    placeholder="0"
-                    className="flex-1"
-                  />
-                  <Select value={data.thickness_unit} onValueChange={(v) => update({ thickness_unit: v })}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gauge">Gauge</SelectItem>
-                      <SelectItem value="microns">Microns</SelectItem>
-                      <SelectItem value="mils">Mils</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Structure</Label>
-                <Input value={data.structure} onChange={(e) => update({ structure: e.target.value })} placeholder="e.g., LDPE" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Material</Label>
-                <Input value={data.material} onChange={(e) => update({ material: e.target.value })} placeholder="Material" />
-              </div>
-            </div>
+            {/* Structure Layers */}
+            <StructureLayersInput
+              layers={data.structure_layers}
+              onChange={(layers) => update({ structure_layers: layers })}
+              productType={data.product_type}
+            />
 
             {/* Film & Printing */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-1">
                 <Label className="text-xs">Film Type</Label>
                 <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Finish</Label>
-                <Select value={data.finish} onValueChange={(v) => update({ finish: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="natural">Natural</SelectItem>
-                    <SelectItem value="white">White</SelectItem>
-                    <SelectItem value="pigmented">Pigmented</SelectItem>
-                    <SelectItem value="metallic">Metallic</SelectItem>
-                    <SelectItem value="matte">Matte</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Seal Type</Label>
