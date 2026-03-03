@@ -1988,6 +1988,45 @@ export type Database = {
         }
         Relationships: []
       }
+      structure_layer_options: {
+        Row: {
+          category: string
+          created_at: string
+          default_unit: string | null
+          default_value: number | null
+          id: string
+          is_active: boolean
+          label: string
+          parent_material: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_unit?: string | null
+          default_value?: number | null
+          id?: string
+          is_active?: boolean
+          label: string
+          parent_material?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_unit?: string | null
+          default_value?: number | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          parent_material?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           created_at: string
