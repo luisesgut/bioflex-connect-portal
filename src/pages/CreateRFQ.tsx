@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createEmptyLayer, layersToStructureString } from "@/components/rfq/StructureLayersInput";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
