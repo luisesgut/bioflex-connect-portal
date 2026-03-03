@@ -41,7 +41,12 @@ const bottomNavigation = [
   { nameKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobile?: boolean;
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ mobile, onNavigate }: SidebarProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
