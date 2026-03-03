@@ -108,7 +108,7 @@ const loadStatusOptions = [
 ];
 
 export default function ShippingLoads() {
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isInternalUser } = useAdmin();
   const { t } = useLanguage();
   const { user } = useAuth();
   const { getDestinationLabel } = useCustomerLocations();
