@@ -166,8 +166,12 @@ function MeasureField({
           <Input
             type="number"
             step="0.01"
+            min="0"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || parseFloat(val) >= 0) onChange(val);
+            }}
             placeholder={placeholder}
             className="pr-8"
           />
@@ -381,10 +385,13 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               <MeasureField label="Width" value={data.width} onChange={(v) => update({ width: v })} unit={measureUnit} />
               <MeasureField label="Length / Height" value={data.length} onChange={(v) => update({ length: v })} unit={measureUnit} />
               {showGusset && (
-                <MeasureField label="Gusset" value={data.gusset} onChange={(v) => update({ gusset: v })} unit={measureUnit} />
+                <MeasureField label="Bottom Gusset" value={data.gusset} onChange={(v) => update({ gusset: v })} unit={measureUnit} />
               )}
               {isBag && !isFilm && (
-                <MeasureField label="Backflip / Flap / Lip" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
+                <>
+                  <MeasureField label="Back Flip" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
+                  <MeasureField label="Lip / Flap" value={data.lip_back} onChange={(v) => update({ lip_back: v })} unit={measureUnit} />
+                </>
               )}
               {showZipper && (
                 <MeasureField label="Zipper" value={data.zipper} onChange={(v) => update({ zipper: v })} unit={measureUnit} />
@@ -394,9 +401,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   <MeasureField label="Lip Front" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
                   <MeasureField label="Lip Back" value={data.lip_back} onChange={(v) => update({ lip_back: v })} unit={measureUnit} />
                 </>
-              )}
-              {showFlip && (
-                <MeasureField label="Flip Size" value={data.flip_size} onChange={(v) => update({ flip_size: v })} unit={measureUnit} />
               )}
             </div>
 
@@ -485,18 +489,19 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Elements</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <MeasureField label="Flip Size" value={data.flip_size} onChange={(v) => update({ flip_size: v })} unit={measureUnit} />
-                  <div className="space-y-1">
-                    <Label className="text-xs">Flip Position</Label>
-                    <Select value={data.flip_position} onValueChange={(v) => update({ flip_position: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="top">Top</SelectItem>
-                        <SelectItem value="bottom">Bottom</SelectItem>
-                        <SelectItem value="na">N/A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {parseFloat(data.lip_front) > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-xs">Flip Position</Label>
+                      <Select value={data.flip_position} onValueChange={(v) => update({ flip_position: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="top">Top</SelectItem>
+                          <SelectItem value="bottom">Bottom</SelectItem>
+                          <SelectItem value="na">N/A</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-5">
                     <Checkbox checked={data.zipper_header} onCheckedChange={(c) => update({ zipper_header: !!c })} />
                     <Label className="text-xs">Zipper Header</Label>

@@ -80,7 +80,7 @@ export function mapProductLineToItemType(productLine: string | null | undefined)
     case "bag_no_wicket_zipper": return "Bag No Wicket/Zipper";
     case "bag_zipper": return "Bag Zipper";
     case "film": return "Film";
-    case "pouch": return "Bag Zipper Pouch";
+    case "pouch": return "Bag Pouch";
     default: return null;
   }
 }

@@ -108,7 +108,7 @@ const loadStatusOptions = [
 ];
 
 export default function ShippingLoads() {
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isInternalUser } = useAdmin();
   const { t } = useLanguage();
   const { user } = useAuth();
   const { getDestinationLabel } = useCustomerLocations();
@@ -577,7 +577,7 @@ export default function ShippingLoads() {
         ) : (
           <div className="space-y-8">
             {/* Assembling Section - Admin Only */}
-            {isAdmin && (
+            {(isAdmin || isInternalUser) && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-muted-foreground" />

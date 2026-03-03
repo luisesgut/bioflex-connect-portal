@@ -1309,6 +1309,9 @@ export type Database = {
         Row: {
           access_profile_id: string | null
           company: string | null
+          company_address: string | null
+          company_city: string | null
+          company_zip: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -1322,6 +1325,9 @@ export type Database = {
         Insert: {
           access_profile_id?: string | null
           company?: string | null
+          company_address?: string | null
+          company_city?: string | null
+          company_zip?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -1335,6 +1341,9 @@ export type Database = {
         Update: {
           access_profile_id?: string | null
           company?: string | null
+          company_address?: string | null
+          company_city?: string | null
+          company_zip?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -2134,6 +2143,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_internal_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
