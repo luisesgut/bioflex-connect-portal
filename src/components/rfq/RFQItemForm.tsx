@@ -324,6 +324,11 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
       <Collapsible open={openSections.includes(2)} onOpenChange={() => toggleSection(2)}>
         <SectionHeader title="Dimensions & Structure" number={2} open={openSections.includes(2)} />
         <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure dimensions & structure.</p>
+            </div>
+          ) : (
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Unit toggle */}
             <div className="flex justify-end">
@@ -436,6 +441,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               </div>
             )}
           </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
