@@ -19,6 +19,12 @@ import {
 } from "@/components/ui/collapsible";
 import { FileText, Plus, Trash2, Upload, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  StructureLayersInput,
+  type StructureLayer,
+  createEmptyLayer,
+  layersToStructureString,
+} from "@/components/rfq/StructureLayersInput";
 
 export interface VolumeData {
   volume_quantity: string;
