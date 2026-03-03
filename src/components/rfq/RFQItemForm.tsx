@@ -628,68 +628,78 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               {showWicketFields && (
                 <>
                   <div className="space-y-1">
-                    <Label className="text-xs">Pieces / Wicket</Label>
+                    <Label className="text-xs">Bags / Cs / Rl</Label>
+                    <Input type="number" value={data.pieces_per_case} onChange={(e) => update({ pieces_per_case: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Bags / Wicket</Label>
                     <Input type="number" value={data.pieces_per_wicket} onChange={(e) => update({ pieces_per_wicket: e.target.value })} placeholder="0" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Wicket Type</Label>
-                    <Select value={data.wicket_type} onValueChange={(v) => update({ wicket_type: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="reverse">Reverse</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs">Wickets / Case</Label>
+                    <Input value={data.wickets_per_case} onChange={(e) => update({ wickets_per_case: e.target.value })} placeholder="e.g., N/A" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Wire Type</Label>
-                    <Select value={data.wire_type} onValueChange={(v) => update({ wire_type: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="smooth">Smooth</SelectItem>
-                        <SelectItem value="drop">Drop</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Wicket Hole</Label>
-                    <Input value={data.wicket_hole} onChange={(e) => update({ wicket_hole: e.target.value })} placeholder='e.g., 1/4 inch' />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Wicket Size</Label>
-                    <Input value={data.wicket_size} onChange={(e) => update({ wicket_size: e.target.value })} placeholder="e.g., Standard" />
+                    <Label className="text-xs">Cases / Pallet</Label>
+                    <Input type="number" value={data.cases_per_pallet} onChange={(e) => update({ cases_per_pallet: e.target.value })} placeholder="0" />
                   </div>
                 </>
               )}
-              {showVents && (
+
+              {!showWicketFields && (
                 <>
                   <div className="space-y-1">
-                    <Label className="text-xs">Vent Size</Label>
-                    <Input value={data.vent_size} onChange={(e) => update({ vent_size: e.target.value })} placeholder="e.g., Micro" />
+                    <Label className="text-xs">Pieces / Case</Label>
+                    <Input type="number" value={data.pieces_per_case} onChange={(e) => update({ pieces_per_case: e.target.value })} placeholder="0" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Vents Count</Label>
-                    <Input type="number" value={data.vents_count} onChange={(e) => update({ vents_count: e.target.value })} placeholder="0" />
+                    <Label className="text-xs">Cases / Pallet</Label>
+                    <Input type="number" value={data.cases_per_pallet} onChange={(e) => update({ cases_per_pallet: e.target.value })} placeholder="0" />
                   </div>
                 </>
               )}
 
               <div className="space-y-1">
-                <Label className="text-xs">Pieces / Case</Label>
-                <Input type="number" value={data.pieces_per_case} onChange={(e) => update({ pieces_per_case: e.target.value })} placeholder="0" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Cases / Pallet</Label>
-                <Input type="number" value={data.cases_per_pallet} onChange={(e) => update({ cases_per_pallet: e.target.value })} placeholder="0" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Pallet Dimensions</Label>
+                <Label className="text-xs">Pallet Size</Label>
                 <Input value={data.pallet_dimensions} onChange={(e) => update({ pallet_dimensions: e.target.value })} placeholder="e.g., 40 x 48" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Max Pallet Height</Label>
                 <Input value={data.max_pallet_height} onChange={(e) => update({ max_pallet_height: e.target.value })} placeholder="e.g., 1.4 mts" />
               </div>
+
+              {showWicketFields && (
+                <>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.cornerboards} onCheckedChange={(c) => update({ cornerboards: !!c })} />
+                    <Label className="text-xs">Cornerboards</Label>
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.heat_treated} onCheckedChange={(c) => update({ heat_treated: !!c })} />
+                    <Label className="text-xs">Heat Treated</Label>
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.pallet_covers} onCheckedChange={(c) => update({ pallet_covers: !!c })} />
+                    <Label className="text-xs">Pallet Covers</Label>
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.poly_wrap} onCheckedChange={(c) => update({ poly_wrap: !!c })} />
+                    <Label className="text-xs">Poly Wrap</Label>
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.four_way_strap} onCheckedChange={(c) => update({ four_way_strap: !!c })} />
+                    <Label className="text-xs">4-Way Strap</Label>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Box Size</Label>
+                    <Input value={data.box_size} onChange={(e) => update({ box_size: e.target.value })} placeholder="e.g., 24 x 12 x 8" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Box Color</Label>
+                    <Input value={data.box_color} onChange={(e) => update({ box_color: e.target.value })} placeholder="e.g., White" />
+                  </div>
+                </>
+              )}
             </div>
           </div>
           )}
