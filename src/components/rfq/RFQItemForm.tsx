@@ -388,7 +388,10 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                 <MeasureField label="Bottom Gusset" value={data.gusset} onChange={(v) => update({ gusset: v })} unit={measureUnit} />
               )}
               {isBag && !isFilm && (
-                <MeasureField label="Backflip / Flap / Lip" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
+                <>
+                  <MeasureField label="Back Flip" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
+                  <MeasureField label="Lip / Flap" value={data.lip_back} onChange={(v) => update({ lip_back: v })} unit={measureUnit} />
+                </>
               )}
               {showZipper && (
                 <MeasureField label="Zipper" value={data.zipper} onChange={(v) => update({ zipper: v })} unit={measureUnit} />
