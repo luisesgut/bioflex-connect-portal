@@ -53,6 +53,7 @@ export interface RFQItemData {
   lip_front: string;
   lip_back: string;
   flip_size: string;
+  flip_position: string;
   film_type: string;
   finish: string;
   printing_side: string;
@@ -62,8 +63,24 @@ export interface RFQItemData {
   pre_cut_wicket: boolean;
   pre_cut_dotted: boolean;
   wicket_separation: string;
+  zipper_header: boolean;
+  tear_top: boolean;
+  wicket_less: boolean;
+  vents_across: string;
+  vents_down: string;
+  slits_above_wicket: boolean;
+  land_area: string;
+  wicket_position: string;
+  rubber_bands: boolean;
+  front_chipboard: string;
+  back_chipboard: string;
+  wicket_wire_end: string;
+  wicket_wire_gauge: string;
+  rubber_washers: boolean;
+  extrusion_type: string;
+  clarity_grade: string;
 
-  // Section 3 - Packaging
+  // Section 3 - Packaging & Shipping Format
   wicket_hole: string;
   wicket_size: string;
   wicket_type: string;
@@ -77,6 +94,14 @@ export interface RFQItemData {
   max_pallet_height: string;
   pieces_per_wicket: string;
   pieces_per_case: string;
+  wickets_per_case: string;
+  cornerboards: boolean;
+  heat_treated: boolean;
+  pallet_covers: boolean;
+  poly_wrap: boolean;
+  four_way_strap: boolean;
+  box_size: string;
+  box_color: string;
 
   // Section 4 - Complementary Info
   pantone_base: boolean;
