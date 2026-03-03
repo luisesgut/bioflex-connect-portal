@@ -16,34 +16,46 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined);
 export function AdminProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [isActualAdmin, setIsActualAdmin] = useState(false);
+  const [isInternalUser, setIsInternalUser] = useState(false);
   const [isViewingAsCustomer, setIsViewingAsCustomer] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdminRole = async () => {
+    const checkUserRoles = async () => {
       if (!user) {
         setIsActualAdmin(false);
+        setIsInternalUser(false);
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+      // Check admin role and internal user type in parallel
+      const [adminResult, profileResult] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+      ]);
 
-      if (error) {
-        console.error('Error checking admin role:', error);
+      if (adminResult.error) {
+        console.error('Error checking admin role:', adminResult.error);
         setIsActualAdmin(false);
       } else {
-        setIsActualAdmin(!!data);
+        setIsActualAdmin(!!adminResult.data);
       }
+
+      setIsInternalUser(profileResult.data?.user_type === 'internal');
       setLoading(false);
     };
 
-    checkAdminRole();
+    checkUserRoles();
   }, [user]);
 
   // Reset view mode when user changes
@@ -59,7 +71,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const isAdmin = isActualAdmin && !isViewingAsCustomer;
 
   return (
-    <AdminContext.Provider value={{ isAdmin, isActualAdmin, loading, isViewingAsCustomer, toggleViewMode }}>
+    <AdminContext.Provider value={{ isAdmin, isActualAdmin, isInternalUser, loading, isViewingAsCustomer, toggleViewMode }}>
       {children}
     </AdminContext.Provider>
   );
