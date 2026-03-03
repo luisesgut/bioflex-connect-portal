@@ -78,7 +78,10 @@ export function Sidebar({ mobile, onNavigate }: SidebarProps = {}) {
   const userEmail = user?.email || 'user@example.com';
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground">
+    <aside className={cn(
+      "h-full w-64 bg-sidebar text-sidebar-foreground",
+      !mobile && "fixed left-0 top-0 z-40 h-screen"
+    )}>
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
