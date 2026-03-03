@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,35 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-
-const MATERIALS = [
-  "LDPE",
-  "LLDPE",
-  "HDPE",
-  "PP",
-  "CPP",
-  "BOPP",
-  "PET",
-  "BOPET",
-  "PA",
-  "Nylon",
-  "EVA",
-  "Metallized PET",
-  "Metallized BOPP",
-  "Aluminum Foil",
-  "Paper",
-  "Other",
-] as const;
-
-const FINISHES = [
-  "Natural",
-  "White",
-  "Pigmented",
-  "Metallic",
-  "Matte",
-  "Glossy",
-  "Satin",
-] as const;
+import { supabase } from "@/integrations/supabase/client";
 
 export interface StructureLayer {
   id: string;
@@ -50,7 +23,13 @@ export interface StructureLayer {
 interface StructureLayersInputProps {
   layers: StructureLayer[];
   onChange: (layers: StructureLayer[]) => void;
-  productType: string; // to determine max layers
+  productType: string;
+}
+
+interface ThicknessPreset {
+  parent_material: string;
+  default_value: number;
+  default_unit: string;
 }
 
 function generateId(): string {
@@ -73,8 +52,14 @@ export function layersToStructureString(layers: StructureLayer[]): string {
     .filter((l) => l.material)
     .map((l) => {
       const unitLabel =
-        l.thickness_unit === "gauge" ? "ga" : l.thickness_unit === "microns" ? "μm" : "mil";
-      const thicknessPart = l.thickness_value ? ` ${l.thickness_value}${unitLabel}` : "";
+        l.thickness_unit === "gauge"
+          ? "ga"
+          : l.thickness_unit === "microns"
+          ? "μm"
+          : "mil";
+      const thicknessPart = l.thickness_value
+        ? ` ${l.thickness_value}${unitLabel}`
+        : "";
       const finishPart = l.finish ? ` (${l.finish})` : "";
       return `${l.material}${thicknessPart}${finishPart}`;
     })
@@ -90,9 +75,17 @@ function getMaxLayers(productType: string): number {
     pt.includes("sello") ||
     pt.includes("side seal");
   if (isBag) return 2;
-  // Film, Pouch, etc. — unlimited (practical max 10)
   return 10;
 }
+
+// Fallbacks if DB is empty
+const FALLBACK_MATERIALS = [
+  "LDPE","LLDPE","HDPE","PP","CPP","BOPP","PET","BOPET","PA","Nylon",
+  "EVA","Metallized PET","Metallized BOPP","Aluminum Foil","Paper","Other",
+];
+const FALLBACK_FINISHES = [
+  "Natural","White","Pigmented","Metallic","Matte","Glossy","Satin",
+];
 
 export function StructureLayersInput({
   layers,
@@ -100,9 +93,56 @@ export function StructureLayersInput({
   productType,
 }: StructureLayersInputProps) {
   const maxLayers = getMaxLayers(productType);
+  const [materials, setMaterials] = useState<string[]>(FALLBACK_MATERIALS);
+  const [finishes, setFinishes] = useState<string[]>(FALLBACK_FINISHES);
+  const [thicknessPresets, setThicknessPresets] = useState<ThicknessPreset[]>([]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      const { data } = await supabase
+        .from("structure_layer_options")
+        .select("category, label, parent_material, default_value, default_unit")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (data && data.length > 0) {
+        const mats = data.filter((d) => d.category === "material").map((d) => d.label);
+        const fins = data.filter((d) => d.category === "finish").map((d) => d.label);
+        const presets = data
+          .filter((d) => d.category === "thickness_preset" && d.parent_material && d.default_value)
+          .map((d) => ({
+            parent_material: d.parent_material!,
+            default_value: d.default_value!,
+            default_unit: d.default_unit || "gauge",
+          }));
+
+        if (mats.length > 0) setMaterials(mats);
+        if (fins.length > 0) setFinishes(fins);
+        setThicknessPresets(presets);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   const updateLayer = (id: string, updates: Partial<StructureLayer>) => {
-    onChange(layers.map((l) => (l.id === id ? { ...l, ...updates } : l)));
+    const newLayers = layers.map((l) => {
+      if (l.id !== id) return l;
+      const updated = { ...l, ...updates };
+
+      // Auto-fill thickness from preset when material changes
+      if (updates.material && thicknessPresets.length > 0) {
+        const preset = thicknessPresets.find(
+          (p) => p.parent_material === updates.material
+        );
+        if (preset) {
+          updated.thickness_value = String(preset.default_value);
+          updated.thickness_unit = preset.default_unit;
+        }
+      }
+
+      return updated;
+    });
+    onChange(newLayers);
   };
 
   const addLayer = () => {
@@ -148,7 +188,7 @@ export function StructureLayersInput({
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MATERIALS.map((mat) => (
+                    {materials.map((mat) => (
                       <SelectItem key={mat} value={mat}>
                         {mat}
                       </SelectItem>
@@ -168,7 +208,7 @@ export function StructureLayersInput({
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FINISHES.map((f) => (
+                    {finishes.map((f) => (
                       <SelectItem key={f} value={f}>
                         {f}
                       </SelectItem>

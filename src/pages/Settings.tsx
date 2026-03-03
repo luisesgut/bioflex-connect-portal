@@ -88,6 +88,13 @@ export default function Settings() {
           </div>
         )}
 
+        {/* Structure Layer Options Management - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.18s" }}>
+            <StructureLayerOptionsManagement />
+          </div>
+        )}
+
 
         {/* Company Section */}
         <div className="rounded-xl border bg-card p-6 shadow-card animate-slide-up" style={{ animationDelay: "0.2s" }}>
