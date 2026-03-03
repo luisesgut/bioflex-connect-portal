@@ -18,6 +18,7 @@ export interface StructureLayer {
   finish: string;
   thickness_value: string;
   thickness_unit: string; // gauge | microns | mils
+  print_side: string; // external | internal | both | none
 }
 
 interface StructureLayersInputProps {
@@ -43,6 +44,7 @@ export function createEmptyLayer(): StructureLayer {
     finish: "",
     thickness_value: "",
     thickness_unit: "gauge",
+    print_side: "",
   };
 }
 
@@ -218,7 +220,7 @@ export function StructureLayersInput({
               </div>
 
               {/* Thickness */}
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1">
                 <Label className="text-xs">Thickness</Label>
                 <div className="flex gap-1.5">
                   <Input
@@ -249,6 +251,27 @@ export function StructureLayersInput({
                   </Select>
                 </div>
               </div>
+
+              {/* Print Side - only on first layer */}
+              {index === 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Print Side</Label>
+                  <Select
+                    value={layer.print_side}
+                    onValueChange={(val) => updateLayer(layer.id, { print_side: val })}
+                  >
+                    <SelectTrigger className="h-9 bg-background">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="external">External (Front)</SelectItem>
+                      <SelectItem value="internal">Internal (Reverse)</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="none">N/A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {layers.length > 1 && (
