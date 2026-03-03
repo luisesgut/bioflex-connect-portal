@@ -46,6 +46,7 @@ export interface RFQItemData {
   thickness_unit: string;
   structure: string;
   material: string;
+  structure_layers: StructureLayer[];
   seal_type: string;
   gusset: string;
   zipper: string;
