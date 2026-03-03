@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Package } from 'lucide-react';
 import { z } from 'zod';
+import ForgotPasswordDialog from '@/components/auth/ForgotPasswordDialog';
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: 'Invalid email address' }),
@@ -177,6 +178,9 @@ export default function Auth() {
                       'Sign In'
                     )}
                   </Button>
+                  <div className="text-center pt-2">
+                    <ForgotPasswordDialog />
+                  </div>
                 </form>
               </TabsContent>
 

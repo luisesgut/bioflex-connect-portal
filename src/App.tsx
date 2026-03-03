@@ -16,6 +16,7 @@ import CreateOrder from "./pages/CreateOrder";
 
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import AdminProducts from "./pages/AdminProducts";
 import Users from "./pages/Users";
@@ -43,6 +44,7 @@ const App = () => (
             <LanguageProvider>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
                 <Route path="/products/new" element={<ProtectedRoute><CreateRFQ /></ProtectedRoute>} />
