@@ -132,6 +132,7 @@ export function Sidebar({ mobile, onNavigate }: SidebarProps = {}) {
                 <Link
                   key={item.nameKey}
                   to={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
