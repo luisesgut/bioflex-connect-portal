@@ -395,9 +395,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   <MeasureField label="Lip Back" value={data.lip_back} onChange={(v) => update({ lip_back: v })} unit={measureUnit} />
                 </>
               )}
-              {showFlip && (
-                <MeasureField label="Flip Size" value={data.flip_size} onChange={(v) => update({ flip_size: v })} unit={measureUnit} />
-              )}
             </div>
 
             {/* Structure Layers */}
