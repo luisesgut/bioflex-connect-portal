@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 interface AdminContextType {
   isAdmin: boolean;
   isActualAdmin: boolean;
+  isInternalUser: boolean;
   loading: boolean;
   isViewingAsCustomer: boolean;
   toggleViewMode: () => void;
