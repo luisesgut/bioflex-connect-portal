@@ -75,6 +75,7 @@ interface Filters {
   customer: string[];
   item_type: string[];
   tipo_empaque: string[];
+  pt_code: string[];
   pieces_per_pallet: string[];
   dp_sales_csr_names: string[];
 }
@@ -85,6 +86,7 @@ const emptyFilters: Filters = {
   customer: [],
   item_type: [],
   tipo_empaque: [],
+  pt_code: [],
   pieces_per_pallet: [],
   dp_sales_csr_names: [],
 };
@@ -267,10 +269,12 @@ export default function Products() {
 
   // Apply search + filters to products
   const filteredProducts = tabProducts.filter((product) => {
+    const ptCode = product.codigo_producto || product.pt_code || "";
     const matchesSearch =
       !searchQuery ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.item_description?.toLowerCase().includes(searchQuery.toLowerCase());
+      product.item_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ptCode.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesFilters =
       (filters.customer_item.length === 0 || (product.customer_item && filters.customer_item.includes(product.customer_item))) &&
@@ -278,6 +282,7 @@ export default function Products() {
       (filters.customer.length === 0 || (product.customer && filters.customer.includes(product.customer))) &&
       (filters.item_type.length === 0 || (product.item_type && filters.item_type.includes(product.item_type))) &&
       (filters.tipo_empaque.length === 0 || (product.tipo_empaque && filters.tipo_empaque.includes(product.tipo_empaque))) &&
+      (filters.pt_code.length === 0 || ((product.codigo_producto || product.pt_code) && filters.pt_code.includes(product.codigo_producto || product.pt_code || ""))) &&
       (filters.pieces_per_pallet.length === 0 || (product.pieces_per_pallet !== null && filters.pieces_per_pallet.includes(String(product.pieces_per_pallet)))) &&
       (filters.dp_sales_csr_names.length === 0 || (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names)));
 
@@ -385,7 +390,7 @@ export default function Products() {
               <ColumnFilterHeader label="Final Customer" filterKey="customer" options={getUniqueValues("customer")} />
               <ColumnFilterHeader label="Item Type" filterKey="item_type" options={getUniqueValues("item_type")} />
               {isAdmin && <ColumnFilterHeader label="Tipo Empaque" filterKey="tipo_empaque" options={getUniqueValues("tipo_empaque")} />}
-              {isAdmin && <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">PT Code</th>}
+              {isAdmin && <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={getUniqueValues("codigo_producto")} />}
               <ColumnFilterHeader label="Pieces/Pallet" filterKey="pieces_per_pallet" options={getUniqueValues("pieces_per_pallet")} className="text-right" />
               {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">PC</th>}
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Customer Spec</th>
@@ -593,7 +598,7 @@ export default function Products() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={activeTab === "in_process" ? "Search by name, customer, or item code..." : "Search by item or description..."}
+              placeholder={activeTab === "in_process" ? "Search by name, customer, or item code..." : "Search by item, description, or PT Code..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
