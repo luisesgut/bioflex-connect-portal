@@ -18,6 +18,7 @@ export interface StructureLayer {
   finish: string;
   thickness_value: string;
   thickness_unit: string; // gauge | microns | mils
+  print_side: string; // external | internal | both | none
 }
 
 interface StructureLayersInputProps {
