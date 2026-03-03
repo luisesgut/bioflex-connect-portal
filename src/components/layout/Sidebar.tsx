@@ -41,7 +41,12 @@ const bottomNavigation = [
   { nameKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobile?: boolean;
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ mobile, onNavigate }: SidebarProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -73,7 +78,10 @@ export function Sidebar() {
   const userEmail = user?.email || 'user@example.com';
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar text-sidebar-foreground">
+    <aside className={cn(
+      "h-full w-64 bg-sidebar text-sidebar-foreground",
+      !mobile && "fixed left-0 top-0 z-40 h-screen"
+    )}>
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
@@ -124,6 +132,7 @@ export function Sidebar() {
                 <Link
                   key={item.nameKey}
                   to={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
@@ -154,6 +163,7 @@ export function Sidebar() {
                     <Link
                       key={item.nameKey}
                       to={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         isActive
@@ -180,6 +190,7 @@ export function Sidebar() {
             <Link
               key={item.nameKey}
               to={item.href}
+              onClick={onNavigate}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
             >
               <item.icon className="h-5 w-5" />
