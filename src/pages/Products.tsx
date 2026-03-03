@@ -75,6 +75,7 @@ interface Filters {
   customer: string[];
   item_type: string[];
   tipo_empaque: string[];
+  pt_code: string[];
   pieces_per_pallet: string[];
   dp_sales_csr_names: string[];
 }
@@ -85,6 +86,7 @@ const emptyFilters: Filters = {
   customer: [],
   item_type: [],
   tipo_empaque: [],
+  pt_code: [],
   pieces_per_pallet: [],
   dp_sales_csr_names: [],
 };
