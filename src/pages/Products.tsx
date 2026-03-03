@@ -390,7 +390,7 @@ export default function Products() {
               <ColumnFilterHeader label="Final Customer" filterKey="customer" options={getUniqueValues("customer")} />
               <ColumnFilterHeader label="Item Type" filterKey="item_type" options={getUniqueValues("item_type")} />
               {isAdmin && <ColumnFilterHeader label="Tipo Empaque" filterKey="tipo_empaque" options={getUniqueValues("tipo_empaque")} />}
-              {isAdmin && <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">PT Code</th>}
+              {isAdmin && <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={getUniqueValues("codigo_producto")} />}
               <ColumnFilterHeader label="Pieces/Pallet" filterKey="pieces_per_pallet" options={getUniqueValues("pieces_per_pallet")} className="text-right" />
               {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">PC</th>}
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Customer Spec</th>
