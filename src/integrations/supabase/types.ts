@@ -1994,6 +1994,7 @@ export type Database = {
           created_at: string
           default_unit: string | null
           default_value: number | null
+          density: number | null
           id: string
           is_active: boolean
           label: string
@@ -2006,6 +2007,7 @@ export type Database = {
           created_at?: string
           default_unit?: string | null
           default_value?: number | null
+          density?: number | null
           id?: string
           is_active?: boolean
           label: string
@@ -2018,6 +2020,7 @@ export type Database = {
           created_at?: string
           default_unit?: string | null
           default_value?: number | null
+          density?: number | null
           id?: string
           is_active?: boolean
           label?: string

@@ -1,0 +1,1 @@
+ALTER TABLE public.structure_layer_options ADD COLUMN density numeric NULL;
