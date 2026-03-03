@@ -166,8 +166,12 @@ function MeasureField({
           <Input
             type="number"
             step="0.01"
+            min="0"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || parseFloat(val) >= 0) onChange(val);
+            }}
             placeholder={placeholder}
             className="pr-8"
           />
@@ -381,7 +385,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               <MeasureField label="Width" value={data.width} onChange={(v) => update({ width: v })} unit={measureUnit} />
               <MeasureField label="Length / Height" value={data.length} onChange={(v) => update({ length: v })} unit={measureUnit} />
               {showGusset && (
-                <MeasureField label="Gusset" value={data.gusset} onChange={(v) => update({ gusset: v })} unit={measureUnit} />
+                <MeasureField label="Bottom Gusset" value={data.gusset} onChange={(v) => update({ gusset: v })} unit={measureUnit} />
               )}
               {isBag && !isFilm && (
                 <MeasureField label="Backflip / Flap / Lip" value={data.lip_front} onChange={(v) => update({ lip_front: v })} unit={measureUnit} />
