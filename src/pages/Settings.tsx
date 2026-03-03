@@ -21,6 +21,9 @@ export default function Settings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [companyName, setCompanyName] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
+  const [companyCity, setCompanyCity] = useState("");
+  const [companyZip, setCompanyZip] = useState("");
   const [savingCompany, setSavingCompany] = useState(false);
 
   const { data: profile } = useQuery({
@@ -29,7 +32,7 @@ export default function Settings() {
       if (!user?.id) return null;
       const { data } = await supabase
         .from("profiles")
-        .select("company")
+        .select("company, company_address, company_city, company_zip")
         .eq("user_id", user.id)
         .single();
       return data;
@@ -38,15 +41,25 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    if (profile?.company) setCompanyName(profile.company);
-  }, [profile?.company]);
+    if (profile) {
+      setCompanyName(profile.company || "");
+      setCompanyAddress(profile.company_address || "");
+      setCompanyCity(profile.company_city || "");
+      setCompanyZip(profile.company_zip || "");
+    }
+  }, [profile]);
 
   const handleSaveCompany = async () => {
     if (!user?.id) return;
     setSavingCompany(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ company: companyName })
+      .update({
+        company: companyName,
+        company_address: companyAddress,
+        company_city: companyCity,
+        company_zip: companyZip,
+      })
       .eq("user_id", user.id);
     setSavingCompany(false);
     if (error) {
@@ -115,15 +128,15 @@ export default function Settings() {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="address">Address</Label>
-              <Input id="address" defaultValue="123 Business Ave, Suite 100" />
+              <Input id="address" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
-              <Input id="city" defaultValue="San Francisco" />
+              <Input id="city" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="zip">ZIP Code</Label>
-              <Input id="zip" defaultValue="94102" />
+              <Input id="zip" value={companyZip} onChange={(e) => setCompanyZip(e.target.value)} />
             </div>
           </div>
           
