@@ -118,7 +118,7 @@ export default function ResetPassword() {
         <Card className="w-full max-w-md shadow-lg border-border/50">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-500" />
+              <CheckCircle className="h-12 w-12 text-primary" />
             </div>
             <CardTitle>Password Updated</CardTitle>
             <CardDescription>Redirecting you to the dashboard...</CardDescription>
