@@ -166,8 +166,12 @@ function MeasureField({
           <Input
             type="number"
             step="0.01"
+            min="0"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || parseFloat(val) >= 0) onChange(val);
+            }}
             placeholder={placeholder}
             className="pr-8"
           />
