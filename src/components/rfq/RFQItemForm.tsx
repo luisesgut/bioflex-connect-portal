@@ -441,6 +441,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               </div>
             )}
           </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
