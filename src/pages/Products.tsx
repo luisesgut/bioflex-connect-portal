@@ -282,6 +282,7 @@ export default function Products() {
       (filters.customer.length === 0 || (product.customer && filters.customer.includes(product.customer))) &&
       (filters.item_type.length === 0 || (product.item_type && filters.item_type.includes(product.item_type))) &&
       (filters.tipo_empaque.length === 0 || (product.tipo_empaque && filters.tipo_empaque.includes(product.tipo_empaque))) &&
+      (filters.pt_code.length === 0 || ((product.codigo_producto || product.pt_code) && filters.pt_code.includes(product.codigo_producto || product.pt_code || ""))) &&
       (filters.pieces_per_pallet.length === 0 || (product.pieces_per_pallet !== null && filters.pieces_per_pallet.includes(String(product.pieces_per_pallet)))) &&
       (filters.dp_sales_csr_names.length === 0 || (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names)));
 
