@@ -447,8 +447,13 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
       {/* ═══════════ SECTION 3: Packaging & Packing ═══════════ */}
       <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
-        <SectionHeader title="Packaging & Packing" number={3} open={openSections.includes(3)} />
+        <SectionHeader title="Packaging & Shipping Format" number={3} open={openSections.includes(3)} />
         <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure packaging & shipping format.</p>
+            </div>
+          ) : (
           <div className="px-3 pb-4 pt-2">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {showWicketFields && (
@@ -518,6 +523,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               </div>
             </div>
           </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
 
