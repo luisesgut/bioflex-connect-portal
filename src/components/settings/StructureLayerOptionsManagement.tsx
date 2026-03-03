@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Layers,
   Plus,
@@ -6,6 +6,7 @@ import {
   Save,
   ChevronDown,
   ChevronRight,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ export function StructureLayerOptionsManagement() {
   const [saving, setSaving] = useState(false);
   const [expandedMats, setExpandedMats] = useState<Set<string>>(new Set());
   const [expandedFins, setExpandedFins] = useState<Set<string>>(new Set());
+  const dragIdx = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -91,7 +94,6 @@ export function StructureLayerOptionsManagement() {
     setFinishes((p) => [...p, { category: "finish", label: "", parent_material: parentMaterial, sort_order: max + 1, is_active: true, isNew: true }]);
   };
 
-  // Presets use parent_material = material name, label = finish name
   const addPreset = (materialName: string, finishLabel: string) => {
     const siblings = presets.filter((p) => p.parent_material === materialName && p.label === finishLabel);
     const max = siblings.reduce((m, r) => Math.max(m, r.sort_order), 0);
@@ -105,6 +107,25 @@ export function StructureLayerOptionsManagement() {
       is_active: true,
       isNew: true,
     }]);
+  };
+
+  // Drag & drop for materials
+  const handleDragStart = (idx: number) => { dragIdx.current = idx; };
+  const handleDragOver = (e: React.DragEvent, idx: number) => { e.preventDefault(); setDragOverIdx(idx); };
+  const handleDragEnd = () => {
+    if (dragIdx.current === null || dragOverIdx === null || dragIdx.current === dragOverIdx) {
+      dragIdx.current = null;
+      setDragOverIdx(null);
+      return;
+    }
+    setMaterials((prev) => {
+      const items = [...prev];
+      const [moved] = items.splice(dragIdx.current!, 1);
+      items.splice(dragOverIdx, 0, moved);
+      return items.map((item, i) => ({ ...item, sort_order: i + 1 }));
+    });
+    dragIdx.current = null;
+    setDragOverIdx(null);
   };
 
   const saveAll = async () => {
@@ -164,24 +185,36 @@ export function StructureLayerOptionsManagement() {
       </div>
 
       {/* Column headers */}
-      <div className="grid grid-cols-[minmax(0,1fr)_100px_70px_50px_40px] gap-2 px-2 pb-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_100px_50px_40px] gap-2 px-2 pb-2 border-b text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <span />
         <span>Material</span>
         <span>Density (g/cm³)</span>
-        <span className="text-center">Order</span>
         <span className="text-center">Active</span>
         <span />
       </div>
 
-      <div className="divide-y">
+      <div>
         {materials.map((mat, matIdx) => {
-          const matKey = mat.id || `m-${matIdx}`;
-          const matOpen = expandedMats.has(matKey);
+          const key = mat.id || `m-${matIdx}`;
+          const matOpen = expandedMats.has(key);
           const matFinishes = finishes.filter((f) => f.parent_material === mat.label);
+          const isDragOver = dragOverIdx === matIdx;
 
           return (
-            <Collapsible key={matKey} open={matOpen} onOpenChange={() => toggle(matKey, expandedMats, setExpandedMats)}>
+            <Collapsible key={key} open={matOpen} onOpenChange={() => toggle(key, expandedMats, setExpandedMats)}>
               {/* Material row */}
-              <div className="grid grid-cols-[minmax(0,1fr)_100px_70px_50px_40px] gap-2 items-center py-2 px-2 hover:bg-muted/40 transition-colors">
+              <div
+                draggable
+                onDragStart={() => handleDragStart(matIdx)}
+                onDragOver={(e) => handleDragOver(e, matIdx)}
+                onDragEnd={handleDragEnd}
+                className={`grid grid-cols-[28px_minmax(0,1fr)_100px_50px_40px] gap-2 items-center py-2 px-2 transition-colors border-b ${
+                  isDragOver ? "bg-primary/10 border-primary/30" : "hover:bg-muted/40"
+                }`}
+              >
+                <div className="flex items-center gap-0.5">
+                  <GripVertical className="h-4 w-4 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0" />
+                </div>
                 <div className="flex items-center gap-1.5">
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
@@ -191,7 +224,6 @@ export function StructureLayerOptionsManagement() {
                   <Input value={mat.label} onChange={(e) => update(matIdx, "label", e.target.value, setMaterials)} placeholder="Material" className="h-8" />
                 </div>
                 <Input type="number" step="0.01" value={mat.density ?? ""} onChange={(e) => update(matIdx, "density", parseFloat(e.target.value) || null, setMaterials)} placeholder="0.92" className="h-8" />
-                <Input type="number" value={mat.sort_order} onChange={(e) => update(matIdx, "sort_order", parseInt(e.target.value) || 0, setMaterials)} className="h-8 text-center" />
                 <div className="flex justify-center">
                   <Switch checked={mat.is_active} onCheckedChange={(val) => update(matIdx, "is_active", val, setMaterials)} />
                 </div>
@@ -200,9 +232,9 @@ export function StructureLayerOptionsManagement() {
                 </Button>
               </div>
 
-              {/* Finishes under this material */}
+              {/* Expanded sub-sections */}
               <CollapsibleContent>
-                <div className="ml-8 pl-4 border-l-2 border-muted pb-3">
+                <div className="ml-12 pl-4 border-l-2 border-muted pb-3">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 mt-2">
                     Finishes
                   </p>
@@ -217,7 +249,6 @@ export function StructureLayerOptionsManagement() {
 
                       return (
                         <Collapsible key={finKey} open={finOpen} onOpenChange={() => toggle(finKey, expandedFins, setExpandedFins)}>
-                          {/* Finish row */}
                           <div className="flex items-center gap-2 py-1">
                             <CollapsibleTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0">
@@ -234,7 +265,6 @@ export function StructureLayerOptionsManagement() {
                             </Button>
                           </div>
 
-                          {/* Thickness presets under this finish */}
                           <CollapsibleContent>
                             <div className="ml-7 pl-3 border-l border-muted/60 py-1 space-y-1">
                               {finPresets.map((preset) => {
