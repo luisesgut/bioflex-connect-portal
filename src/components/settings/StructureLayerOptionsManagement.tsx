@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Layers, Plus, Trash2, Save } from "lucide-react";
+import {
+  Layers,
+  Plus,
+  Trash2,
+  Save,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,15 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface OptionRow {
   id?: string;
@@ -27,6 +33,7 @@ interface OptionRow {
   parent_material?: string | null;
   default_value?: number | null;
   default_unit?: string | null;
+  density?: number | null;
   sort_order: number;
   is_active: boolean;
   isNew?: boolean;
@@ -36,9 +43,9 @@ export function StructureLayerOptionsManagement() {
   const [materials, setMaterials] = useState<OptionRow[]>([]);
   const [finishes, setFinishes] = useState<OptionRow[]>([]);
   const [thicknessPresets, setThicknessPresets] = useState<OptionRow[]>([]);
-  const [materialOptions, setMaterialOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedMaterials, setExpandedMaterials] = useState<Set<string>>( new Set());
 
   useEffect(() => {
     fetchAll();
@@ -57,37 +64,31 @@ export function StructureLayerOptionsManagement() {
       return;
     }
 
-    const rows = data || [];
-    const mats = rows.filter((r) => r.category === "material");
-    const fins = rows.filter((r) => r.category === "finish");
-    const presets = rows.filter((r) => r.category === "thickness_preset");
-
-    setMaterials(mats);
-    setFinishes(fins);
-    setThicknessPresets(presets);
-    setMaterialOptions(mats.filter((m) => m.is_active).map((m) => m.label));
+    const rows = (data || []) as OptionRow[];
+    setMaterials(rows.filter((r) => r.category === "material"));
+    setFinishes(rows.filter((r) => r.category === "finish"));
+    setThicknessPresets(rows.filter((r) => r.category === "thickness_preset"));
     setLoading(false);
   };
 
-  const addRow = (
-    category: string,
-    setter: React.Dispatch<React.SetStateAction<OptionRow[]>>,
-    list: OptionRow[]
+  const toggleExpand = (key: string) => {
+    setExpandedMaterials((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const updateRow = (
+    index: number,
+    field: string,
+    value: any,
+    setter: React.Dispatch<React.SetStateAction<OptionRow[]>>
   ) => {
-    const maxSort = list.reduce((max, r) => Math.max(max, r.sort_order), 0);
-    setter((prev) => [
-      ...prev,
-      {
-        category,
-        label: "",
-        sort_order: maxSort + 1,
-        is_active: true,
-        isNew: true,
-        ...(category === "thickness_preset"
-          ? { parent_material: "", default_value: null, default_unit: "gauge" }
-          : {}),
-      },
-    ]);
+    setter((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
+    );
   };
 
   const removeRow = async (
@@ -110,46 +111,67 @@ export function StructureLayerOptionsManagement() {
     toast.success("Option removed");
   };
 
-  const updateRow = (
-    index: number,
-    field: string,
-    value: any,
-    setter: React.Dispatch<React.SetStateAction<OptionRow[]>>
-  ) => {
-    setter((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
-    );
+  const addMaterial = () => {
+    const maxSort = materials.reduce((max, r) => Math.max(max, r.sort_order), 0);
+    setMaterials((prev) => [
+      ...prev,
+      { category: "material", label: "", sort_order: maxSort + 1, is_active: true, density: null, isNew: true },
+    ]);
   };
 
-  const saveCategory = async (
-    list: OptionRow[],
-    category: string
-  ) => {
+  const addThicknessPreset = (parentMaterial: string) => {
+    const existing = thicknessPresets.filter((p) => p.parent_material === parentMaterial);
+    const maxSort = existing.reduce((max, r) => Math.max(max, r.sort_order), 0);
+    setThicknessPresets((prev) => [
+      ...prev,
+      {
+        category: "thickness_preset",
+        label: parentMaterial,
+        parent_material: parentMaterial,
+        default_value: null,
+        default_unit: "gauge",
+        sort_order: maxSort + 1,
+        is_active: true,
+        isNew: true,
+      },
+    ]);
+  };
+
+  const addFinish = () => {
+    const maxSort = finishes.reduce((max, r) => Math.max(max, r.sort_order), 0);
+    setFinishes((prev) => [
+      ...prev,
+      { category: "finish", label: "", sort_order: maxSort + 1, is_active: true, isNew: true },
+    ]);
+  };
+
+  const saveAll = async () => {
     setSaving(true);
     try {
-      for (const row of list) {
-        if (!row.label.trim()) continue;
+      const allRows = [...materials, ...finishes, ...thicknessPresets];
+      for (const row of allRows) {
+        if (!row.label.trim() && row.category !== "thickness_preset") continue;
         const payload: any = {
-          category,
-          label: row.label.trim(),
+          category: row.category,
+          label: row.category === "thickness_preset" ? (row.parent_material || row.label) : row.label.trim(),
           sort_order: row.sort_order,
           is_active: row.is_active,
         };
-        if (category === "thickness_preset") {
+        if (row.category === "material") {
+          payload.density = row.density || null;
+        }
+        if (row.category === "thickness_preset") {
           payload.parent_material = row.parent_material || null;
           payload.default_value = row.default_value || null;
           payload.default_unit = row.default_unit || null;
         }
         if (row.id) {
-          await supabase
-            .from("structure_layer_options")
-            .update(payload)
-            .eq("id", row.id);
+          await supabase.from("structure_layer_options").update(payload).eq("id", row.id);
         } else {
           await supabase.from("structure_layer_options").insert(payload);
         }
       }
-      toast.success("Options saved");
+      toast.success("All options saved");
       await fetchAll();
     } catch {
       toast.error("Error saving options");
@@ -181,220 +203,211 @@ export function StructureLayerOptionsManagement() {
         </div>
       </div>
 
-      <Tabs defaultValue="materials">
-        <TabsList className="mb-4">
-          <TabsTrigger value="materials">Materials</TabsTrigger>
-          <TabsTrigger value="finishes">Finishes</TabsTrigger>
-          <TabsTrigger value="thickness">Thickness Presets</TabsTrigger>
-        </TabsList>
+      {/* MATERIALS MATRIX */}
+      <div className="space-y-1">
+        {/* Header */}
+        <div className="grid grid-cols-[1fr_100px_100px_60px_40px_40px] gap-2 px-2 pb-2 border-b text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <span>Material</span>
+          <span>Density (g/cm³)</span>
+          <span>Order</span>
+          <span>Active</span>
+          <span></span>
+          <span></span>
+        </div>
 
-        {/* MATERIALS TAB */}
-        <TabsContent value="materials">
-          <SimpleOptionList
-            items={materials}
-            onUpdate={(i, field, val) => updateRow(i, field, val, setMaterials)}
-            onRemove={(i) => removeRow(i, materials, setMaterials)}
-            onAdd={() => addRow("material", setMaterials, materials)}
-            onSave={() => saveCategory(materials, "material")}
-            saving={saving}
-          />
-        </TabsContent>
+        {materials.map((mat, matIdx) => {
+          const matKey = mat.id || `new-${matIdx}`;
+          const isExpanded = expandedMaterials.has(matKey);
+          const matPresets = thicknessPresets.filter(
+            (p) => p.parent_material === mat.label
+          );
 
-        {/* FINISHES TAB */}
-        <TabsContent value="finishes">
-          <SimpleOptionList
-            items={finishes}
-            onUpdate={(i, field, val) => updateRow(i, field, val, setFinishes)}
-            onRemove={(i) => removeRow(i, finishes, setFinishes)}
-            onAdd={() => addRow("finish", setFinishes, finishes)}
-            onSave={() => saveCategory(finishes, "finish")}
-            saving={saving}
-          />
-        </TabsContent>
-
-        {/* THICKNESS PRESETS TAB */}
-        <TabsContent value="thickness">
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Define default thickness values per material. These will auto-fill
-              when a user selects that material in the structure builder.
-            </p>
-            {thicknessPresets.map((row, index) => (
-              <div
-                key={row.id || `new-${index}`}
-                className="flex items-end gap-2 flex-wrap"
-              >
-                <div className="flex-1 min-w-[140px] space-y-1">
-                  <Label className="text-xs text-muted-foreground">Material</Label>
-                  <Select
-                    value={row.parent_material || ""}
-                    onValueChange={(val) =>
-                      updateRow(index, "parent_material", val, setThicknessPresets)
-                    }
-                  >
-                    <SelectTrigger className="h-9 bg-background">
-                      <SelectValue placeholder="Select material" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {materialOptions.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-24 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Value</Label>
+          return (
+            <Collapsible
+              key={matKey}
+              open={isExpanded}
+              onOpenChange={() => toggleExpand(matKey)}
+            >
+              {/* Material row */}
+              <div className="grid grid-cols-[1fr_100px_100px_60px_40px_40px] gap-2 items-center py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
                   <Input
-                    type="number"
-                    step="0.1"
-                    value={row.default_value ?? ""}
-                    onChange={(e) =>
-                      updateRow(
-                        index,
-                        "default_value",
-                        parseFloat(e.target.value) || null,
-                        setThicknessPresets
-                      )
-                    }
-                    className="h-9"
-                    placeholder="0"
+                    value={mat.label}
+                    onChange={(e) => updateRow(matIdx, "label", e.target.value, setMaterials)}
+                    placeholder="Material name"
+                    className="h-8"
                   />
                 </div>
-                <div className="w-28 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Unit</Label>
-                  <Select
-                    value={row.default_unit || "gauge"}
-                    onValueChange={(val) =>
-                      updateRow(index, "default_unit", val, setThicknessPresets)
-                    }
-                  >
-                    <SelectTrigger className="h-9 bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gauge">Gauge</SelectItem>
-                      <SelectItem value="microns">Microns</SelectItem>
-                      <SelectItem value="mils">Mils</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2 pb-0.5">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={mat.density ?? ""}
+                  onChange={(e) =>
+                    updateRow(matIdx, "density", parseFloat(e.target.value) || null, setMaterials)
+                  }
+                  placeholder="e.g. 0.92"
+                  className="h-8"
+                />
+                <Input
+                  type="number"
+                  value={mat.sort_order}
+                  onChange={(e) =>
+                    updateRow(matIdx, "sort_order", parseInt(e.target.value) || 0, setMaterials)
+                  }
+                  className="h-8"
+                />
+                <div className="flex justify-center">
                   <Switch
-                    checked={row.is_active}
-                    onCheckedChange={(val) =>
-                      updateRow(index, "is_active", val, setThicknessPresets)
-                    }
+                    checked={mat.is_active}
+                    onCheckedChange={(val) => updateRow(matIdx, "is_active", val, setMaterials)}
                   />
+                </div>
+                <div />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => removeRow(matIdx, materials, setMaterials)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              {/* Sub-rows: thickness presets */}
+              <CollapsibleContent>
+                <div className="ml-10 pl-4 border-l-2 border-muted space-y-1 py-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">
+                    Thickness Presets
+                  </p>
+                  {matPresets.map((preset) => {
+                    const presetIdx = thicknessPresets.indexOf(preset);
+                    return (
+                      <div
+                        key={preset.id || `preset-${presetIdx}`}
+                        className="flex items-center gap-2"
+                      >
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={preset.default_value ?? ""}
+                          onChange={(e) =>
+                            updateRow(
+                              presetIdx,
+                              "default_value",
+                              parseFloat(e.target.value) || null,
+                              setThicknessPresets
+                            )
+                          }
+                          className="h-8 w-24"
+                          placeholder="Value"
+                        />
+                        <Select
+                          value={preset.default_unit || "gauge"}
+                          onValueChange={(val) =>
+                            updateRow(presetIdx, "default_unit", val, setThicknessPresets)
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-28 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gauge">Gauge</SelectItem>
+                            <SelectItem value="microns">Microns</SelectItem>
+                            <SelectItem value="mils">Mils</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Switch
+                          checked={preset.is_active}
+                          onCheckedChange={(val) =>
+                            updateRow(presetIdx, "is_active", val, setThicknessPresets)
+                          }
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() =>
+                            removeRow(presetIdx, thicknessPresets, setThicknessPresets)
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() =>
-                      removeRow(index, thicknessPresets, setThicknessPresets)
-                    }
+                    size="sm"
+                    className="gap-1 text-xs h-7"
+                    onClick={() => addThicknessPreset(mat.label)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-3 w-3" /> Add Preset
                   </Button>
                 </div>
-              </div>
-            ))}
-            <div className="flex items-center gap-3 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  addRow("thickness_preset", setThicknessPresets, thicknessPresets)
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
+
+        <Button variant="outline" size="sm" onClick={addMaterial} className="gap-1 mt-3">
+          <Plus className="h-4 w-4" /> Add Material
+        </Button>
+      </div>
+
+      {/* FINISHES SECTION */}
+      <div className="mt-8 pt-6 border-t">
+        <h3 className="text-sm font-semibold text-card-foreground mb-3">Finishes</h3>
+        <div className="space-y-2">
+          {finishes.map((row, index) => (
+            <div key={row.id || `fin-${index}`} className="flex items-center gap-3">
+              <Input
+                value={row.label}
+                onChange={(e) => updateRow(index, "label", e.target.value, setFinishes)}
+                placeholder="Finish name"
+                className="h-8 flex-1"
+              />
+              <Input
+                type="number"
+                value={row.sort_order}
+                onChange={(e) =>
+                  updateRow(index, "sort_order", parseInt(e.target.value) || 0, setFinishes)
                 }
-                className="gap-1"
-              >
-                <Plus className="h-4 w-4" /> Add Preset
-              </Button>
+                className="h-8 w-20"
+                placeholder="Order"
+              />
+              <Switch
+                checked={row.is_active}
+                onCheckedChange={(val) => updateRow(index, "is_active", val, setFinishes)}
+              />
               <Button
-                variant="accent"
-                size="sm"
-                onClick={() =>
-                  saveCategory(thicknessPresets, "thickness_preset")
-                }
-                disabled={saving}
-                className="gap-1"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                onClick={() => removeRow(index, finishes, setFinishes)}
               >
-                <Save className="h-4 w-4" />{" "}
-                {saving ? "Saving..." : "Save Presets"}
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-/* Reusable simple list for materials & finishes */
-function SimpleOptionList({
-  items,
-  onUpdate,
-  onRemove,
-  onAdd,
-  onSave,
-  saving,
-}: {
-  items: OptionRow[];
-  onUpdate: (index: number, field: string, value: any) => void;
-  onRemove: (index: number) => void;
-  onAdd: () => void;
-  onSave: () => void;
-  saving: boolean;
-}) {
-  return (
-    <div className="space-y-3">
-      {items.map((row, index) => (
-        <div
-          key={row.id || `new-${index}`}
-          className="flex items-center gap-3"
-        >
-          <Input
-            value={row.label}
-            onChange={(e) => onUpdate(index, "label", e.target.value)}
-            placeholder="Option name"
-            className="h-9 flex-1"
-          />
-          <Input
-            type="number"
-            value={row.sort_order}
-            onChange={(e) =>
-              onUpdate(index, "sort_order", parseInt(e.target.value) || 0)
-            }
-            className="h-9 w-20"
-            placeholder="Order"
-          />
-          <Switch
-            checked={row.is_active}
-            onCheckedChange={(val) => onUpdate(index, "is_active", val)}
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-            onClick={() => onRemove(index)}
-          >
-            <Trash2 className="h-4 w-4" />
+          ))}
+          <Button variant="outline" size="sm" onClick={addFinish} className="gap-1">
+            <Plus className="h-4 w-4" /> Add Finish
           </Button>
         </div>
-      ))}
-      <div className="flex items-center gap-3 mt-4">
-        <Button variant="outline" size="sm" onClick={onAdd} className="gap-1">
-          <Plus className="h-4 w-4" /> Add Option
-        </Button>
-        <Button
-          variant="accent"
-          size="sm"
-          onClick={onSave}
-          disabled={saving}
-          className="gap-1"
-        >
-          <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save All"}
+      </div>
+
+      {/* SAVE ALL */}
+      <div className="mt-6 flex justify-end">
+        <Button variant="accent" onClick={saveAll} disabled={saving} className="gap-1">
+          <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save All Changes"}
         </Button>
       </div>
     </div>
