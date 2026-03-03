@@ -178,6 +178,9 @@ export default function Auth() {
                       'Sign In'
                     )}
                   </Button>
+                  <div className="text-center pt-2">
+                    <ForgotPasswordDialog />
+                  </div>
                 </form>
               </TabsContent>
 
