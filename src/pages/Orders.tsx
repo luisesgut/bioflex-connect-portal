@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid, RotateCcw } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useQuery } from "@tanstack/react-query";
 
 interface LoadDetail {
   load_number: string;
@@ -59,33 +60,32 @@ interface InventoryStats {
 
 interface StockVerificationWarehouseDetail {
   lote?: string;
-  cantidad?: number;
-}
-
-interface StockVerificationItem {
-  cantidadSolicitada?: number;
-  cantidadEnviada?: number;
-  cantidadPendiente?: number;
-  porcentajeEnviado?: number;
-  totalStockDisponible?: number;
-  detallesAlmacen?: StockVerificationWarehouseDetail[];
-  detallesAlmacenTotal?: StockVerificationWarehouseDetail[];
-  stockAsignadoPO?: number;
-  stockOtrasPOs?: number;
+  cantidad?: number | string;
 }
 
 interface CatOrdenOpenItem {
   pedido?: number | string | null;
   u_PO2?: string | null;
+  u_Cl1?: string | null;
   clave?: string | null;
   producto?: string | null;
+  frgnName?: string | null;
+  u_ItemNo?: string | null;
+  tipoEmpaque?: string | null;
   cantidad?: number | string | null;
   precio?: number | string | null;
+  value?: number | string | null;
+  cantidadSolicitada?: number | string | null;
+  cantidadEnviada?: number | string | null;
+  totalStockDisponible?: number | string | null;
+  detallesAlmacen?: StockVerificationWarehouseDetail[] | null;
+  detallesAlmacenTotal?: StockVerificationWarehouseDetail[] | null;
 }
 
 interface Order {
   id: string;
   po_number: string;
+  product_id: string | null;
   product_name: string | null;
   product_pt_code: string | null;
   product_customer: string | null;
@@ -107,7 +107,6 @@ interface Order {
   pdf_url: string | null;
   sales_order_number: string | null;
   accepted_at: string | null;
-  is_external?: boolean;
   inventoryStats: InventoryStats;
 }
 
@@ -124,6 +123,19 @@ const parseApiNumber = (value: unknown): number | null => {
   }
   return null;
 };
+
+const normalizePoKey = (value: string | null | undefined): string => {
+  const cleaned = (value || "").trim().toUpperCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  if (/^\d+$/.test(compact)) {
+    return String(Number(compact));
+  }
+  return compact;
+};
+
+const sumWarehouseQty = (details?: StockVerificationWarehouseDetail[] | null): number =>
+  (details || []).reduce((sum, lot) => sum + (parseApiNumber(lot?.cantidad) || 0), 0);
 
 const statusStyles: Record<string, string> = {
   pending: "bg-info/10 text-info border-info/20",
@@ -151,8 +163,6 @@ export default function Orders() {
   const { user } = useAuth();
   const { isAdmin, isInternalUser } = useAdmin();
   const { t } = useLanguage();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
@@ -177,16 +187,13 @@ export default function Orders() {
   // View mode toggle
   const [viewMode, setViewMode] = useState<"list" | "timeline" | "board" | "canvas">((isAdmin || isInternalUser) ? "board" : "list");
 
-  const fetchOrders = async () => {
-    if (!user) return;
+  const fetchOrders = async (): Promise<Order[]> => {
+    if (!user) return [];
 
-    setLoading(true);
-    
-    const { data: ordersData, error: ordersError } = await supabase
-      .from("purchase_orders")
-      .select(`
+    const purchaseOrdersSelect = `
         id,
         po_number,
+        product_id,
         quantity,
         total_price,
         status,
@@ -201,18 +208,19 @@ export default function Orders() {
         sales_order_number,
         accepted_at,
         products (name, sku, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
-      `)
+      `;
+
+    let { data: ordersData, error: ordersError } = await supabase
+      .from("purchase_orders")
+      .select(purchaseOrdersSelect)
       .order("created_at", { ascending: false });
 
     if (ordersError) {
       console.error("Error fetching orders:", ordersError);
-      toast.error("Failed to load orders");
-      setLoading(false);
-      return;
+      throw ordersError;
     }
 
     let catOrdenByPO: Record<string, CatOrdenOpenItem> = {};
-    let catOrdenLoaded = false;
     try {
       const catOrdenResponse = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
         signal: AbortSignal.timeout(30000),
@@ -221,11 +229,10 @@ export default function Orders() {
       if (catOrdenResponse.ok) {
         const catOrdenPayload = (await catOrdenResponse.json()) as CatOrdenOpenItem[];
         if (Array.isArray(catOrdenPayload)) {
-          catOrdenLoaded = true;
           catOrdenByPO = catOrdenPayload.reduce<Record<string, CatOrdenOpenItem>>((acc, item) => {
-            const po2 = item.u_PO2?.trim();
-            if (po2) {
-              acc[po2] = item;
+            const poKey = normalizePoKey(item.u_PO2);
+            if (poKey && !acc[poKey]) {
+              acc[poKey] = item;
             }
             return acc;
           }, {});
@@ -239,63 +246,84 @@ export default function Orders() {
       console.warn("Failed to fetch CatOrden open-with-orden:", catOrdenError);
     }
 
-    const poByNumber = new Map<string, any>();
-    (ordersData || []).forEach((order: any) => {
-      const po = order.po_number?.trim?.();
-      if (po) poByNumber.set(po, order);
-    });
-
-    const activeOrdersSourceFromEndpoint: any[] = Object.values(catOrdenByPO).map((catOrder) => {
-      const po = catOrder.u_PO2?.trim() || "";
-      const matchedOrder = poByNumber.get(po);
-      if (matchedOrder) return matchedOrder;
-
-      const syntheticCantidad = parseApiNumber(catOrder.cantidad);
-      const syntheticPrecio = parseApiNumber(catOrder.precio);
-      const syntheticQuantity = syntheticCantidad !== null ? syntheticCantidad * 1000 : 0;
-      const syntheticTotalPrice =
-        syntheticCantidad !== null && syntheticPrecio !== null
-          ? syntheticCantidad * syntheticPrecio
-          : null;
-      const syntheticSalesOrder =
-        catOrder.pedido !== null && catOrder.pedido !== undefined
-          ? String(catOrder.pedido)
-          : null;
-
-      return {
-        id: `external-${po || Date.now()}`,
-        po_number: po,
-        quantity: syntheticQuantity,
-        total_price: syntheticTotalPrice,
-        status: "submitted",
-        is_hot_order: false,
-        do_not_delay: false,
-        requested_delivery_date: null,
-        estimated_delivery_date: null,
-        printing_date: null,
-        conversion_date: null,
-        created_at: new Date().toISOString(),
-        pdf_url: null,
-        sales_order_number: syntheticSalesOrder,
-        accepted_at: null,
-        products: null,
-        is_external: true,
-      };
-    });
-    const activeOrdersSource: any[] = catOrdenLoaded
-      ? activeOrdersSourceFromEndpoint
-      : (ordersData || []).filter((order: any) => order.status !== "closed");
-
-    const endpointPOs = new Set(
-      Object.keys(catOrdenByPO)
-        .map((po) => po.trim())
+    // Create missing SAP POs in Supabase so they behave like regular editable rows.
+    const existingPONumbers = new Set(
+      (ordersData || [])
+        .map((order: any) => normalizePoKey(order.po_number))
         .filter(Boolean)
     );
-    const closedOrdersSource = (ordersData || []).filter((order: any) => {
-      const po = order.po_number?.trim?.() || "";
-      return order.status === "closed" && !endpointPOs.has(po);
-    });
-    const combinedOrdersSource = [...activeOrdersSource, ...closedOrdersSource];
+    const sapItems = Object.values(catOrdenByPO).filter((item) => normalizePoKey(item.u_PO2));
+    const missingSapItems = sapItems.filter((item) => !existingPONumbers.has(normalizePoKey(item.u_PO2)));
+
+    if (missingSapItems.length > 0) {
+      const sapProductKeys = Array.from(
+        new Set(
+          missingSapItems
+            .map((item) => (item.clave || "").trim())
+            .filter(Boolean)
+        )
+      );
+
+      const productIdByKey = new Map<string, string>();
+      if (sapProductKeys.length > 0) {
+        const [bySku, byPtCode, byCodigoProducto] = await Promise.all([
+          supabase.from("products").select("id, sku").in("sku", sapProductKeys),
+          supabase.from("products").select("id, pt_code").in("pt_code", sapProductKeys),
+          supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapProductKeys),
+        ]);
+
+        (bySku.data || []).forEach((p: any) => {
+          if (p.sku) productIdByKey.set(String(p.sku).trim().toUpperCase(), p.id);
+        });
+        (byPtCode.data || []).forEach((p: any) => {
+          if (p.pt_code) productIdByKey.set(String(p.pt_code).trim().toUpperCase(), p.id);
+        });
+        (byCodigoProducto.data || []).forEach((p: any) => {
+          if (p.codigo_producto) productIdByKey.set(String(p.codigo_producto).trim().toUpperCase(), p.id);
+        });
+      }
+
+      const sapInserts = missingSapItems.map((item) => {
+        const poNumber = item.u_PO2!.trim();
+        const sapCantidad = parseApiNumber(item.cantidad);
+        const sapPrecio = parseApiNumber(item.precio);
+        const quantity = sapCantidad !== null ? sapCantidad * 1000 : 0;
+        const totalPrice = sapCantidad !== null && sapPrecio !== null ? sapCantidad * sapPrecio : null;
+        const salesOrderNumber =
+          item.pedido !== null && item.pedido !== undefined ? String(item.pedido) : null;
+        const productKey = (item.clave || "").trim().toUpperCase();
+        const productId = productKey ? productIdByKey.get(productKey) || null : null;
+
+        return {
+          po_number: poNumber,
+          quantity,
+          total_price: totalPrice,
+          status: "submitted",
+          product_id: productId,
+          sales_order_number: salesOrderNumber,
+          user_id: user.id,
+        };
+      });
+
+      const { error: upsertSapError } = await supabase
+        .from("purchase_orders")
+        .upsert(sapInserts, { onConflict: "po_number", ignoreDuplicates: true });
+
+      if (upsertSapError) {
+        console.error("Error syncing SAP purchase orders:", upsertSapError);
+      } else {
+        const { data: refreshedOrdersData, error: refreshedOrdersError } = await supabase
+          .from("purchase_orders")
+          .select(purchaseOrdersSelect)
+          .order("created_at", { ascending: false });
+
+        if (!refreshedOrdersError && refreshedOrdersData) {
+          ordersData = refreshedOrdersData;
+        }
+      }
+    }
+
+    const combinedOrdersSource = ordersData || [];
 
     const salesOrderNumbers = combinedOrdersSource
       .map((o: any) => o.sales_order_number)
@@ -478,12 +506,12 @@ export default function Orders() {
     }
 
     const formattedOrders = combinedOrdersSource.map((order: any) => {
-      const catOrdenItem = catOrdenByPO[order.po_number];
+      const catOrdenItem = catOrdenByPO[normalizePoKey(order.po_number)];
       const apiCantidad = parseApiNumber(catOrdenItem?.cantidad);
       const apiPrecio = parseApiNumber(catOrdenItem?.precio);
       const quantityFromApi = apiCantidad !== null ? apiCantidad * 1000 : null;
-      const totalPriceFromApi =
-        apiCantidad !== null && apiPrecio !== null ? apiCantidad * apiPrecio : null;
+      const totalPriceFromApi = parseApiNumber(catOrdenItem?.value) ??
+        (apiCantidad !== null && apiPrecio !== null ? apiCantidad * apiPrecio : null);
       const salesOrderFromApi =
         catOrdenItem?.pedido !== null && catOrdenItem?.pedido !== undefined
           ? String(catOrdenItem.pedido)
@@ -492,30 +520,52 @@ export default function Orders() {
       const mergedSalesOrder = salesOrderFromApi || order.sales_order_number || null;
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
       const hasSalesOrder = Boolean(mergedSalesOrder && mergedSalesOrder.trim() !== "" && order.po_number);
-      // When SAP verification will run, use 0 as placeholder — SAP is the source of truth
-      const effectiveInFloor = hasSalesOrder ? 0 : stats.inFloor;
-      const effectiveShipped = hasSalesOrder ? 0 : stats.shipped;
+      const sapRequested = parseApiNumber(catOrdenItem?.cantidadSolicitada) ?? mergedQuantity;
+      const sapShipped = parseApiNumber(catOrdenItem?.cantidadEnviada);
+      const sapAssignedStock = sumWarehouseQty(catOrdenItem?.detallesAlmacen);
+      const sapOtherStock = sumWarehouseQty(catOrdenItem?.detallesAlmacenTotal);
+      const sapStockAvailable = parseApiNumber(catOrdenItem?.totalStockDisponible) ?? (sapAssignedStock + sapOtherStock);
+      const hasSapWarehouseData =
+        Boolean(catOrdenItem) &&
+        (sapShipped !== null ||
+          sapRequested !== null ||
+          sapAssignedStock > 0 ||
+          sapOtherStock > 0 ||
+          parseApiNumber(catOrdenItem?.totalStockDisponible) !== null);
+
+      const effectiveInFloor = hasSapWarehouseData ? sapAssignedStock : (hasSalesOrder ? 0 : stats.inFloor);
+      const effectiveShipped = hasSapWarehouseData ? (sapShipped ?? 0) : (hasSalesOrder ? 0 : stats.shipped);
       const produced = effectiveInFloor + effectiveShipped;
-      const pending = Math.max(0, mergedQuantity - produced);
-      const percentProduced = mergedQuantity > 0 ? Math.round((produced / mergedQuantity) * 100) : 0;
+      const requestedForProgress = hasSapWarehouseData ? (sapRequested ?? mergedQuantity) : mergedQuantity;
+      const pending = Math.max(0, requestedForProgress - effectiveShipped);
+      const percentProduced = requestedForProgress > 0 ? Math.round((effectiveShipped / requestedForProgress) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
       const productSkuForInventory = order.products?.sku || null;
-      const excessStock = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
+      const excessStockFromInventory = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
+      const excessStockFromSap =
+        hasSapWarehouseData && sapStockAvailable > pending
+          ? {
+              pallet_count: (catOrdenItem?.detallesAlmacen?.length || 0) + (catOrdenItem?.detallesAlmacenTotal?.length || 0),
+              total_quantity: Math.max(0, sapStockAvailable - pending),
+            }
+          : null;
+      const excessStock = excessStockFromSap ?? excessStockFromInventory;
       const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
 
       return {
         id: order.id,
         po_number: order.po_number,
-        product_name: catOrdenItem?.producto || order.products?.name || null,
+        product_id: order.product_id || null,
+        product_name: catOrdenItem?.producto || catOrdenItem?.frgnName || order.products?.name || null,
         product_pt_code: catOrdenItem?.clave || productPtCode,
-        product_customer: order.products?.customer || null,
+        product_customer: catOrdenItem?.u_Cl1 || order.products?.customer || null,
         product_item_type: order.products?.item_type || null,
-        product_tipo_empaque: order.products?.tipo_empaque || null,
+        product_tipo_empaque: catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null,
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
-        product_customer_item: order.products?.customer_item || null,
-        product_item_description: order.products?.item_description || null,
-        quantity: mergedQuantity,
+        product_customer_item: catOrdenItem?.u_ItemNo || order.products?.customer_item || null,
+        product_item_description: catOrdenItem?.frgnName || order.products?.item_description || null,
+        quantity: requestedForProgress,
         total_price: totalPriceFromApi ?? order.total_price,
         status: order.status,
         is_hot_order: order.is_hot_order,
@@ -528,7 +578,6 @@ export default function Orders() {
         pdf_url: order.pdf_url,
         sales_order_number: mergedSalesOrder,
         accepted_at: order.accepted_at || null,
-        is_external: Boolean(order.is_external),
         inventoryStats: {
           inFloor: effectiveInFloor,
           shipped: effectiveShipped,
@@ -537,166 +586,33 @@ export default function Orders() {
           loadDetails,
           shippedLoadDetails,
           excessStock,
-          sapStockAvailable: null,
-          sapVerificationLoading: hasSalesOrder,
+          sapStockAvailable: hasSapWarehouseData ? sapStockAvailable : null,
+          sapVerificationLoading: false,
         },
       };
     });
-    setOrders(formattedOrders);
-    setLoading(false);
-
-    // Fetch SAP stock verification data for all orders with sales_order_number
-    const ordersWithSO = formattedOrders.filter(
-      (o) => o.sales_order_number && o.sales_order_number.trim() !== ""
-    );
-
-    if (ordersWithSO.length > 0) {
-      const sapResults = await Promise.allSettled(
-        ordersWithSO.map(async (order) => {
-          try {
-            const response = await fetch(
-              `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number!)}/${encodeURIComponent(order.po_number)}`,
-              { method: "GET", headers: { accept: "*/*" } }
-            );
-            if (!response.ok) {
-              return {
-                poNumber: order.po_number,
-                stockAvailable: null,
-                inFloor: null,
-                shipped: null,
-                pending: null,
-                percentProduced: null,
-                excessStock: null,
-              };
-            }
-            const payload = await response.json();
-            const items: StockVerificationItem[] = Array.isArray(payload) ? payload : [];
-
-            if (items.length === 0) {
-              return {
-                poNumber: order.po_number,
-                stockAvailable: null,
-                inFloor: null,
-                shipped: null,
-                pending: null,
-                percentProduced: null,
-                excessStock: null,
-              };
-            }
-
-            const totalRequested = items.reduce((sum, item) => sum + (item.cantidadSolicitada || 0), 0);
-            const totalShipped = items.reduce((sum, item) => sum + (item.cantidadEnviada || 0), 0);
-            const totalPending = items.reduce((sum, item) => sum + (item.cantidadPendiente || 0), 0);
-            const totalInFloor = items.reduce((sum, item) => {
-              const assignedFromLots = (item.detallesAlmacen || []).reduce(
-                (lotSum, lot) => lotSum + (lot.cantidad || 0),
-                0
-              );
-              return sum + (item.stockAsignadoPO ?? assignedFromLots);
-            }, 0);
-            const totalStock = items.reduce((sum, item) => {
-              const assignedFromLots = (item.detallesAlmacen || []).reduce(
-                (lotSum, lot) => lotSum + (lot.cantidad || 0),
-                0
-              );
-              const otherFromLots = (item.detallesAlmacenTotal || []).reduce(
-                (lotSum, lot) => lotSum + (lot.cantidad || 0),
-                0
-              );
-              const stockAssignedPO = item.stockAsignadoPO ?? assignedFromLots;
-              const stockOtherPOs = item.stockOtrasPOs ?? otherFromLots;
-              return sum + (item.totalStockDisponible ?? stockAssignedPO + stockOtherPOs);
-            }, 0);
-            const percentProduced =
-              totalRequested > 0
-                ? Math.round((totalShipped / totalRequested) * 100)
-                : null;
-            const excessQty = Math.max(0, totalStock - totalPending);
-            const excessLots = items.reduce((sum, item) => sum + (item.detallesAlmacen?.length || 0), 0);
-
-            return {
-              poNumber: order.po_number,
-              stockAvailable: totalStock,
-              inFloor: totalInFloor,
-              shipped: totalShipped,
-              pending: totalPending,
-              percentProduced,
-              excessStock: excessQty > 0 ? { pallet_count: excessLots, total_quantity: excessQty } : null,
-            };
-          } catch {
-            return {
-              poNumber: order.po_number,
-              stockAvailable: null,
-              inFloor: null,
-              shipped: null,
-              pending: null,
-              percentProduced: null,
-              excessStock: null,
-            };
-          }
-        })
-      );
-
-      const sapMap = new Map<
-        string,
-        {
-          stockAvailable: number | null;
-          inFloor: number | null;
-          shipped: number | null;
-          pending: number | null;
-          percentProduced: number | null;
-          excessStock: ExcessStockDetail | null;
-        }
-      >();
-      sapResults.forEach((result) => {
-        if (result.status === "fulfilled" && result.value) {
-          sapMap.set(result.value.poNumber, {
-            stockAvailable: result.value.stockAvailable,
-            inFloor: result.value.inFloor,
-            shipped: result.value.shipped,
-            pending: result.value.pending,
-            percentProduced: result.value.percentProduced,
-            excessStock: result.value.excessStock,
-          });
-        }
-      });
-
-      // Always clear loading state for all orders that had SAP verification pending
-      setOrders((prev) =>
-        prev.map((o) => {
-          if (!o.inventoryStats.sapVerificationLoading) return o;
-          const sapData = sapMap.get(o.po_number);
-          if (sapData !== undefined) {
-            return {
-              ...o,
-              inventoryStats: {
-                ...o.inventoryStats,
-                sapStockAvailable: sapData.stockAvailable,
-                inFloor: sapData.inFloor ?? o.inventoryStats.inFloor,
-                shipped: sapData.shipped ?? o.inventoryStats.shipped,
-                pending: sapData.pending ?? o.inventoryStats.pending,
-                percentProduced: sapData.percentProduced ?? o.inventoryStats.percentProduced,
-                excessStock: sapData.excessStock ?? o.inventoryStats.excessStock,
-                sapVerificationLoading: false,
-              },
-            };
-          }
-          // SAP call was not attempted or not in map — clear loading
-          return {
-            ...o,
-            inventoryStats: {
-              ...o.inventoryStats,
-              sapVerificationLoading: false,
-            },
-          };
-        })
-      );
-    }
+    return formattedOrders;
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [user]);
+  const {
+    data: orders = [],
+    isLoading: loading,
+    isFetching,
+    refetch: refetchOrders,
+  } = useQuery({
+    queryKey: ["purchase-orders", user?.id],
+    queryFn: fetchOrders,
+    enabled: !!user,
+    staleTime: 5_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+    onError: (error) => {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders");
+    },
+  });
 
   const getStatusFilter = (status: string): string => {
     if (status === "pending" || status === "submitted") return "Submitted";
@@ -751,6 +667,14 @@ export default function Orders() {
   };
 
   const filteredAndSortedOrders = useMemo(() => {
+    const hasAnyAvailability = (order: Order) => {
+      const inFloor = order.inventoryStats.inFloor || 0;
+      const shipped = order.inventoryStats.shipped || 0;
+      const stockAvailable = order.inventoryStats.sapStockAvailable || 0;
+      const excess = order.inventoryStats.excessStock?.total_quantity || 0;
+      return inFloor > 0 || shipped > 0 || stockAvailable > 0 || excess > 0;
+    };
+
     let result = orders.filter((order) => {
       const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
@@ -785,6 +709,18 @@ export default function Orders() {
         const dateB = b.estimated_delivery_date ? new Date(b.estimated_delivery_date).getTime() : 0;
         return bioflexDeliverySort === "asc" ? dateA - dateB : dateB - dateA;
       });
+    } else {
+      result = [...result].sort((a, b) => {
+        const aAccepted = a.status === "accepted" ? 0 : 1;
+        const bAccepted = b.status === "accepted" ? 0 : 1;
+        if (aAccepted !== bAccepted) return aAccepted - bAccepted;
+
+        const aHasAvailability = hasAnyAvailability(a) ? 0 : 1;
+        const bHasAvailability = hasAnyAvailability(b) ? 0 : 1;
+        if (aHasAvailability !== bHasAvailability) return aHasAvailability - bHasAvailability;
+
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
     }
 
     return result;
@@ -813,7 +749,7 @@ export default function Orders() {
       toast.error("Failed to reactivate order");
     } else {
       toast.success("Order reactivated successfully");
-      fetchOrders();
+      refetchOrders();
     }
     setReactivatingId(null);
   };
@@ -917,7 +853,11 @@ export default function Orders() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && <BulkOrdersManager onUpdated={fetchOrders} />}
+            <Button variant="outline" size="sm" onClick={() => refetchOrders()} disabled={isFetching} className="gap-1.5">
+              <RotateCcw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+              Refresh
+            </Button>
+            {isAdmin && <BulkOrdersManager onUpdated={refetchOrders} />}
             <Link to="/orders/new">
               <Button variant="accent" className="gap-2">
                 <Plus className="h-5 w-5" />
@@ -1043,7 +983,7 @@ export default function Orders() {
                           formatCurrency={formatCurrency}
                           onAcceptOrder={handleAcceptOrder}
                           onRequestChange={handleRequestChange}
-                          onUpdated={fetchOrders}
+                          onUpdated={refetchOrders}
                           columnOrder={orderedColumns.map(c => c.id)}
                           columnWidths={Object.fromEntries(orderedColumns.map(c => [c.id, getColumnWidth(c.id)]))}
                         />
@@ -1161,13 +1101,13 @@ export default function Orders() {
               open={acceptDialogOpen}
               onOpenChange={setAcceptDialogOpen}
               order={selectedOrder}
-              onAccepted={fetchOrders}
+              onAccepted={refetchOrders}
             />
             <ChangeRequestDialog
               open={changeRequestDialogOpen}
               onOpenChange={setChangeRequestDialogOpen}
               order={selectedOrder}
-              onSubmitted={fetchOrders}
+              onSubmitted={refetchOrders}
             />
           </>
         )}

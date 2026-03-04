@@ -83,6 +83,25 @@ interface StockWarehouseDetail {
   cajas: number;
 }
 
+interface CatOrdenOpenItem {
+  pedido?: number | string | null;
+  u_PO2?: string | null;
+  u_Cl1?: string | null;
+  clave?: string | null;
+  producto?: string | null;
+  frgnName?: string | null;
+  u_ItemNo?: string | null;
+  tipoEmpaque?: string | null;
+  cantidad?: number | string | null;
+  precio?: number | string | null;
+  value?: number | string | null;
+  cantidadSolicitada?: number | string | null;
+  cantidadEnviada?: number | string | null;
+  totalStockDisponible?: number | string | null;
+  detallesAlmacen?: StockWarehouseDetail[] | null;
+  detallesAlmacenTotal?: StockWarehouseDetail[] | null;
+}
+
 interface StockVerificationItem {
   claveProducto: string;
   producto: string;
@@ -98,6 +117,31 @@ interface StockVerificationItem {
   stockAsignadoPO?: number;
   stockOtrasPOs?: number;
 }
+
+const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+
+const parseApiNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const cleaned = value.trim().replace(/[^0-9.-]/g, "");
+    if (!cleaned) return null;
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const normalizePoKey = (value: string | null | undefined): string => {
+  const cleaned = (value || "").trim().toUpperCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  if (/^\d+$/.test(compact)) return String(Number(compact));
+  return compact;
+};
+
+const sumWarehouseQty = (details?: StockWarehouseDetail[] | null): number =>
+  (details || []).reduce((sum, lot) => sum + (parseApiNumber(lot?.cantidad) || 0), 0);
 
 
 const statusStyles: Record<string, string> = {
@@ -130,6 +174,7 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
+  const [sapOrderData, setSapOrderData] = useState<CatOrdenOpenItem | null>(null);
   const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
@@ -200,7 +245,8 @@ export default function OrderDetail() {
   };
 
   useEffect(() => {
-    if (!order?.sales_order_number || !order?.po_number) {
+    if (!order?.po_number) {
+      setSapOrderData(null);
       setStockVerification([]);
       setStockError(null);
       setStockLoading(false);
@@ -214,26 +260,63 @@ export default function OrderDetail() {
       setStockError(null);
 
       try {
-        const response = await fetch(
-          `http://172.16.10.31/api/Ordenes/verificar-stock/${encodeURIComponent(order.sales_order_number)}/${encodeURIComponent(order.po_number)}`,
-          {
-            method: "GET",
-            headers: { accept: "*/*" },
-            signal: controller.signal,
-          }
-        );
+        const response = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+          method: "GET",
+          headers: { accept: "*/*" },
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
 
         const payload = await response.json();
-        setStockVerification(Array.isArray(payload) ? payload : []);
+        const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload : [];
+        const sapItem =
+          list.find((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number)) || null;
+
+        setSapOrderData(sapItem);
+
+        if (!sapItem) {
+          setStockVerification([]);
+          return;
+        }
+
+        const requested =
+          parseApiNumber(sapItem.cantidadSolicitada) ??
+          ((parseApiNumber(sapItem.cantidad) || 0) * 1000);
+        const shipped = parseApiNumber(sapItem.cantidadEnviada) ?? 0;
+        const pending = Math.max(0, requested - shipped);
+        const lotsCurrent = sapItem.detallesAlmacen || [];
+        const lotsOther = sapItem.detallesAlmacenTotal || [];
+        const assignedFromLots = sumWarehouseQty(lotsCurrent);
+        const otherFromLots = sumWarehouseQty(lotsOther);
+        const totalStock =
+          parseApiNumber(sapItem.totalStockDisponible) ?? (assignedFromLots + otherFromLots);
+        const percent = requested > 0 ? (shipped / requested) * 100 : 0;
+
+        setStockVerification([
+          {
+            claveProducto: sapItem.clave || order.product?.codigo_producto || order.product?.pt_code || "",
+            producto: sapItem.producto || sapItem.frgnName || order.product?.name || "",
+            cantidadSolicitada: requested,
+            unidadSolicitada: "Units",
+            cantidadEnviada: shipped,
+            cantidadPendiente: pending,
+            porcentajeEnviado: percent,
+            puedeCompletarOrden: totalStock >= pending,
+            detallesAlmacen: lotsCurrent,
+            detallesAlmacenTotal: lotsOther,
+            totalStockDisponible: totalStock,
+            stockAsignadoPO: assignedFromLots,
+            stockOtrasPOs: otherFromLots,
+          },
+        ]);
       } catch (error) {
         if ((error as Error).name === "AbortError") {
           return;
         }
-        console.error("Error verifying stock:", error);
+        console.error("Error loading SAP order details:", error);
         setStockError("Unable to verify stock for this order right now.");
       } finally {
         setStockLoading(false);
@@ -245,7 +328,7 @@ export default function OrderDetail() {
     return () => {
       controller.abort();
     };
-  }, [order?.sales_order_number, order?.po_number]);
+  }, [order?.po_number, order?.product?.codigo_producto, order?.product?.name, order?.product?.pt_code]);
 
   const fetchOrderDetails = async () => {
     if (!id) return;
@@ -433,6 +516,32 @@ export default function OrderDetail() {
     return null;
   }
 
+  const displaySalesOrder =
+    sapOrderData?.pedido !== null && sapOrderData?.pedido !== undefined
+      ? String(sapOrderData.pedido)
+      : order.sales_order_number;
+  const sapRequested =
+    parseApiNumber(sapOrderData?.cantidadSolicitada) ??
+    (() => {
+      const sapBaseQty = parseApiNumber(sapOrderData?.cantidad);
+      return sapBaseQty !== null ? sapBaseQty * 1000 : null;
+    })();
+  const displayQuantity = sapRequested ?? order.quantity;
+  const displayTotalPrice =
+    parseApiNumber(sapOrderData?.value) ??
+    (() => {
+      const c = parseApiNumber(sapOrderData?.cantidad);
+      const p = parseApiNumber(sapOrderData?.precio);
+      return c !== null && p !== null ? c * p : order.total_price;
+    })();
+  const displayPricePerThousand = parseApiNumber(sapOrderData?.precio) ?? order.price_per_thousand;
+  const displayItemCode = sapOrderData?.u_ItemNo || order.product?.customer_item || "—";
+  const displayItemDescription = sapOrderData?.frgnName || sapOrderData?.producto || order.product?.item_description || "—";
+  const displayFinalCustomer = sapOrderData?.u_Cl1 || order.product?.customer || "—";
+  const displayTipoEmpaque = sapOrderData?.tipoEmpaque || order.product?.tipo_empaque || "—";
+  const displayPtCode = sapOrderData?.clave || order.product?.codigo_producto || order.product?.pt_code || "—";
+  const displayProductName = sapOrderData?.producto || sapOrderData?.frgnName || order.product?.name || "—";
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -527,16 +636,20 @@ export default function OrderDetail() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="text-sm text-muted-foreground">Product Name</label>
+                    <p className="font-medium">{displayProductName}</p>
+                  </div>
+                  <div>
                     <label className="text-sm text-muted-foreground">Item Code</label>
-                    <p className="font-medium">{order.product?.customer_item || "—"}</p>
+                    <p className="font-medium">{displayItemCode}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Item Description</label>
-                    <p className="font-medium">{order.product?.item_description || "—"}</p>
+                    <p className="font-medium">{displayItemDescription}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Final Customer</label>
-                    <p className="font-medium">{order.product?.customer || "—"}</p>
+                    <p className="font-medium">{displayFinalCustomer}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Item Type</label>
@@ -545,14 +658,14 @@ export default function OrderDetail() {
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">Tipo Empaque</label>
-                      <p className="font-medium">{order.product?.tipo_empaque || "—"}</p>
+                      <p className="font-medium">{displayTipoEmpaque}</p>
                     </div>
                   )}
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PT Code</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.codigo_producto || order.product?.pt_code || "—"}</p>
+                        <p className="font-medium">{displayPtCode}</p>
                         {order.product?.bfx_spec_url && (
                           <Button
                             variant="link"
@@ -628,7 +741,7 @@ export default function OrderDetail() {
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">Sales Order #</label>
-                      <p className="font-medium">{order.sales_order_number || "—"}</p>
+                      <p className="font-medium">{displaySalesOrder || "—"}</p>
                     </div>
                   )}
                   {isAdmin && order.accepted_at && (
@@ -663,14 +776,14 @@ export default function OrderDetail() {
                   )}
                   <div>
                     <label className="text-sm text-muted-foreground">Quantity</label>
-                    <p className="font-medium">{order.quantity.toLocaleString()}</p>
+                    <p className="font-medium">{displayQuantity.toLocaleString()}</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Pallets Needed</label>
                     <p className="font-medium">
-                      {order.product?.pieces_per_pallet && order.quantity
+                      {order.product?.pieces_per_pallet && displayQuantity
                         ? (() => {
-                            const result = order.quantity / order.product.pieces_per_pallet;
+                            const result = displayQuantity / order.product.pieces_per_pallet;
                             return Number.isInteger(result) ? result.toLocaleString() : parseFloat(result.toFixed(2)).toLocaleString();
                           })()
                         : "—"}
@@ -680,11 +793,11 @@ export default function OrderDetail() {
                     <>
                       <div>
                         <label className="text-sm text-muted-foreground">Price per Thousand</label>
-                        <p className="font-medium">{formatCurrency(order.price_per_thousand)}</p>
+                        <p className="font-medium">{formatCurrency(displayPricePerThousand)}</p>
                       </div>
                       <div>
                         <label className="text-sm text-muted-foreground">Total Price</label>
-                        <p className="font-medium">{formatCurrency(order.total_price)}</p>
+                        <p className="font-medium">{formatCurrency(displayTotalPrice)}</p>
                       </div>
                     </>
                   )}
@@ -836,7 +949,7 @@ export default function OrderDetail() {
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span className="rounded-full border px-2 py-1 text-muted-foreground">
-                        Sales Order: <span className="font-semibold text-foreground">{order.sales_order_number || "—"}</span>
+                        Sales Order: <span className="font-semibold text-foreground">{displaySalesOrder || "—"}</span>
                       </span>
                       <span className="rounded-full border px-2 py-1 text-muted-foreground">
                         PO Number: <span className="font-semibold text-foreground">{order.po_number || "—"}</span>

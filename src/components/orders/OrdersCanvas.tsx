@@ -97,14 +97,25 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
     (o) => o.status !== "closed" && o.status !== "delivered"
   );
 
-  const getGroupValue = (o: CanvasOrder) => o[groupBy] || "Unassigned";
+  const normalizeGroupValue = (value: string | null | undefined) => {
+    const raw = (value || "").trim();
+    const normalized = raw.toLowerCase();
+    if (!raw || normalized === "null" || normalized === "undefined" || normalized === "unassigned" || normalized === "n/a") {
+      return "Unassigned";
+    }
+    return raw;
+  };
+
+  const getGroupValue = (o: CanvasOrder) => normalizeGroupValue(o[groupBy]);
 
   // Group by selected field
   const families = Array.from(
     new Set(activeOrders.map(getGroupValue))
   ).sort((a, b) => {
-    if (a === "Unassigned") return 1;
-    if (b === "Unassigned") return -1;
+    const aUnassigned = a === "Unassigned";
+    const bUnassigned = b === "Unassigned";
+    if (aUnassigned && !bUnassigned) return 1;
+    if (!aUnassigned && bUnassigned) return -1;
     return a.localeCompare(b);
   });
 

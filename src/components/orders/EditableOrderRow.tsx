@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { Link, useNavigate } from "react-router-dom";
 import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
@@ -76,6 +76,7 @@ interface InventoryStats {
 interface Order {
   id: string;
   po_number: string;
+  product_id: string | null;
   product_name: string | null;
   product_pt_code: string | null;
   product_customer: string | null;
@@ -93,7 +94,6 @@ interface Order {
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
-  is_external?: boolean;
   inventoryStats: InventoryStats;
 }
 
@@ -135,7 +135,6 @@ export function EditableOrderRow({
   columnWidths,
 }: EditableOrderRowProps) {
   const navigate = useNavigate();
-  const isExternalOrder = Boolean(order.is_external || order.id.startsWith("external-"));
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -143,6 +142,8 @@ export function EditableOrderRow({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [itemTypeOptions, setItemTypeOptions] = useState<string[]>([]);
+  const [dpSalesOptions, setDpSalesOptions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editedOrder, setEditedOrder] = useState({
     quantity: order.quantity,
@@ -153,7 +154,49 @@ export function EditableOrderRow({
     requested_delivery_date: order.requested_delivery_date || "",
     estimated_delivery_date: order.estimated_delivery_date || "",
     sales_order_number: order.sales_order_number || "",
+    product_item_type: order.product_item_type || "",
+    product_dp_sales_csr: order.product_dp_sales_csr || "",
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadOptions = async () => {
+      const [itemTypeRes, dpSalesRes] = await Promise.all([
+        supabase
+          .from("dropdown_options")
+          .select("label")
+          .eq("category", "item_type")
+          .eq("is_active", true)
+          .order("sort_order")
+          .order("label"),
+        supabase
+          .from("products")
+          .select("dp_sales_csr_names")
+          .not("dp_sales_csr_names", "is", null),
+      ]);
+
+      if (!isMounted) return;
+
+      if (!itemTypeRes.error) {
+        const labels = Array.from(
+          new Set((itemTypeRes.data || []).map((r: any) => String(r.label || "").trim()).filter(Boolean))
+        );
+        setItemTypeOptions(labels);
+      }
+
+      if (!dpSalesRes.error) {
+        const labels = Array.from(
+          new Set((dpSalesRes.data || []).map((r: any) => String(r.dp_sales_csr_names || "").trim()).filter(Boolean))
+        );
+        setDpSalesOptions(labels);
+      }
+    };
+
+    loadOptions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -243,11 +286,35 @@ export function EditableOrderRow({
         .update(updateData)
         .eq("id", order.id);
 
-      setSaving(false);
       if (error) {
+        setSaving(false);
         console.error("Error updating order:", error);
         toast.error("Failed to update order");
       } else {
+        if (
+          order.product_id &&
+          (
+            editedOrder.product_item_type !== (order.product_item_type || "") ||
+            editedOrder.product_dp_sales_csr !== (order.product_dp_sales_csr || "")
+          )
+        ) {
+          const { error: productUpdateError } = await supabase
+            .from("products")
+            .update({
+              item_type: editedOrder.product_item_type || null,
+              dp_sales_csr_names: editedOrder.product_dp_sales_csr || null,
+            })
+            .eq("id", order.product_id);
+
+          if (productUpdateError) {
+            setSaving(false);
+            console.error("Error updating product fields:", productUpdateError);
+            toast.error("Order updated, but failed to update Item Type / DP Sales CSR");
+            return;
+          }
+        }
+
+        setSaving(false);
         toast.success("Order updated successfully");
         setIsEditing(false);
         setUploadedFile(null);
@@ -270,6 +337,8 @@ export function EditableOrderRow({
       requested_delivery_date: order.requested_delivery_date || "",
       estimated_delivery_date: order.estimated_delivery_date || "",
       sales_order_number: order.sales_order_number || "",
+      product_item_type: order.product_item_type || "",
+      product_dp_sales_csr: order.product_dp_sales_csr || "",
     });
     setUploadedFile(null);
     if (fileInputRef.current) {
@@ -279,7 +348,6 @@ export function EditableOrderRow({
   };
 
   const handleRowClick = (e: React.MouseEvent) => {
-    if (isExternalOrder) return;
     const target = e.target as HTMLElement;
     if (
       target.closest('button') ||
@@ -482,8 +550,42 @@ export function EditableOrderRow({
       </span>
     ),
     customer: <span className="text-sm text-muted-foreground">{order.product_customer || "—"}</span>,
-    item_type: <span className="text-sm text-muted-foreground">{order.product_item_type || "—"}</span>,
-    dp_sales_csr: <span className="text-sm text-muted-foreground">{order.product_dp_sales_csr || "—"}</span>,
+    item_type: (
+      <Select
+        value={editedOrder.product_item_type || "__none__"}
+        onValueChange={(value) =>
+          setEditedOrder({ ...editedOrder, product_item_type: value === "__none__" ? "" : value })
+        }
+      >
+        <SelectTrigger className="h-8 w-44">
+          <SelectValue placeholder="Select item type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">—</SelectItem>
+          {Array.from(new Set([...(editedOrder.product_item_type ? [editedOrder.product_item_type] : []), ...itemTypeOptions])).map((opt) => (
+            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    dp_sales_csr: (
+      <Select
+        value={editedOrder.product_dp_sales_csr || "__none__"}
+        onValueChange={(value) =>
+          setEditedOrder({ ...editedOrder, product_dp_sales_csr: value === "__none__" ? "" : value })
+        }
+      >
+        <SelectTrigger className="h-8 w-52">
+          <SelectValue placeholder="Select DP Sales CSR" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">—</SelectItem>
+          {Array.from(new Set([...(editedOrder.product_dp_sales_csr ? [editedOrder.product_dp_sales_csr] : []), ...dpSalesOptions])).map((opt) => (
+            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
     pt_code: <span className="text-sm font-mono text-muted-foreground">{order.product_pt_code || "—"}</span>,
     quantity: (
       <Input type="number" value={editedOrder.quantity}
@@ -562,14 +664,10 @@ export function EditableOrderRow({
   const buildViewCells = (): Record<string, React.ReactNode> => ({
     po_number: (
       <div className="flex items-center gap-2">
-        {isExternalOrder ? (
-          <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
-        ) : (
-          <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
-            onClick={(e) => e.stopPropagation()}>
-            {order.po_number}
-          </Link>
-        )}
+        <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
+          onClick={(e) => e.stopPropagation()}>
+          {order.po_number}
+        </Link>
         {order.pdf_url && (
           <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
             className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
@@ -630,10 +728,6 @@ export function EditableOrderRow({
     percent_produced: renderPercentProduced(),
     actions: (
       <div className="flex items-center justify-end gap-2">
-        {isExternalOrder ? (
-          <span className="text-xs text-muted-foreground">External</span>
-        ) : (
-          <>
         {isAdmin && (order.status === "pending" || order.status === "submitted") && (
           <Button size="sm" variant="default" className="gap-1" onClick={() => onAcceptOrder(order)}>
             <CheckCircle2 className="h-4 w-4" /> Accept
@@ -718,8 +812,6 @@ export function EditableOrderRow({
             is_hot_order: order.is_hot_order,
           }}
         />
-          </>
-        )}
       </div>
     ),
   });
@@ -739,7 +831,7 @@ export function EditableOrderRow({
           isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
         )}
         onClick={isAdmin && isEditing ? undefined : handleRowClick}
-        onDoubleClick={isAdmin && !isEditing && !isExternalOrder ? () => setIsEditing(true) : undefined}
+        onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
       >
         {columnOrder.map((colId) => (
           <td
@@ -788,7 +880,7 @@ export function EditableOrderRow({
 
   return (
     <tr className="transition-colors hover:bg-muted/20 cursor-pointer" onClick={handleRowClick}
-      onDoubleClick={() => isAdmin && !isExternalOrder && setIsEditing(true)}>
+      onDoubleClick={() => isAdmin && setIsEditing(true)}>
       {defaultViewOrder.map((colId) => (
         <td key={colId} className={cn("whitespace-nowrap px-6 py-4 text-sm", rightAlignedColumns.has(colId) && "text-right")}>
           {viewCells[colId] ?? null}
