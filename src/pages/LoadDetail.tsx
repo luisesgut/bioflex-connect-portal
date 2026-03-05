@@ -1158,7 +1158,7 @@ export default function LoadDetail() {
     }
 
     // Apply column filters
-    const dateStr = (p: AvailablePallet) => format(new Date(p.fecha), "MM/dd/yyyy");
+    const dateStr = (p: AvailablePallet) => format(parseDateLocal(p.fecha), "MM/dd/yyyy");
     if (inventoryFilters.fecha.length > 0) {
       result = result.filter(p => inventoryFilters.fecha.includes(dateStr(p)));
     }
