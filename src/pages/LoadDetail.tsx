@@ -4009,7 +4009,7 @@ export default function LoadDetail() {
                               <Badge variant="secondary">{po.inventory_pallets}</Badge>
                             </TableCell>
                             <TableCell className="text-right font-medium text-primary">
-                              {po.inventory_volume.toLocaleString()}
+                              {(po.inventory_volume * 1000).toLocaleString()}
                             </TableCell>
                           </TableRow>
                         ))}
