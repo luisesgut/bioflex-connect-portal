@@ -81,6 +81,7 @@ interface StockWarehouseDetail {
   pesoBruto: number;
   pesoNeto: number;
   cajas: number;
+  fecha?: string | null;
 }
 
 interface CatOrdenOpenItem {
