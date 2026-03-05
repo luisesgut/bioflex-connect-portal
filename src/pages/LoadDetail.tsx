@@ -3523,7 +3523,7 @@ export default function LoadDetail() {
                             "bg-red-50/50 dark:bg-red-950/20",
                             isFirstOfGroup(onHoldPallets, index) && "border-t-2 border-t-border"
                           )}>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 <Checkbox
                                   checked={selectedOnHoldPallets.has(pallet.id)}
