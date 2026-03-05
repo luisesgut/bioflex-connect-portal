@@ -4087,7 +4087,7 @@ export default function LoadDetail() {
                                   }}
                                 />
                               </TableCell>
-                              <TableCell className="text-sm">{format(new Date(pallet.fecha), "MM/dd/yyyy")}</TableCell>
+                              <TableCell className="text-sm">{format(parseDateLocal(pallet.fecha), "MM/dd/yyyy")}</TableCell>
                               <TableCell className="font-mono">{pallet.pt_code}</TableCell>
                               <TableCell className="max-w-[200px] truncate">{pallet.description}</TableCell>
                               <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
