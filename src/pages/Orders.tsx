@@ -566,6 +566,8 @@ export default function Orders() {
           }
         }
       }
+    }
+
     // Admin-only: update existing POs missing price_per_thousand with SAP data
     if (isAdmin && Object.keys(catOrdenByPO).length > 0) {
       const ordersSource = ordersData || combinedOrdersSource;
