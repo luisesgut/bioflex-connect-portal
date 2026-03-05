@@ -3182,7 +3182,7 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {isAdmin && (
+                          {canEditShipping && (
                             <TableHead className="w-[40px]">
                               <Checkbox
                                 checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
