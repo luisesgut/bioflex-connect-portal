@@ -2404,7 +2404,7 @@ export default function LoadDetail() {
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "MMM d")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "MMM d")
                       : "-"}
                   </div>
                   <p className="text-xs text-muted-foreground">
