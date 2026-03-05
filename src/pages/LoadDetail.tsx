@@ -3439,7 +3439,7 @@ export default function LoadDetail() {
                       )}
                     </CardDescription>
                   </div>
-                  {isAdmin && selectedOnHoldPallets.size > 0 && (
+                  {canEditShipping && selectedOnHoldPallets.size > 0 && (
                     <div className="flex items-center gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
