@@ -3639,7 +3639,7 @@ export default function LoadDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {isAdmin && (
+                      {canEditShipping && (
                         <TableHead className="w-[40px]">
                           <Checkbox
                             checked={selectedPalletsToDelete.size === pallets.length && pallets.length > 0}
