@@ -108,6 +108,8 @@ const customerVisibleStatuses = [
   "draft", "specs_submitted", "artwork_uploaded", "pc_in_review", "pc_approved", "completed",
 ];
 
+const PRINTCARD_API_BASE_URL = "http://172.16.10.31/api/Printcard";
+
 function getCustomerVisibleStatus(status: string, isAdmin: boolean): string {
   if (isAdmin) return requestStatusLabels[status] || status;
   if (!customerVisibleStatuses.includes(status)) return "In Progress";
@@ -122,6 +124,12 @@ function getStatusBadgeVariant(status: string) {
     case "completed": return "default" as const;
     default: return "default" as const;
   }
+}
+
+function getPrintCardDocumentUrl(printCard: string | null | undefined): string | null {
+  const pc = printCard?.trim();
+  if (!pc) return null;
+  return `${PRINTCARD_API_BASE_URL}/${encodeURIComponent(pc)}`;
 }
 
 export default function Products() {
@@ -444,7 +452,18 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {product.bfx_spec_url ? (
+                    {getPrintCardDocumentUrl(product.print_card) ? (
+                      <button
+                        onClick={() => {
+                          const url = getPrintCardDocumentUrl(product.print_card);
+                          if (url) window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View
+                      </button>
+                    ) : product.bfx_spec_url ? (
                       <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         View
