@@ -249,7 +249,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                               </div>
                               {/* Mini progress bar */}
                               <div className="mt-2">
-                                {order.inventoryStats.sapVerificationLoading ? (
+                              {order.inventoryStats.sapVerificationLoading ? (
                                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                     <span>Verifying with SAP...</span>
@@ -275,6 +275,15 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                         </>
                                       )}
                                     </div>
+                                    {(() => {
+                                      const stockInOtherPOs = Math.max(0, (order.inventoryStats.sapStockAvailable ?? 0) - order.inventoryStats.inFloor);
+                                      return stockInOtherPOs > 0 ? (
+                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                          <Boxes className="h-3 w-3" />
+                                          <span>Other POs: <strong className="text-foreground">{formatNumber(stockInOtherPOs)}</strong></span>
+                                        </div>
+                                      ) : null;
+                                    })()}
                                   </>
                                 )}
                               </div>
