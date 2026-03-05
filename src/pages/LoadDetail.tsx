@@ -2811,7 +2811,7 @@ export default function LoadDetail() {
                                       </Button>
                                     </label>
                                   )}
-                                  {!isAdmin && !step.podPdfUrl && (
+                                  {!canEditShipping && !step.podPdfUrl && (
                                     <span className="text-xs text-muted-foreground italic">No POD uploaded</span>
                                   )}
                                 </div>
