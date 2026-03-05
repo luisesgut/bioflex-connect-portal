@@ -3604,7 +3604,7 @@ export default function LoadDetail() {
                     + Virtual
                   </Button>
                 )}
-                {isAdmin && selectedPalletsToDelete.size > 0 && (
+                {canEditShipping && selectedPalletsToDelete.size > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={deletingPallets}>
