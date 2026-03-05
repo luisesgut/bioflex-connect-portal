@@ -3578,7 +3578,7 @@ export default function LoadDetail() {
             )}
 
             {/* Comments Section */}
-            <LoadComments loadId={id!} userId={user?.id} isAdmin={isAdmin} />
+            <LoadComments loadId={id!} userId={user?.id} isAdmin={canEditShipping} />
           </>
         )}
 
