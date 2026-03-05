@@ -2361,7 +2361,7 @@ export default function LoadDetail() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {differenceInDays(new Date(), new Date(load.shipping_date))}
+                  {differenceInDays(new Date(), parseDateLocal(load.shipping_date))}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   since {format(new Date(load.shipping_date), "MMM d, yyyy")}
