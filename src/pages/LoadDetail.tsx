@@ -3531,7 +3531,7 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell className="font-mono">
                                 <div className="flex items-center gap-1.5">
                                   {pallet.pallet.pt_code}
