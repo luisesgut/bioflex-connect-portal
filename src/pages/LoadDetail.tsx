@@ -924,7 +924,7 @@ export default function LoadDetail() {
   }, [pallets]);
 
   // Get unique values for filter options
-  const uniqueDates = useMemo(() => [...new Set(availablePallets.map(p => format(new Date(p.fecha), "MM/dd/yyyy")))].sort(), [availablePallets]);
+  const uniqueDates = useMemo(() => [...new Set(availablePallets.map(p => format(parseDateLocal(p.fecha), "MM/dd/yyyy")))].sort(), [availablePallets]);
   const uniquePtCodes = useMemo(() => [...new Set(availablePallets.map(p => p.pt_code))].filter(Boolean).sort(), [availablePallets]);
   const uniqueDescriptions = useMemo(() => [...new Set(availablePallets.map(p => p.description))].filter(Boolean).sort(), [availablePallets]);
   const uniqueTraceability = useMemo(() => [...new Set(availablePallets.map(p => p.traceability))].filter(Boolean).sort(), [availablePallets]);
