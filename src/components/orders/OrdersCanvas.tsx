@@ -250,35 +250,40 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                 ) : (
                                   <>
                                     {(() => {
-                                      const totalProduced = order.inventoryStats.shipped + order.inventoryStats.inFloor;
+                                      const shipped = order.inventoryStats.shipped;
+                                      const inFloor = order.inventoryStats.inFloor;
+                                      const stockOtherPOs = Math.max(0, (order.inventoryStats.sapStockAvailable ?? 0) - inFloor);
+                                      const totalStock = shipped + inFloor + stockOtherPOs;
                                       const threshold = order.quantity * 1.1;
-                                      const isOverLimit = order.quantity > 0 && totalProduced > threshold;
-                                      const excessPercent = order.quantity > 0 ? Math.round(((totalProduced / order.quantity) - 1) * 100) : 0;
+                                      const isOverLimit = order.quantity > 0 && totalStock > threshold;
+                                      const excessPercent = order.quantity > 0 ? Math.round(((totalStock / order.quantity) - 1) * 100) : 0;
+                                      const fulfillmentPct = order.quantity > 0 ? Math.round((totalStock / order.quantity) * 100) : 0;
 
                                       return (
                                         <>
                                           <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
-                                            <span>Shipped {formatNumber(order.inventoryStats.shipped)}</span>
-                                            <span>WH {formatNumber(order.inventoryStats.inFloor)}</span>
-                                            <span>Pend {formatNumber(order.inventoryStats.pending)}</span>
+                                            <span>{fulfillmentPct}%</span>
                                             {isOverLimit && (
                                               <span className="text-destructive font-semibold">+{excessPercent}%</span>
                                             )}
                                           </div>
                                           <div className={cn("h-1.5 rounded-full overflow-hidden flex", isOverLimit ? "bg-destructive/20" : "bg-muted")}>
                                             {order.quantity > 0 && (() => {
-                                              const shippedPct = (order.inventoryStats.shipped / order.quantity) * 100;
-                                              const whPct = (order.inventoryStats.inFloor / order.quantity) * 100;
-                                              const cap = 110; // show up to 110%
+                                              const shippedPct = (shipped / order.quantity) * 100;
+                                              const whPct = (inFloor / order.quantity) * 100;
+                                              const otherPct = (stockOtherPOs / order.quantity) * 100;
+                                              const cap = 110;
                                               const shippedClamped = Math.min(shippedPct, cap);
                                               const whClamped = Math.min(whPct, cap - shippedClamped);
-                                              const overflowPct = isOverLimit ? Math.min(((totalProduced / order.quantity) * 100) - 110, cap) : 0;
-                                              // Scale widths so total maps to bar width
+                                              const otherClamped = Math.min(otherPct, cap - shippedClamped - whClamped);
+                                              const totalClamped = shippedClamped + whClamped + otherClamped;
+                                              const overflowPct = isOverLimit ? Math.min(((totalStock / order.quantity) * 100) - 110, cap) : 0;
                                               const scale = cap > 0 ? 100 / cap : 1;
                                               return (
                                                 <>
                                                   <div className="bg-success h-full" style={{ width: `${shippedClamped * scale}%` }} />
                                                   <div className="bg-info h-full" style={{ width: `${whClamped * scale}%` }} />
+                                                  <div className="bg-info/50 h-full" style={{ width: `${otherClamped * scale}%` }} />
                                                   {isOverLimit && (
                                                     <div className="bg-destructive h-full" style={{ width: `${overflowPct * scale}%` }} />
                                                   )}
@@ -286,17 +291,17 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                               );
                                             })()}
                                           </div>
+                                          <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                                            <div className="flex items-center gap-2">
+                                              <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-success" />Ship {formatNumber(shipped)}</span>
+                                              <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-info" />WH {formatNumber(inFloor)}</span>
+                                              {stockOtherPOs > 0 && (
+                                                <span className="flex items-center gap-0.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-info/50" />Other {formatNumber(stockOtherPOs)}</span>
+                                              )}
+                                            </div>
+                                          </div>
                                         </>
                                       );
-                                    })()}
-                                    {(() => {
-                                      const stockInOtherPOs = Math.max(0, (order.inventoryStats.sapStockAvailable ?? 0) - order.inventoryStats.inFloor);
-                                      return stockInOtherPOs > 0 ? (
-                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
-                                          <Boxes className="h-3 w-3" />
-                                          <span>Other POs: <strong className="text-foreground">{formatNumber(stockInOtherPOs)}</strong></span>
-                                        </div>
-                                      ) : null;
                                     })()}
                                   </>
                                 )}
