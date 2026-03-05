@@ -2183,7 +2183,7 @@ export default function LoadDetail() {
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
                         <CalendarIcon className="mr-1 h-3 w-3" />
-                        {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                        {format(parseDateLocal(load.shipping_date), "MMM d, yyyy")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
