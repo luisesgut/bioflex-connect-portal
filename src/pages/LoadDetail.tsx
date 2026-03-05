@@ -3684,7 +3684,7 @@ export default function LoadDetail() {
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                        {isAdmin && (
+                        {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
                               <Button
