@@ -265,7 +265,7 @@ export default function OrderDetail() {
 
       try {
         // Fetch order data from SAP and inventory dates from database in parallel
-        const [orderResponse, sapInvResult] = await Promise.all([
+        const [orderResponse, sapInvResult, poResult] = await Promise.all([
           fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
             method: "GET",
             headers: { accept: "*/*" },
