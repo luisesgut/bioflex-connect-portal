@@ -2279,7 +2279,7 @@ export default function LoadDetail() {
                 </SelectContent>
               </Select>
             )}
-            {isAdmin && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
+            {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
               <Button variant="outline" onClick={() => {
                 const totalPalletCount = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
