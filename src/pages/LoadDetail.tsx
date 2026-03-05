@@ -1772,7 +1772,7 @@ export default function LoadDetail() {
         toast.error(validation.message);
         return;
       }
-      setInTransitShipDate(new Date(load!.shipping_date));
+      setInTransitShipDate(parseDateLocal(load!.shipping_date));
       setInTransitConfirmOpen(true);
     } else if (newStatus === "pending_release" && user) {
       // Create release request if transitioning to pending_release and none exists
