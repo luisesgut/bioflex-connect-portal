@@ -298,7 +298,7 @@ export default function Orders() {
           po_number: poNumber,
           quantity,
           total_price: totalPrice,
-          status: "submitted",
+          status: salesOrderNumber ? "accepted" : "submitted",
           product_id: productId,
           sales_order_number: salesOrderNumber,
           user_id: user.id,
