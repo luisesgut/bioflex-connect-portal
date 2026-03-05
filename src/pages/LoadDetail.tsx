@@ -3392,7 +3392,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
