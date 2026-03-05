@@ -598,7 +598,7 @@ export default function Inventory() {
                 {filteredInventory.map((item) => (
                   <TableRow key={item.id} className={item.is_virtual ? "bg-red-50 dark:bg-red-950/20" : ""}>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(item.fecha).toLocaleDateString()}
+                      {parseDateLocal(item.fecha).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-1.5">
