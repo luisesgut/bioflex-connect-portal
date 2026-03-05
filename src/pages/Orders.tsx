@@ -297,6 +297,7 @@ export default function Orders() {
         return {
           po_number: poNumber,
           quantity,
+          price_per_thousand: sapPrecio,
           total_price: totalPrice,
           status: salesOrderNumber ? "accepted" : "submitted",
           product_id: productId,
