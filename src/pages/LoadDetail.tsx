@@ -2189,7 +2189,7 @@ export default function LoadDetail() {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={new Date(load.shipping_date)}
+                        selected={parseDateLocal(load.shipping_date)}
                         onSelect={(date) => {
                           if (date && id) {
                             supabase
