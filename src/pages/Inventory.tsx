@@ -27,6 +27,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
+import { parseDateLocal } from "@/lib/utils";
 
 interface SAPInventoryItem {
   id: string;
@@ -225,7 +226,7 @@ export default function Inventory() {
   const hasActiveFilters = Object.values(filters).some(arr => arr.length > 0) || searchQuery.length > 0;
 
   // Get unique values for filter options
-  const uniqueDates = [...new Set(inventory.map(i => new Date(i.fecha).toLocaleDateString()))].sort();
+  const uniqueDates = [...new Set(inventory.map(i => parseDateLocal(i.fecha).toLocaleDateString()))].sort();
   const uniquePtCodes = [...new Set(inventory.map(i => i.pt_code))].filter(Boolean).sort();
   const uniqueDescriptions = [...new Set(inventory.map(i => i.description))].filter(Boolean).sort();
   const uniqueUnits = [...new Set(inventory.map(i => i.unit))].filter(Boolean).sort();
@@ -421,7 +422,7 @@ export default function Inventory() {
         if (!matchesSearch) return false;
       }
 
-      const dateStr = new Date(item.fecha).toLocaleDateString();
+      const dateStr = parseDateLocal(item.fecha).toLocaleDateString();
       if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
       if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
       if (filters.description.length > 0 && !filters.description.includes(item.description)) return false;
@@ -438,8 +439,8 @@ export default function Inventory() {
       if (!a.is_virtual && b.is_virtual) return 1;
       // Then date sort
       if (!dateSortOrder) return 0;
-      const dateA = new Date(a.fecha).getTime();
-      const dateB = new Date(b.fecha).getTime();
+      const dateA = parseDateLocal(a.fecha).getTime();
+      const dateB = parseDateLocal(b.fecha).getTime();
       return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
@@ -597,7 +598,7 @@ export default function Inventory() {
                 {filteredInventory.map((item) => (
                   <TableRow key={item.id} className={item.is_virtual ? "bg-red-50 dark:bg-red-950/20" : ""}>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(item.fecha).toLocaleDateString()}
+                      {parseDateLocal(item.fecha).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-1.5">
