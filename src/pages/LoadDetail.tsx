@@ -3141,7 +3141,7 @@ export default function LoadDetail() {
                     )}
                   </CardDescription>
                 </div>
-                {isAdmin && selectedReleasedPallets.size > 0 && (
+                {canEditShipping && selectedReleasedPallets.size > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" disabled={revertingPallets}>
