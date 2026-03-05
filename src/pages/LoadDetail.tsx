@@ -3300,7 +3300,7 @@ export default function LoadDetail() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isAdmin && selectedPalletsForRelease.size > 0 && (
+                  {canEditShipping && selectedPalletsForRelease.size > 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" disabled={deletingPallets}>
