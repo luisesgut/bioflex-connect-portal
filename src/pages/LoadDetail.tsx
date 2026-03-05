@@ -2263,7 +2263,7 @@ export default function LoadDetail() {
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
-            {isAdmin && load.status !== "delivered" && (
+            {canEditShipping && load.status !== "delivered" && (
               <Select
                 value={load.status}
                 onValueChange={handleStatusChange}
