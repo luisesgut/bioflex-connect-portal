@@ -421,15 +421,6 @@ export default function OrderDetail() {
     };
     setOrder(orderData);
 
-        if (!orderResponse.ok) {
-          throw new Error(`HTTP ${orderResponse.status}`);
-        }
-
-        const payload = await orderResponse.json();
-        const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload : [];
-        const sapItem =
-          list.find((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number)) || null;
-
 
     setLoading(false);
   };
