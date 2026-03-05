@@ -3375,7 +3375,7 @@ export default function LoadDetail() {
                                 onCheckedChange={() => togglePalletForRelease(pallet.id)}
                               />
                             </TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell className="font-mono">
                                 <div className="flex items-center gap-1.5">
                                   {pallet.pallet.pt_code}
