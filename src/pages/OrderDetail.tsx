@@ -1166,6 +1166,7 @@ export default function OrderDetail() {
                                           <thead className="bg-sky-100/70 text-sky-900">
                                             <tr>
                                               {isAdmin && <th className="px-3 py-1.5 text-left font-medium">Lot</th>}
+                                              <th className="px-3 py-1.5 text-left font-medium">PO</th>
                                               <th className="px-3 py-1.5 text-left font-medium">Date</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Qty</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
