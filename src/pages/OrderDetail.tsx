@@ -275,12 +275,28 @@ export default function OrderDetail() {
           supabase.from('purchase_orders').select('po_number, sales_order_number'),
         ]);
 
-        // Build a map of lote -> fecha from the database
+        // Build maps of lote -> fecha and lote -> bfx_order from the database
         let fechaByLote: Record<string, string> = {};
+        let bfxOrderByLote: Record<string, string> = {};
         if (sapInvResult.data) {
           for (const item of sapInvResult.data) {
-            if (item.traceability && item.fecha && !fechaByLote[item.traceability]) {
-              fechaByLote[item.traceability] = item.fecha;
+            if (item.traceability) {
+              if (item.fecha && !fechaByLote[item.traceability]) {
+                fechaByLote[item.traceability] = item.fecha;
+              }
+              if (item.bfx_order && !bfxOrderByLote[item.traceability]) {
+                bfxOrderByLote[item.traceability] = item.bfx_order;
+              }
+            }
+          }
+        }
+
+        // Build map of sales_order_number -> po_number
+        let poBySONumber: Record<string, string> = {};
+        if (poResult.data) {
+          for (const po of poResult.data) {
+            if (po.sales_order_number && po.po_number) {
+              poBySONumber[po.sales_order_number] = po.po_number;
             }
           }
         }
