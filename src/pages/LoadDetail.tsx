@@ -3352,7 +3352,7 @@ export default function LoadDetail() {
                               onCheckedChange={toggleAllPendingPalletsForRelease}
                             />
                           </TableHead>
-                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          {canEditShipping && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
                           <TableHead>CSR</TableHead>
