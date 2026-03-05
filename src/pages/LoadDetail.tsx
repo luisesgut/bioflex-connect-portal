@@ -2294,7 +2294,7 @@ export default function LoadDetail() {
                 Billing PDF
               </Button>
             )}
-            {isAdmin && (
+            {canEditShipping && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" disabled={deletingLoad}>
