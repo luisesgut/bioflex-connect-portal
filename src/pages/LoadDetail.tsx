@@ -3598,7 +3598,7 @@ export default function LoadDetail() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isAdmin && (
+                {canEditShipping && (
                   <Button variant="outline" size="sm" onClick={() => setCreateVirtualOpen(true)}>
                     <Ghost className="mr-2 h-4 w-4" />
                     + Virtual
