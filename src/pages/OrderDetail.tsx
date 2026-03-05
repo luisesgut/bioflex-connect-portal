@@ -925,7 +925,7 @@ export default function OrderDetail() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Bioflex Delivery (Estimated)</label>
+                    <label className="text-sm text-muted-foreground">Bioflex Ship Date (Estimated)</label>
                     <p className="font-medium">{formatDate(order.estimated_delivery_date)}</p>
                   </div>
                 </div>
