@@ -3045,7 +3045,7 @@ export default function LoadDetail() {
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
-                          {isAdmin && (
+                          {canEditShipping && (
                             <label className="cursor-pointer">
                               <input type="file" accept=".pdf" className="hidden" onChange={handleUploadInvoicePdf} disabled={uploadingInvoicePdf} />
                               <Button variant="ghost" size="sm" asChild disabled={uploadingInvoicePdf} className="h-7 px-2">
