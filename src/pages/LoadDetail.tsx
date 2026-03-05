@@ -2744,7 +2744,7 @@ export default function LoadDetail() {
                                   />
                                 </div>
                               )}
-                              {step.type === "cross_border" && (!isAdmin || load.status !== "in_transit") && (
+                              {step.type === "cross_border" && (!canEditShipping || load.status !== "in_transit") && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {step.actualDate
                                     ? `Crossed: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
