@@ -458,30 +458,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </SelectContent>
                 </Select>
               </div>
-              {isWicket && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Extrusion Type</Label>
-                    <Select value={data.extrusion_type} onValueChange={(v) => update({ extrusion_type: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="blown">Blown</SelectItem>
-                        <SelectItem value="cast">Cast</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Clarity Grade</Label>
-                    <Select value={data.clarity_grade} onValueChange={(v) => update({ clarity_grade: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="standard">Standard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
             </div>
 
             {/* Wicket-specific elements */}
