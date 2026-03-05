@@ -120,6 +120,7 @@ interface StockVerificationItem {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const SAP_INVENTORY_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
 
 const parseApiNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
