@@ -120,7 +120,7 @@ interface StockVerificationItem {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
-const SAP_INVENTORY_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
+
 
 const parseApiNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -262,19 +262,25 @@ export default function OrderDetail() {
       setStockError(null);
 
       try {
-        // Fetch order data and inventory data in parallel
-        const [orderResponse, inventoryResponse] = await Promise.all([
+        // Fetch order data from SAP and inventory dates from database in parallel
+        const [orderResponse, sapInvResult] = await Promise.all([
           fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
             method: "GET",
             headers: { accept: "*/*" },
             signal: controller.signal,
           }),
-          fetch(SAP_INVENTORY_ENDPOINT, {
-            method: "GET",
-            headers: { accept: "*/*" },
-            signal: controller.signal,
-          }).catch(() => null), // Don't fail if inventory endpoint is unavailable
+          supabase.from('sap_inventory').select('traceability, fecha'),
         ]);
+
+        // Build a map of lote -> fecha from the database
+        let fechaByLote: Record<string, string> = {};
+        if (sapInvResult.data) {
+          for (const item of sapInvResult.data) {
+            if (item.traceability && item.fecha && !fechaByLote[item.traceability]) {
+              fechaByLote[item.traceability] = item.fecha;
+            }
+          }
+        }
 
         if (!orderResponse.ok) {
           throw new Error(`HTTP ${orderResponse.status}`);
@@ -285,24 +291,7 @@ export default function OrderDetail() {
         const sapItem =
           list.find((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number)) || null;
 
-        // Build a map of lote -> fecha from the inventory endpoint
-        let fechaByLote: Record<string, string> = {};
-        if (inventoryResponse && inventoryResponse.ok) {
-          try {
-            const invPayload = await inventoryResponse.json();
-            if (Array.isArray(invPayload)) {
-              for (const item of invPayload) {
-                const lote = item.lote || "";
-                const fecha = item.fecha || null;
-                if (lote && fecha && !fechaByLote[lote]) {
-                  fechaByLote[lote] = fecha;
-                }
-              }
-            }
-          } catch { /* ignore parse errors */ }
-        }
 
-        // Helper to enrich detallesAlmacen with fecha from inventory
         const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
           details.map((d) => ({
             ...d,
@@ -431,8 +420,8 @@ export default function OrderDetail() {
       product: data.products as OrderDetails["product"],
     };
     setOrder(orderData);
-    
-    
+
+
     setLoading(false);
   };
 
