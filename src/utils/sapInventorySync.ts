@@ -54,6 +54,17 @@ export async function syncSapInventoryFromEndpoint() {
   const now = new Date().toISOString();
   const today = now.split("T")[0];
 
+  // ── Fetch existing fecha values to preserve them when SAP doesn't provide one ──
+  const { data: existingRows } = await supabase
+    .from("sap_inventory")
+    .select("pt_code, traceability, fecha");
+  const existingFechaMap = new Map<string, string>();
+  (existingRows || []).forEach((row: any) => {
+    if (row.fecha) {
+      existingFechaMap.set(`${row.pt_code}||${row.traceability}`, row.fecha);
+    }
+  });
+
   const transformedData: SapInventoryInsertRow[] = sapData.map((item) => {
     let fechaFormatted = today;
 
@@ -61,6 +72,13 @@ export async function syncSapInventoryFromEndpoint() {
       const d = new Date(item.fecha);
       if (!Number.isNaN(d.getTime())) {
         fechaFormatted = d.toISOString().split("T")[0];
+      }
+    } else {
+      // Preserve existing fecha from previous sync if SAP doesn't provide it
+      const key = `${item.claveProducto || ""}||${item.lote || ""}`;
+      const existingFecha = existingFechaMap.get(key);
+      if (existingFecha) {
+        fechaFormatted = existingFecha;
       }
     }
 
