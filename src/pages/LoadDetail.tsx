@@ -3209,7 +3209,7 @@ export default function LoadDetail() {
                             "bg-green-50/50 dark:bg-green-950/20",
                             isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
                           )}>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 <Checkbox
                                   checked={selectedReleasedPallets.has(pallet.id)}
