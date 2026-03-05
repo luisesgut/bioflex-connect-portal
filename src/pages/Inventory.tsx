@@ -422,7 +422,7 @@ export default function Inventory() {
         if (!matchesSearch) return false;
       }
 
-      const dateStr = new Date(item.fecha).toLocaleDateString();
+      const dateStr = parseDateLocal(item.fecha).toLocaleDateString();
       if (filters.fecha.length > 0 && !filters.fecha.includes(dateStr)) return false;
       if (filters.pt_code.length > 0 && !filters.pt_code.includes(item.pt_code)) return false;
       if (filters.description.length > 0 && !filters.description.includes(item.description)) return false;
