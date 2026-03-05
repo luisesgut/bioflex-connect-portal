@@ -595,11 +595,12 @@ export default function Orders() {
   };
 
   const {
-    data: orders = [],
+    data: orders = [] as Order[],
     isLoading: loading,
     isFetching,
     refetch: refetchOrders,
-  } = useQuery({
+    error: ordersError,
+  } = useQuery<Order[]>({
     queryKey: ["purchase-orders", user?.id],
     queryFn: fetchOrders,
     enabled: !!user,
@@ -608,11 +609,11 @@ export default function Orders() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 1,
-    onError: (error) => {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to load orders");
-    },
   });
+
+  if (ordersError) {
+    console.error("Error fetching orders:", ordersError);
+  }
 
   const getStatusFilter = (status: string): string => {
     if (status === "pending" || status === "submitted") return "Submitted";

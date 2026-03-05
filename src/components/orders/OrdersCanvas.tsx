@@ -2,12 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
-import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock, Loader2 } from "lucide-react";
+import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock, Loader2, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CanvasOrder {
   id: string;
   po_number: string;
+  sales_order_number?: string | null;
   product_name: string | null;
   product_item_type: string | null;
   product_tipo_empaque: string | null;
@@ -24,6 +25,7 @@ interface CanvasOrder {
     inFloor: number;
     shipped: number;
     pending: number;
+    sapStockAvailable?: number | null;
     sapVerificationLoading?: boolean;
   };
 }
@@ -198,9 +200,16 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                           >
                             <CardContent className="p-3">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-mono text-xs font-medium text-card-foreground">
-                                  {order.po_number}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="font-mono text-xs font-medium text-card-foreground">
+                                    PO: {order.po_number}
+                                  </span>
+                                  {order.sales_order_number && (
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      SO: {order.sales_order_number}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-1">
                                   {order.is_hot_order && (
                                     <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
@@ -240,7 +249,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                               </div>
                               {/* Mini progress bar */}
                               <div className="mt-2">
-                                {order.inventoryStats.sapVerificationLoading ? (
+                              {order.inventoryStats.sapVerificationLoading ? (
                                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                     <span>Verifying with SAP...</span>
@@ -266,6 +275,15 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                         </>
                                       )}
                                     </div>
+                                    {(() => {
+                                      const stockInOtherPOs = Math.max(0, (order.inventoryStats.sapStockAvailable ?? 0) - order.inventoryStats.inFloor);
+                                      return stockInOtherPOs > 0 ? (
+                                        <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                          <Boxes className="h-3 w-3" />
+                                          <span>Other POs: <strong className="text-foreground">{formatNumber(stockInOtherPOs)}</strong></span>
+                                        </div>
+                                      ) : null;
+                                    })()}
                                   </>
                                 )}
                               </div>
