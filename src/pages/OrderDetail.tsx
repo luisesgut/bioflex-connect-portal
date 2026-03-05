@@ -1135,7 +1135,7 @@ export default function OrderDetail() {
                                               >
                                                 {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
                                                 <td className="px-3 py-1 text-muted-foreground">
-                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }) : "—"}
                                                 </td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
