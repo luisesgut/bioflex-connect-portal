@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface CanvasOrder {
   id: string;
   po_number: string;
+  sales_order_number?: string | null;
   product_name: string | null;
   product_item_type: string | null;
   product_tipo_empaque: string | null;
@@ -24,6 +25,7 @@ interface CanvasOrder {
     inFloor: number;
     shipped: number;
     pending: number;
+    sapStockAvailable?: number | null;
     sapVerificationLoading?: boolean;
   };
 }
