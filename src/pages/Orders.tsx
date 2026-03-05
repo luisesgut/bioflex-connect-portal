@@ -601,7 +601,7 @@ export default function Orders() {
     refetch: refetchOrders,
     error: ordersError,
   } = useQuery<Order[]>({
-    queryKey: ["purchase-orders", user?.id],
+    queryKey: ["purchase-orders", user?.id, isAdmin],
     queryFn: fetchOrders,
     enabled: !!user,
     staleTime: 5_000,
