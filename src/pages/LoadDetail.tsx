@@ -3014,7 +3014,7 @@ export default function LoadDetail() {
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Invoice #</th>
                       <th className="px-3 py-2 text-right font-medium text-muted-foreground">Amount</th>
                       <th className="px-3 py-2 text-center font-medium text-muted-foreground">PDF</th>
-                      {isAdmin && <th className="px-3 py-2 text-right font-medium text-muted-foreground"></th>}
+                      {canEditShipping && <th className="px-3 py-2 text-right font-medium text-muted-foreground"></th>}
                     </tr>
                   </thead>
                   <tbody>
