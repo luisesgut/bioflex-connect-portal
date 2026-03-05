@@ -3923,7 +3923,7 @@ export default function LoadDetail() {
                               />
                             </TableCell>
                             <TableCell className="text-sm">
-                              {format(new Date(pallet.fecha), "MM/dd/yyyy")}
+                              {format(parseDateLocal(pallet.fecha), "MM/dd/yyyy")}
                             </TableCell>
                             <TableCell className="font-mono">
                               <div className="flex items-center gap-1.5">
