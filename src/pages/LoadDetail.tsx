@@ -3758,7 +3758,7 @@ export default function LoadDetail() {
         )}
 
         {/* Active POs with Available Inventory - Always show during assembling */}
-        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
+        {canEditShipping && load.status === "assembling" && activePOsWithInventory.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex items-center gap-2">
