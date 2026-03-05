@@ -3101,7 +3101,7 @@ export default function LoadDetail() {
                           )}
                         </div>
                       </td>
-                      {isAdmin && (
+                      {canEditShipping && (
                         <td className="px-3 py-2 text-right">
                           <Button size="sm" className="h-7 text-xs" onClick={handleSaveFreightInvoice} disabled={savingFreightInvoice || (!freightInvoiceNumber.trim() && !freightInvoiceAmount.trim())}>
                             {savingFreightInvoice ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
