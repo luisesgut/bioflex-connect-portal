@@ -297,6 +297,7 @@ export default function Orders() {
         return {
           po_number: poNumber,
           quantity,
+          price_per_thousand: sapPrecio,
           total_price: totalPrice,
           status: salesOrderNumber ? "accepted" : "submitted",
           product_id: productId,
@@ -563,6 +564,35 @@ export default function Orders() {
               ordersData = refreshedData;
             }
           }
+        }
+      }
+    }
+
+    // Admin-only: update existing POs missing price_per_thousand with SAP data
+    if (isAdmin && Object.keys(catOrdenByPO).length > 0) {
+      const ordersSource = ordersData || combinedOrdersSource;
+      const ordersMissingPrice = ordersSource.filter(
+        (o: any) => (o.price_per_thousand === null || o.price_per_thousand === undefined || o.price_per_thousand === 0) && catOrdenByPO[normalizePoKey(o.po_number)]?.precio
+      );
+
+      if (ordersMissingPrice.length > 0) {
+        const priceUpdatePromises = ordersMissingPrice
+          .map((o: any) => {
+            const sapPrecio = parseApiNumber(catOrdenByPO[normalizePoKey(o.po_number)]?.precio);
+            if (sapPrecio !== null && sapPrecio > 0) {
+              const sapCantidad = parseApiNumber(catOrdenByPO[normalizePoKey(o.po_number)]?.cantidad);
+              const totalPrice = sapCantidad !== null ? sapCantidad * sapPrecio : null;
+              return supabase
+                .from("purchase_orders")
+                .update({ price_per_thousand: sapPrecio, total_price: totalPrice })
+                .eq("id", o.id);
+            }
+            return null;
+          })
+          .filter(Boolean);
+
+        if (priceUpdatePromises.length > 0) {
+          await Promise.all(priceUpdatePromises);
         }
       }
     }
