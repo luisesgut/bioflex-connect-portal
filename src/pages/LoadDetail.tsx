@@ -2409,7 +2409,7 @@ export default function LoadDetail() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "yyyy")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "yyyy")
                       : "No ETA set"}
                   </p>
                 </CardContent>
