@@ -312,10 +312,15 @@ export default function OrderDetail() {
 
 
         const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
-          details.map((d) => ({
-            ...d,
-            fecha: d.fecha || fechaByLote[d.lote] || null,
-          }));
+          details.map((d) => {
+            const bfxOrder = bfxOrderByLote[d.lote] || null;
+            return {
+              ...d,
+              fecha: d.fecha || fechaByLote[d.lote] || null,
+              bfx_order: bfxOrder,
+              po_number: bfxOrder ? (poBySONumber[bfxOrder] || null) : null,
+            };
+          });
 
         setSapOrderData(sapItem);
 
