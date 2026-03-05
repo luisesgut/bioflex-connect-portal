@@ -271,7 +271,8 @@ export default function OrderDetail() {
             headers: { accept: "*/*" },
             signal: controller.signal,
           }),
-          supabase.from('sap_inventory').select('traceability, fecha'),
+          supabase.from('sap_inventory').select('traceability, fecha, bfx_order'),
+          supabase.from('purchase_orders').select('po_number, sales_order_number'),
         ]);
 
         // Build a map of lote -> fecha from the database
