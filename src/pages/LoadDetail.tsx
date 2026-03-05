@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
@@ -249,7 +250,9 @@ export default function LoadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const { canEdit } = usePermissions();
   const { user } = useAuth();
+  const canEditShipping = isAdmin || canEdit("shipping_loads");
   const { locations, destinationOptions, getDestinationLabel } = useCustomerLocations();
   const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
@@ -2178,7 +2181,7 @@ export default function LoadDetail() {
               {/* Ship Date */}
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground">Ship Date:</span>
-                {isAdmin ? (
+                {canEditShipping ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
@@ -2216,7 +2219,7 @@ export default function LoadDetail() {
               {/* Delivery Date */}
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground">Delivery Date:</span>
-                {isAdmin ? (
+                {canEditShipping ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
@@ -2260,7 +2263,7 @@ export default function LoadDetail() {
           </div>
           <div className="flex items-center gap-2">
             {/* Admin Status Change Dropdown */}
-            {isAdmin && load.status !== "delivered" && (
+            {canEditShipping && load.status !== "delivered" && (
               <Select
                 value={load.status}
                 onValueChange={handleStatusChange}
@@ -2276,7 +2279,7 @@ export default function LoadDetail() {
                 </SelectContent>
               </Select>
             )}
-            {isAdmin && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
+            {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
               <Button variant="outline" onClick={() => {
                 const totalPalletCount = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
@@ -2291,7 +2294,7 @@ export default function LoadDetail() {
                 Billing PDF
               </Button>
             )}
-            {isAdmin && (
+            {canEditShipping && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" disabled={deletingLoad}>
@@ -2368,7 +2371,7 @@ export default function LoadDetail() {
                 </p>
               </CardContent>
             </Card>
-            {isAdmin ? (
+            {canEditShipping ? (
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Load Value</CardTitle>
@@ -2535,7 +2538,7 @@ export default function LoadDetail() {
           <BillingValidationCard
             loadId={id!}
             loadStatus={load.status}
-            isAdmin={isAdmin}
+            isAdmin={canEditShipping}
             isBillingTeam={isBillingTeam}
             userId={user.id}
             loadNumber={load.load_number}
@@ -2725,7 +2728,7 @@ export default function LoadDetail() {
                               {step.type === "city" && step.sublabel && (
                                 <p className="text-xs text-muted-foreground mt-1">{step.sublabel}</p>
                               )}
-                              {step.type === "cross_border" && isAdmin && load.status === "in_transit" && (
+                              {step.type === "cross_border" && canEditShipping && load.status === "in_transit" && (
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   <DatePickerInline
                                     value={step.estimatedDate || null}
@@ -2741,7 +2744,7 @@ export default function LoadDetail() {
                                   />
                                 </div>
                               )}
-                              {step.type === "cross_border" && (!isAdmin || load.status !== "in_transit") && (
+                              {step.type === "cross_border" && (!canEditShipping || load.status !== "in_transit") && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {step.actualDate
                                     ? `Crossed: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
@@ -2750,7 +2753,7 @@ export default function LoadDetail() {
                                     : "ETA pending"}
                                 </p>
                               )}
-                              {step.type === "destination" && isAdmin && load.status === "in_transit" && (
+                              {step.type === "destination" && canEditShipping && load.status === "in_transit" && (
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   <DatePickerInline
                                     value={step.estimatedDate || null}
@@ -2766,7 +2769,7 @@ export default function LoadDetail() {
                                   />
                                 </div>
                               )}
-                              {step.type === "destination" && (!isAdmin || load.status !== "in_transit") && (
+                              {step.type === "destination" && (!canEditShipping || load.status !== "in_transit") && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {step.actualDate
                                     ? `Delivered: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
@@ -2787,7 +2790,7 @@ export default function LoadDetail() {
                                       View POD
                                     </button>
                                   ) : null}
-                                  {isAdmin && (
+                                  {canEditShipping && (
                                     <label className="cursor-pointer">
                                       <input
                                         type="file"
@@ -2808,7 +2811,7 @@ export default function LoadDetail() {
                                       </Button>
                                     </label>
                                   )}
-                                  {!isAdmin && !step.podPdfUrl && (
+                                  {!canEditShipping && !step.podPdfUrl && (
                                     <span className="text-xs text-muted-foreground italic">No POD uploaded</span>
                                   )}
                                 </div>
@@ -2820,7 +2823,7 @@ export default function LoadDetail() {
                     </div>
 
                     {/* Add Transit Update Form (Admin only, in_transit only) */}
-                    {isAdmin && load.status === "in_transit" && (
+                    {canEditShipping && load.status === "in_transit" && (
                       <div className="border-t pt-4 space-y-3">
                         <h4 className="text-sm font-semibold flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
@@ -2905,7 +2908,7 @@ export default function LoadDetail() {
                                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                                     {format(new Date(update.created_at), "MMM d, h:mm a")}
                                   </span>
-                                  {isAdmin && (
+                                  {canEditShipping && (
                                     <div className="flex gap-1">
                                       <Button
                                         size="icon"
@@ -2944,7 +2947,7 @@ export default function LoadDetail() {
         )}
 
         {/* Carrier Tracking - Admin Only */}
-        {isAdmin && (load.status === "in_transit" || load.status === "delivered") && (
+        {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -3011,7 +3014,7 @@ export default function LoadDetail() {
                       <th className="px-3 py-2 text-left font-medium text-muted-foreground">Invoice #</th>
                       <th className="px-3 py-2 text-right font-medium text-muted-foreground">Amount</th>
                       <th className="px-3 py-2 text-center font-medium text-muted-foreground">PDF</th>
-                      {isAdmin && <th className="px-3 py-2 text-right font-medium text-muted-foreground"></th>}
+                      {canEditShipping && <th className="px-3 py-2 text-right font-medium text-muted-foreground"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -3019,14 +3022,14 @@ export default function LoadDetail() {
                     <tr className="border-t">
                       <td className="px-3 py-2 font-medium whitespace-nowrap">Product</td>
                       <td className="px-3 py-2">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <Input className="h-8 text-sm" placeholder="Invoice #" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
                         ) : (
                           <span className="font-mono">{load.invoice_number || "—"}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <CurrencyInput value={invoiceAmount} onChange={setInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.invoice_amount ? `$${Number(load.invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
@@ -3042,7 +3045,7 @@ export default function LoadDetail() {
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
-                          {isAdmin && (
+                          {canEditShipping && (
                             <label className="cursor-pointer">
                               <input type="file" accept=".pdf" className="hidden" onChange={handleUploadInvoicePdf} disabled={uploadingInvoicePdf} />
                               <Button variant="ghost" size="sm" asChild disabled={uploadingInvoicePdf} className="h-7 px-2">
@@ -3052,7 +3055,7 @@ export default function LoadDetail() {
                           )}
                         </div>
                       </td>
-                      {isAdmin && (
+                      {canEditShipping && (
                         <td className="px-3 py-2 text-right">
                           <Button size="sm" className="h-7 text-xs" onClick={handleSaveInvoice} disabled={savingInvoice || (!invoiceNumber.trim() && !invoiceAmount.trim())}>
                             {savingInvoice ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
@@ -3065,14 +3068,14 @@ export default function LoadDetail() {
                     <tr className="border-t">
                       <td className="px-3 py-2 font-medium whitespace-nowrap">Freight</td>
                       <td className="px-3 py-2">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <Input className="h-8 text-sm" placeholder="Invoice #" value={freightInvoiceNumber} onChange={(e) => setFreightInvoiceNumber(e.target.value)} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_number || "—"}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <CurrencyInput value={freightInvoiceAmount} onChange={setFreightInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_amount ? `$${Number(load.freight_invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
@@ -3088,7 +3091,7 @@ export default function LoadDetail() {
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
-                          {isAdmin && (
+                          {canEditShipping && (
                             <label className="cursor-pointer">
                               <input type="file" accept=".pdf" className="hidden" onChange={handleUploadFreightInvoicePdf} disabled={uploadingFreightInvoicePdf} />
                               <Button variant="ghost" size="sm" asChild disabled={uploadingFreightInvoicePdf} className="h-7 px-2">
@@ -3098,7 +3101,7 @@ export default function LoadDetail() {
                           )}
                         </div>
                       </td>
-                      {isAdmin && (
+                      {canEditShipping && (
                         <td className="px-3 py-2 text-right">
                           <Button size="sm" className="h-7 text-xs" onClick={handleSaveFreightInvoice} disabled={savingFreightInvoice || (!freightInvoiceNumber.trim() && !freightInvoiceAmount.trim())}>
                             {savingFreightInvoice ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
@@ -3115,7 +3118,7 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={isAdmin} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
+          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
@@ -3138,7 +3141,7 @@ export default function LoadDetail() {
                     )}
                   </CardDescription>
                 </div>
-                {isAdmin && selectedReleasedPallets.size > 0 && (
+                {canEditShipping && selectedReleasedPallets.size > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" disabled={revertingPallets}>
@@ -3179,7 +3182,7 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {isAdmin && (
+                          {canEditShipping && (
                             <TableHead className="w-[40px]">
                               <Checkbox
                                 checked={releasedPallets.length > 0 && selectedReleasedPallets.size === releasedPallets.length}
@@ -3187,7 +3190,7 @@ export default function LoadDetail() {
                               />
                             </TableHead>
                           )}
-                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          {canEditShipping && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
                           <TableHead>CSR</TableHead>
@@ -3197,7 +3200,7 @@ export default function LoadDetail() {
                           <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
-                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                          {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3206,7 +3209,7 @@ export default function LoadDetail() {
                             "bg-green-50/50 dark:bg-green-950/20",
                             isFirstOfGroup(releasedPallets, index) && "border-t-2 border-t-border"
                           )}>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 <Checkbox
                                   checked={selectedReleasedPallets.has(pallet.id)}
@@ -3214,7 +3217,7 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell className="font-mono">
                                 <div className="flex items-center gap-1.5">
                                   {pallet.pallet.pt_code}
@@ -3249,7 +3252,7 @@ export default function LoadDetail() {
                                 "-"
                               )}
                             </TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
@@ -3297,7 +3300,7 @@ export default function LoadDetail() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isAdmin && selectedPalletsForRelease.size > 0 && (
+                  {canEditShipping && selectedPalletsForRelease.size > 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" disabled={deletingPallets}>
@@ -3349,12 +3352,12 @@ export default function LoadDetail() {
                               onCheckedChange={toggleAllPendingPalletsForRelease}
                             />
                           </TableHead>
-                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          {canEditShipping && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
                           <TableHead>CSR</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                          {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3372,7 +3375,7 @@ export default function LoadDetail() {
                                 onCheckedChange={() => togglePalletForRelease(pallet.id)}
                               />
                             </TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell className="font-mono">
                                 <div className="flex items-center gap-1.5">
                                   {pallet.pallet.pt_code}
@@ -3389,7 +3392,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
@@ -3436,7 +3439,7 @@ export default function LoadDetail() {
                       )}
                     </CardDescription>
                   </div>
-                  {isAdmin && selectedOnHoldPallets.size > 0 && (
+                  {canEditShipping && selectedOnHoldPallets.size > 0 && (
                     <div className="flex items-center gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -3498,7 +3501,7 @@ export default function LoadDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          {isAdmin && (
+                          {canEditShipping && (
                             <TableHead className="w-[40px]">
                               <Checkbox
                                 checked={onHoldPallets.length > 0 && selectedOnHoldPallets.size === onHoldPallets.length}
@@ -3506,12 +3509,12 @@ export default function LoadDetail() {
                               />
                             </TableHead>
                           )}
-                          {isAdmin && <TableHead>PT Code</TableHead>}
+                          {canEditShipping && <TableHead>PT Code</TableHead>}
                           <TableHead>Description</TableHead>
                           <TableHead>Customer PO</TableHead>
                           <TableHead>Held By</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
-                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                          {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -3520,7 +3523,7 @@ export default function LoadDetail() {
                             "bg-red-50/50 dark:bg-red-950/20",
                             isFirstOfGroup(onHoldPallets, index) && "border-t-2 border-t-border"
                           )}>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 <Checkbox
                                   checked={selectedOnHoldPallets.has(pallet.id)}
@@ -3528,7 +3531,7 @@ export default function LoadDetail() {
                                 />
                               </TableCell>
                             )}
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell className="font-mono">
                                 <div className="flex items-center gap-1.5">
                                   {pallet.pallet.pt_code}
@@ -3545,7 +3548,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
@@ -3575,7 +3578,7 @@ export default function LoadDetail() {
             )}
 
             {/* Comments Section */}
-            <LoadComments loadId={id!} userId={user?.id} isAdmin={isAdmin} />
+            <LoadComments loadId={id!} userId={user?.id} isAdmin={canEditShipping} />
           </>
         )}
 
@@ -3595,13 +3598,13 @@ export default function LoadDetail() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isAdmin && (
+                {canEditShipping && (
                   <Button variant="outline" size="sm" onClick={() => setCreateVirtualOpen(true)}>
                     <Ghost className="mr-2 h-4 w-4" />
                     + Virtual
                   </Button>
                 )}
-                {isAdmin && selectedPalletsToDelete.size > 0 && (
+                {canEditShipping && selectedPalletsToDelete.size > 0 && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={deletingPallets}>
@@ -3636,7 +3639,7 @@ export default function LoadDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {isAdmin && (
+                      {canEditShipping && (
                         <TableHead className="w-[40px]">
                           <Checkbox
                             checked={selectedPalletsToDelete.size === pallets.length && pallets.length > 0}
@@ -3644,11 +3647,11 @@ export default function LoadDetail() {
                           />
                         </TableHead>
                       )}
-                      {isAdmin && <TableHead>PT Code</TableHead>}
+                      {canEditShipping && <TableHead>PT Code</TableHead>}
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
-                      {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                      {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -3657,7 +3660,7 @@ export default function LoadDetail() {
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border",
                         pallet.pallet.is_virtual && "bg-red-50/50 dark:bg-red-950/20"
                       )}>
-                        {isAdmin && (
+                        {canEditShipping && (
                           <TableCell>
                             <Checkbox
                               checked={selectedPalletsToDelete.has(pallet.id)}
@@ -3665,7 +3668,7 @@ export default function LoadDetail() {
                             />
                           </TableCell>
                         )}
-                        {isAdmin && (
+                        {canEditShipping && (
                           <TableCell className="font-mono">
                             <div className="flex items-center gap-1.5">
                               {pallet.pallet.pt_code}
@@ -3681,7 +3684,7 @@ export default function LoadDetail() {
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                        {isAdmin && (
+                        {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
                               <Button
@@ -3724,7 +3727,7 @@ export default function LoadDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {isAdmin && <TableHead>PT Code</TableHead>}
+                      {canEditShipping && <TableHead>PT Code</TableHead>}
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
@@ -3737,7 +3740,7 @@ export default function LoadDetail() {
                       <TableRow key={pallet.id} className={cn(
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
                       )}>
-                        {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                        {canEditShipping && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
@@ -3755,7 +3758,7 @@ export default function LoadDetail() {
         )}
 
         {/* Active POs with Available Inventory - Always show during assembling */}
-        {isAdmin && load.status === "assembling" && activePOsWithInventory.length > 0 && (
+        {canEditShipping && load.status === "assembling" && activePOsWithInventory.length > 0 && (
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -3820,7 +3823,7 @@ export default function LoadDetail() {
         )}
 
         {/* Available Inventory Table - Shown for admins during assembly */}
-        {isAdmin && load.status === "assembling" && (
+        {canEditShipping && load.status === "assembling" && (
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
