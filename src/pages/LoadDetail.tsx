@@ -3660,7 +3660,7 @@ export default function LoadDetail() {
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border",
                         pallet.pallet.is_virtual && "bg-red-50/50 dark:bg-red-950/20"
                       )}>
-                        {isAdmin && (
+                        {canEditShipping && (
                           <TableCell>
                             <Checkbox
                               checked={selectedPalletsToDelete.has(pallet.id)}
