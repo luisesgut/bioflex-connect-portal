@@ -2538,7 +2538,7 @@ export default function LoadDetail() {
           <BillingValidationCard
             loadId={id!}
             loadStatus={load.status}
-            isAdmin={isAdmin}
+            isAdmin={canEditShipping}
             isBillingTeam={isBillingTeam}
             userId={user.id}
             loadNumber={load.load_number}
