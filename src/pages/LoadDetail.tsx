@@ -2728,7 +2728,7 @@ export default function LoadDetail() {
                               {step.type === "city" && step.sublabel && (
                                 <p className="text-xs text-muted-foreground mt-1">{step.sublabel}</p>
                               )}
-                              {step.type === "cross_border" && isAdmin && load.status === "in_transit" && (
+                              {step.type === "cross_border" && canEditShipping && load.status === "in_transit" && (
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   <DatePickerInline
                                     value={step.estimatedDate || null}
