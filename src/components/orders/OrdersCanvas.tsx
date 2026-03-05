@@ -266,18 +266,25 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                             )}
                                           </div>
                                           <div className={cn("h-1.5 rounded-full overflow-hidden flex", isOverLimit ? "bg-destructive/20" : "bg-muted")}>
-                                            {order.quantity > 0 && (
-                                              <>
-                                                <div
-                                                  className={cn("h-full", isOverLimit ? "bg-destructive" : "bg-success")}
-                                                  style={{ width: `${Math.min((order.inventoryStats.shipped / order.quantity) * 100, 100)}%` }}
-                                                />
-                                                <div
-                                                  className={cn("h-full", isOverLimit ? "bg-destructive/70" : "bg-info")}
-                                                  style={{ width: `${Math.min((order.inventoryStats.inFloor / order.quantity) * 100, 100 - Math.min((order.inventoryStats.shipped / order.quantity) * 100, 100))}%` }}
-                                                />
-                                              </>
-                                            )}
+                                            {order.quantity > 0 && (() => {
+                                              const shippedPct = (order.inventoryStats.shipped / order.quantity) * 100;
+                                              const whPct = (order.inventoryStats.inFloor / order.quantity) * 100;
+                                              const cap = 110; // show up to 110%
+                                              const shippedClamped = Math.min(shippedPct, cap);
+                                              const whClamped = Math.min(whPct, cap - shippedClamped);
+                                              const overflowPct = isOverLimit ? Math.min(((totalProduced / order.quantity) * 100) - 110, cap) : 0;
+                                              // Scale widths so total maps to bar width
+                                              const scale = cap > 0 ? 100 / cap : 1;
+                                              return (
+                                                <>
+                                                  <div className="bg-success h-full" style={{ width: `${shippedClamped * scale}%` }} />
+                                                  <div className="bg-info h-full" style={{ width: `${whClamped * scale}%` }} />
+                                                  {isOverLimit && (
+                                                    <div className="bg-destructive h-full" style={{ width: `${overflowPct * scale}%` }} />
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
                                           </div>
                                         </>
                                       );
