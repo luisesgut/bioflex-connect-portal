@@ -250,7 +250,9 @@ export default function LoadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
+  const { canEdit } = usePermissions();
   const { user } = useAuth();
+  const canEditShipping = isAdmin || canEdit("shipping_loads");
   const { locations, destinationOptions, getDestinationLabel } = useCustomerLocations();
   const [addDestinationDialogOpen, setAddDestinationDialogOpen] = useState(false);
   const [load, setLoad] = useState<ShippingLoad | null>(null);
