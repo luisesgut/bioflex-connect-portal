@@ -82,6 +82,8 @@ interface StockWarehouseDetail {
   pesoNeto: number;
   cajas: number;
   fecha?: string | null;
+  bfx_order?: string | null;
+  po_number?: string | null;
 }
 
 interface CatOrdenOpenItem {
@@ -263,21 +265,38 @@ export default function OrderDetail() {
 
       try {
         // Fetch order data from SAP and inventory dates from database in parallel
-        const [orderResponse, sapInvResult] = await Promise.all([
+        const [orderResponse, sapInvResult, poResult] = await Promise.all([
           fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
             method: "GET",
             headers: { accept: "*/*" },
             signal: controller.signal,
           }),
-          supabase.from('sap_inventory').select('traceability, fecha'),
+          supabase.from('sap_inventory').select('traceability, fecha, bfx_order'),
+          supabase.from('purchase_orders').select('po_number, sales_order_number'),
         ]);
 
-        // Build a map of lote -> fecha from the database
+        // Build maps of lote -> fecha and lote -> bfx_order from the database
         let fechaByLote: Record<string, string> = {};
+        let bfxOrderByLote: Record<string, string> = {};
         if (sapInvResult.data) {
           for (const item of sapInvResult.data) {
-            if (item.traceability && item.fecha && !fechaByLote[item.traceability]) {
-              fechaByLote[item.traceability] = item.fecha;
+            if (item.traceability) {
+              if (item.fecha && !fechaByLote[item.traceability]) {
+                fechaByLote[item.traceability] = item.fecha;
+              }
+              if (item.bfx_order && !bfxOrderByLote[item.traceability]) {
+                bfxOrderByLote[item.traceability] = item.bfx_order;
+              }
+            }
+          }
+        }
+
+        // Build map of sales_order_number -> po_number
+        let poBySONumber: Record<string, string> = {};
+        if (poResult.data) {
+          for (const po of poResult.data) {
+            if (po.sales_order_number && po.po_number) {
+              poBySONumber[po.sales_order_number] = po.po_number;
             }
           }
         }
@@ -293,10 +312,15 @@ export default function OrderDetail() {
 
 
         const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
-          details.map((d) => ({
-            ...d,
-            fecha: d.fecha || fechaByLote[d.lote] || null,
-          }));
+          details.map((d) => {
+            const bfxOrder = bfxOrderByLote[d.lote] || null;
+            return {
+              ...d,
+              fecha: d.fecha || fechaByLote[d.lote] || null,
+              bfx_order: bfxOrder,
+              po_number: bfxOrder ? (poBySONumber[bfxOrder] || null) : null,
+            };
+          });
 
         setSapOrderData(sapItem);
 
@@ -1142,6 +1166,7 @@ export default function OrderDetail() {
                                           <thead className="bg-sky-100/70 text-sky-900">
                                             <tr>
                                               {isAdmin && <th className="px-3 py-1.5 text-left font-medium">Lot</th>}
+                                              <th className="px-3 py-1.5 text-left font-medium">PO</th>
                                               <th className="px-3 py-1.5 text-left font-medium">Date</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Qty</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
@@ -1156,6 +1181,7 @@ export default function OrderDetail() {
                                                 className="border-t border-sky-100/80 odd:bg-background/60 even:bg-sky-50/40"
                                               >
                                                 {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
+                                                <td className="px-3 py-1 text-muted-foreground font-medium">{detalle.po_number || detalle.bfx_order || "—"}</td>
                                                 <td className="px-3 py-1 text-muted-foreground">
                                                   {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }) : "—"}
                                                 </td>
