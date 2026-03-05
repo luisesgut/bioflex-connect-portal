@@ -516,7 +516,7 @@ export default function ShippingLoads() {
         </div>
 
         {/* Stats Cards */}
-        <div className={cn("grid gap-4", isAdmin ? "md:grid-cols-4" : "md:grid-cols-3")}>
+        <div className={cn("grid gap-4", canEditShipping ? "md:grid-cols-4" : "md:grid-cols-3")}>
           {isAdmin && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
