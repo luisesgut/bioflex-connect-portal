@@ -2181,7 +2181,7 @@ export default function LoadDetail() {
               {/* Ship Date */}
               <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground">Ship Date:</span>
-                {isAdmin ? (
+                {canEditShipping ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
