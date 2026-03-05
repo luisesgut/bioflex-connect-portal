@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -924,7 +924,7 @@ export default function LoadDetail() {
   }, [pallets]);
 
   // Get unique values for filter options
-  const uniqueDates = useMemo(() => [...new Set(availablePallets.map(p => format(new Date(p.fecha), "MM/dd/yyyy")))].sort(), [availablePallets]);
+  const uniqueDates = useMemo(() => [...new Set(availablePallets.map(p => format(parseDateLocal(p.fecha), "MM/dd/yyyy")))].sort(), [availablePallets]);
   const uniquePtCodes = useMemo(() => [...new Set(availablePallets.map(p => p.pt_code))].filter(Boolean).sort(), [availablePallets]);
   const uniqueDescriptions = useMemo(() => [...new Set(availablePallets.map(p => p.description))].filter(Boolean).sort(), [availablePallets]);
   const uniqueTraceability = useMemo(() => [...new Set(availablePallets.map(p => p.traceability))].filter(Boolean).sort(), [availablePallets]);
@@ -1158,7 +1158,7 @@ export default function LoadDetail() {
     }
 
     // Apply column filters
-    const dateStr = (p: AvailablePallet) => format(new Date(p.fecha), "MM/dd/yyyy");
+    const dateStr = (p: AvailablePallet) => format(parseDateLocal(p.fecha), "MM/dd/yyyy");
     if (inventoryFilters.fecha.length > 0) {
       result = result.filter(p => inventoryFilters.fecha.includes(dateStr(p)));
     }
@@ -1183,8 +1183,8 @@ export default function LoadDetail() {
       if (a.is_virtual && !b.is_virtual) return -1;
       if (!a.is_virtual && b.is_virtual) return 1;
       if (!dateSortOrder) return 0;
-      const dateA = new Date(a.fecha).getTime();
-      const dateB = new Date(b.fecha).getTime();
+      const dateA = parseDateLocal(a.fecha).getTime();
+      const dateB = parseDateLocal(b.fecha).getTime();
       return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
@@ -1772,7 +1772,7 @@ export default function LoadDetail() {
         toast.error(validation.message);
         return;
       }
-      setInTransitShipDate(new Date(load!.shipping_date));
+      setInTransitShipDate(parseDateLocal(load!.shipping_date));
       setInTransitConfirmOpen(true);
     } else if (newStatus === "pending_release" && user) {
       // Create release request if transitioning to pending_release and none exists
@@ -2183,13 +2183,13 @@ export default function LoadDetail() {
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
                         <CalendarIcon className="mr-1 h-3 w-3" />
-                        {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                        {format(parseDateLocal(load.shipping_date), "MMM d, yyyy")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={new Date(load.shipping_date)}
+                        selected={parseDateLocal(load.shipping_date)}
                         onSelect={(date) => {
                           if (date && id) {
                             supabase
@@ -2209,7 +2209,7 @@ export default function LoadDetail() {
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <span className="font-medium">{format(new Date(load.shipping_date), "MMM d, yyyy")}</span>
+                  <span className="font-medium">{format(parseDateLocal(load.shipping_date), "MMM d, yyyy")}</span>
                 )}
               </div>
               <span className="text-muted-foreground">•</span>
@@ -2222,14 +2222,14 @@ export default function LoadDetail() {
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
                         <CalendarIcon className="mr-1 h-3 w-3" />
                         {load.estimated_delivery_date
-                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                          ? format(parseDateLocal(load.estimated_delivery_date), "MMM d, yyyy")
                           : "Set date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                        selected={load.estimated_delivery_date ? parseDateLocal(load.estimated_delivery_date) : undefined}
                         onSelect={(date) => {
                           if (date && id) {
                             supabase
@@ -2251,7 +2251,7 @@ export default function LoadDetail() {
                 ) : (
                   <span className="font-medium">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "MMM d, yyyy")
                       : "-"}
                   </span>
                 )}
@@ -2361,10 +2361,10 @@ export default function LoadDetail() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {differenceInDays(new Date(), new Date(load.shipping_date))}
+                  {differenceInDays(new Date(), parseDateLocal(load.shipping_date))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  since {format(new Date(load.shipping_date), "MMM d, yyyy")}
+                  since {format(parseDateLocal(load.shipping_date), "MMM d, yyyy")}
                 </p>
               </CardContent>
             </Card>
@@ -2404,12 +2404,12 @@ export default function LoadDetail() {
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "MMM d")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "MMM d")
                       : "-"}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "yyyy")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "yyyy")
                       : "No ETA set"}
                   </p>
                 </CardContent>
@@ -2624,7 +2624,7 @@ export default function LoadDetail() {
                 // Step 1: Departed BFX
                 steps.push({
                   label: "Departed BFX",
-                  date: format(new Date(load.shipping_date), "MMM d, yyyy"),
+                  date: format(parseDateLocal(load.shipping_date), "MMM d, yyyy"),
                   completed: true,
                   active: false,
                   type: "departed",
@@ -3923,7 +3923,7 @@ export default function LoadDetail() {
                               />
                             </TableCell>
                             <TableCell className="text-sm">
-                              {format(new Date(pallet.fecha), "MM/dd/yyyy")}
+                              {format(parseDateLocal(pallet.fecha), "MM/dd/yyyy")}
                             </TableCell>
                             <TableCell className="font-mono">
                               <div className="flex items-center gap-1.5">
@@ -4087,7 +4087,7 @@ export default function LoadDetail() {
                                   }}
                                 />
                               </TableCell>
-                              <TableCell className="text-sm">{format(new Date(pallet.fecha), "MM/dd/yyyy")}</TableCell>
+                              <TableCell className="text-sm">{format(parseDateLocal(pallet.fecha), "MM/dd/yyyy")}</TableCell>
                               <TableCell className="font-mono">{pallet.pt_code}</TableCell>
                               <TableCell className="max-w-[200px] truncate">{pallet.description}</TableCell>
                               <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
