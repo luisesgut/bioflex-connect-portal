@@ -3252,7 +3252,7 @@ export default function LoadDetail() {
                                 "-"
                               )}
                             </TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
