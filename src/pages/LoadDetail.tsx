@@ -3727,7 +3727,7 @@ export default function LoadDetail() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {isAdmin && <TableHead>PT Code</TableHead>}
+                      {canEditShipping && <TableHead>PT Code</TableHead>}
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
