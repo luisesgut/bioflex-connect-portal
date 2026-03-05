@@ -3740,7 +3740,7 @@ export default function LoadDetail() {
                       <TableRow key={pallet.id} className={cn(
                         isFirstOfGroup(sortedAllPallets, index) && "border-t-2 border-t-border"
                       )}>
-                        {isAdmin && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
+                        {canEditShipping && <TableCell className="font-mono">{pallet.pallet.pt_code}</TableCell>}
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
