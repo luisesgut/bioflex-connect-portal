@@ -615,7 +615,7 @@ export default function Inventory() {
                       {item.description}
                     </TableCell>
                     <TableCell className="text-right">
-                      {item.stock.toLocaleString()} {item.unit}
+                      {item.unit === "MIL" ? (item.stock * 1000).toLocaleString() : item.stock.toLocaleString()}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{item.traceability}</TableCell>
                      <TableCell>{item.bfx_order || "-"}</TableCell>
