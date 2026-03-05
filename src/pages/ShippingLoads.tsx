@@ -610,7 +610,7 @@ export default function ShippingLoads() {
               </div>
               <TransitTrackingTable
                 loads={transitTrackingData}
-                isAdmin={isAdmin}
+                isAdmin={canEditShipping}
                 onRefresh={fetchData}
               />
             </div>
