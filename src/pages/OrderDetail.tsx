@@ -81,6 +81,7 @@ interface StockWarehouseDetail {
   pesoBruto: number;
   pesoNeto: number;
   cajas: number;
+  fecha?: string | null;
 }
 
 interface CatOrdenOpenItem {
@@ -1076,7 +1077,8 @@ export default function OrderDetail() {
                                         <table className="w-full text-xs">
                                           <thead className="bg-emerald-100/70 text-emerald-900">
                                             <tr>
-                                              <th className="px-3 py-1.5 text-left font-medium">Lot</th>
+                                              {isAdmin && <th className="px-3 py-1.5 text-left font-medium">Lot</th>}
+                                              <th className="px-3 py-1.5 text-left font-medium">Date</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Qty</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Gross</th>
@@ -1089,7 +1091,10 @@ export default function OrderDetail() {
                                                 key={`${detalle.lote}-${detailIndex}`}
                                                 className="border-t border-emerald-100/80 odd:bg-background/60 even:bg-emerald-50/40"
                                               >
-                                                <td className="px-3 py-1 font-medium">{detalle.lote}</td>
+                                                {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
+                                                <td className="px-3 py-1 text-muted-foreground">
+                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                                                </td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
@@ -1114,7 +1119,8 @@ export default function OrderDetail() {
                                         <table className="w-full text-xs">
                                           <thead className="bg-sky-100/70 text-sky-900">
                                             <tr>
-                                              <th className="px-3 py-1.5 text-left font-medium">Lot</th>
+                                              {isAdmin && <th className="px-3 py-1.5 text-left font-medium">Lot</th>}
+                                              <th className="px-3 py-1.5 text-left font-medium">Date</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Qty</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Boxes</th>
                                               <th className="px-3 py-1.5 text-right font-medium">Gross</th>
@@ -1127,7 +1133,10 @@ export default function OrderDetail() {
                                                 key={`${detalle.lote}-${detailIndex}`}
                                                 className="border-t border-sky-100/80 odd:bg-background/60 even:bg-sky-50/40"
                                               >
-                                                <td className="px-3 py-1 font-medium">{detalle.lote}</td>
+                                                {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
+                                                <td className="px-3 py-1 text-muted-foreground">
+                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                                                </td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
                                                 <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
