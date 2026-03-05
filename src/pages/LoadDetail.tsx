@@ -2823,7 +2823,7 @@ export default function LoadDetail() {
                     </div>
 
                     {/* Add Transit Update Form (Admin only, in_transit only) */}
-                    {isAdmin && load.status === "in_transit" && (
+                    {canEditShipping && load.status === "in_transit" && (
                       <div className="border-t pt-4 space-y-3">
                         <h4 className="text-sm font-semibold flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
