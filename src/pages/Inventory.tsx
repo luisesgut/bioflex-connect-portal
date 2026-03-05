@@ -27,6 +27,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
+import { parseDateLocal } from "@/lib/utils";
 
 interface SAPInventoryItem {
   id: string;
