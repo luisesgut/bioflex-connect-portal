@@ -2769,7 +2769,7 @@ export default function LoadDetail() {
                                   />
                                 </div>
                               )}
-                              {step.type === "destination" && (!isAdmin || load.status !== "in_transit") && (
+                              {step.type === "destination" && (!canEditShipping || load.status !== "in_transit") && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {step.actualDate
                                     ? `Delivered: ${format(new Date(step.actualDate), "MMM d, yyyy")}`
