@@ -2753,7 +2753,7 @@ export default function LoadDetail() {
                                     : "ETA pending"}
                                 </p>
                               )}
-                              {step.type === "destination" && isAdmin && load.status === "in_transit" && (
+                              {step.type === "destination" && canEditShipping && load.status === "in_transit" && (
                                 <div className="flex flex-wrap items-center gap-2 mt-1">
                                   <DatePickerInline
                                     value={step.estimatedDate || null}
