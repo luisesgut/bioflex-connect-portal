@@ -2251,7 +2251,7 @@ export default function LoadDetail() {
                 ) : (
                   <span className="font-medium">
                     {load.estimated_delivery_date
-                      ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                      ? format(parseDateLocal(load.estimated_delivery_date), "MMM d, yyyy")
                       : "-"}
                   </span>
                 )}
