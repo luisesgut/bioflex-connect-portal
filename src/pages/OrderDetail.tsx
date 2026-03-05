@@ -82,6 +82,8 @@ interface StockWarehouseDetail {
   pesoNeto: number;
   cajas: number;
   fecha?: string | null;
+  bfx_order?: string | null;
+  po_number?: string | null;
 }
 
 interface CatOrdenOpenItem {
