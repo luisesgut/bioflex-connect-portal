@@ -3651,7 +3651,7 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
-                      {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                      {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
