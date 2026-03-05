@@ -505,6 +505,68 @@ export default function Orders() {
       }
     }
 
+    // Admin-only: link orders without product_id to products using SAP clave data
+    if (isAdmin && Object.keys(catOrdenByPO).length > 0) {
+      const ordersWithoutProduct = combinedOrdersSource.filter(
+        (o: any) => !o.product_id && catOrdenByPO[normalizePoKey(o.po_number)]?.clave
+      );
+
+      if (ordersWithoutProduct.length > 0) {
+        const sapClaves = Array.from(
+          new Set(
+            ordersWithoutProduct
+              .map((o: any) => (catOrdenByPO[normalizePoKey(o.po_number)]?.clave || "").trim())
+              .filter(Boolean)
+          )
+        );
+
+        if (sapClaves.length > 0) {
+          const [bySku2, byPtCode2, byCodigoProducto2] = await Promise.all([
+            supabase.from("products").select("id, sku").in("sku", sapClaves),
+            supabase.from("products").select("id, pt_code").in("pt_code", sapClaves),
+            supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapClaves),
+          ]);
+
+          const linkMap = new Map<string, string>();
+          (bySku2.data || []).forEach((p: any) => {
+            if (p.sku) linkMap.set(String(p.sku).trim().toUpperCase(), p.id);
+          });
+          (byPtCode2.data || []).forEach((p: any) => {
+            if (p.pt_code) linkMap.set(String(p.pt_code).trim().toUpperCase(), p.id);
+          });
+          (byCodigoProducto2.data || []).forEach((p: any) => {
+            if (p.codigo_producto) linkMap.set(String(p.codigo_producto).trim().toUpperCase(), p.id);
+          });
+
+          const updatePromises = ordersWithoutProduct
+            .map((o: any) => {
+              const clave = (catOrdenByPO[normalizePoKey(o.po_number)]?.clave || "").trim().toUpperCase();
+              const productId = linkMap.get(clave);
+              if (productId) {
+                return supabase
+                  .from("purchase_orders")
+                  .update({ product_id: productId })
+                  .eq("id", o.id);
+              }
+              return null;
+            })
+            .filter(Boolean);
+
+          if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+            // Refresh to get updated product joins
+            const { data: refreshedData } = await supabase
+              .from("purchase_orders")
+              .select(purchaseOrdersSelect)
+              .order("created_at", { ascending: false });
+            if (refreshedData) {
+              ordersData = refreshedData;
+            }
+          }
+        }
+      }
+    }
+
     const formattedOrders = combinedOrdersSource.map((order: any) => {
       const catOrdenItem = catOrdenByPO[normalizePoKey(order.po_number)];
       const apiCantidad = parseApiNumber(catOrdenItem?.cantidad);
