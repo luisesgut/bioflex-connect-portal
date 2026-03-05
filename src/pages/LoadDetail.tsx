@@ -3075,7 +3075,7 @@ export default function LoadDetail() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <CurrencyInput value={freightInvoiceAmount} onChange={setFreightInvoiceAmount} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_amount ? `$${Number(load.freight_invoice_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}</span>
