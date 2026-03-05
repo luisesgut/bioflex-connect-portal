@@ -2908,7 +2908,7 @@ export default function LoadDetail() {
                                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                                     {format(new Date(update.created_at), "MMM d, h:mm a")}
                                   </span>
-                                  {isAdmin && (
+                                  {canEditShipping && (
                                     <div className="flex gap-1">
                                       <Button
                                         size="icon"
