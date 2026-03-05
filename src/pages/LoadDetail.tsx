@@ -3200,7 +3200,7 @@ export default function LoadDetail() {
                           <TableHead>Released By</TableHead>
                           <TableHead>Release #</TableHead>
                           <TableHead>Release PDF</TableHead>
-                          {isAdmin && <TableHead className="w-[80px]"></TableHead>}
+                          {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
