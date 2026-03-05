@@ -439,8 +439,8 @@ export default function Inventory() {
       if (!a.is_virtual && b.is_virtual) return 1;
       // Then date sort
       if (!dateSortOrder) return 0;
-      const dateA = new Date(a.fecha).getTime();
-      const dateB = new Date(b.fecha).getTime();
+      const dateA = parseDateLocal(a.fecha).getTime();
+      const dateB = parseDateLocal(b.fecha).getTime();
       return dateSortOrder === "desc" ? dateB - dateA : dateA - dateB;
     });
 
