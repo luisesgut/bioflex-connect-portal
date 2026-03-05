@@ -3823,7 +3823,7 @@ export default function LoadDetail() {
         )}
 
         {/* Available Inventory Table - Shown for admins during assembly */}
-        {isAdmin && load.status === "assembling" && (
+        {canEditShipping && load.status === "assembling" && (
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
