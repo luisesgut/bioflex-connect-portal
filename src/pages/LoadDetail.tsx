@@ -3068,7 +3068,7 @@ export default function LoadDetail() {
                     <tr className="border-t">
                       <td className="px-3 py-2 font-medium whitespace-nowrap">Freight</td>
                       <td className="px-3 py-2">
-                        {isAdmin ? (
+                        {canEditShipping ? (
                           <Input className="h-8 text-sm" placeholder="Invoice #" value={freightInvoiceNumber} onChange={(e) => setFreightInvoiceNumber(e.target.value)} />
                         ) : (
                           <span className="font-mono">{load.freight_invoice_number || "—"}</span>
