@@ -2229,7 +2229,7 @@ export default function LoadDetail() {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={load.estimated_delivery_date ? new Date(load.estimated_delivery_date) : undefined}
+                        selected={load.estimated_delivery_date ? parseDateLocal(load.estimated_delivery_date) : undefined}
                         onSelect={(date) => {
                           if (date && id) {
                             supabase
