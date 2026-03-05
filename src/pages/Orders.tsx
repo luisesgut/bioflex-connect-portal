@@ -255,7 +255,7 @@ export default function Orders() {
     const sapItems = Object.values(catOrdenByPO).filter((item) => normalizePoKey(item.u_PO2));
     const missingSapItems = sapItems.filter((item) => !existingPONumbers.has(normalizePoKey(item.u_PO2)));
 
-    if (missingSapItems.length > 0) {
+    if (missingSapItems.length > 0 && isAdmin) {
       const sapProductKeys = Array.from(
         new Set(
           missingSapItems
