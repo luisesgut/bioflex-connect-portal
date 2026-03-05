@@ -2222,7 +2222,7 @@ export default function LoadDetail() {
                       <Button variant="ghost" size="sm" className="h-auto p-1 font-medium">
                         <CalendarIcon className="mr-1 h-3 w-3" />
                         {load.estimated_delivery_date
-                          ? format(new Date(load.estimated_delivery_date), "MMM d, yyyy")
+                          ? format(parseDateLocal(load.estimated_delivery_date), "MMM d, yyyy")
                           : "Set date"}
                       </Button>
                     </PopoverTrigger>
