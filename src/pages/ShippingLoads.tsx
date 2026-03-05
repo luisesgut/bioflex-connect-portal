@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -109,6 +110,8 @@ const loadStatusOptions = [
 
 export default function ShippingLoads() {
   const { isAdmin, isInternalUser } = useAdmin();
+  const { canEdit } = usePermissions();
+  const canEditShipping = isAdmin || canEdit("shipping_loads");
   const { t } = useLanguage();
   const { user } = useAuth();
   const { getDestinationLabel } = useCustomerLocations();
@@ -444,7 +447,7 @@ export default function ShippingLoads() {
                     })()}
                   </TableCell>
                   <TableCell>
-                    {isAdmin ? (
+                    {canEditShipping ? (
                       <Select
                         value={load.status}
                         onValueChange={(value) => handleStatusChange(load, value)}
@@ -473,7 +476,7 @@ export default function ShippingLoads() {
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>
-                      {isAdmin && load.status === "assembling" && load.total_pallets > 0 && (
+                      {canEditShipping && load.status === "assembling" && load.total_pallets > 0 && (
                         <Button
                           variant="default"
                           size="sm"
@@ -504,7 +507,7 @@ export default function ShippingLoads() {
               {t('page.shippingLoads.subtitle')}
             </p>
           </div>
-          {isAdmin && (
+          {canEditShipping && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New Load
@@ -513,8 +516,8 @@ export default function ShippingLoads() {
         </div>
 
         {/* Stats Cards */}
-        <div className={cn("grid gap-4", isAdmin ? "md:grid-cols-4" : "md:grid-cols-3")}>
-          {isAdmin && (
+        <div className={cn("grid gap-4", canEditShipping ? "md:grid-cols-4" : "md:grid-cols-3")}>
+          {canEditShipping && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Assembling</CardTitle>
@@ -577,7 +580,7 @@ export default function ShippingLoads() {
         ) : (
           <div className="space-y-8">
             {/* Assembling Section - Admin Only */}
-            {(isAdmin || isInternalUser) && (
+            {(canEditShipping || isInternalUser) && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-muted-foreground" />
@@ -607,7 +610,7 @@ export default function ShippingLoads() {
               </div>
               <TransitTrackingTable
                 loads={transitTrackingData}
-                isAdmin={isAdmin}
+                isAdmin={canEditShipping}
                 onRefresh={fetchData}
               />
             </div>
