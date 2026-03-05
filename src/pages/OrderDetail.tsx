@@ -120,6 +120,7 @@ interface StockVerificationItem {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const SAP_INVENTORY_ENDPOINT = "http://172.16.10.31/api/vwStockDestiny";
 
 const parseApiNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -261,20 +262,52 @@ export default function OrderDetail() {
       setStockError(null);
 
       try {
-        const response = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
-          method: "GET",
-          headers: { accept: "*/*" },
-          signal: controller.signal,
-        });
+        // Fetch order data and inventory data in parallel
+        const [orderResponse, inventoryResponse] = await Promise.all([
+          fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+            method: "GET",
+            headers: { accept: "*/*" },
+            signal: controller.signal,
+          }),
+          fetch(SAP_INVENTORY_ENDPOINT, {
+            method: "GET",
+            headers: { accept: "*/*" },
+            signal: controller.signal,
+          }).catch(() => null), // Don't fail if inventory endpoint is unavailable
+        ]);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (!orderResponse.ok) {
+          throw new Error(`HTTP ${orderResponse.status}`);
         }
 
-        const payload = await response.json();
+        const payload = await orderResponse.json();
         const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload : [];
         const sapItem =
           list.find((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number)) || null;
+
+        // Build a map of lote -> fecha from the inventory endpoint
+        let fechaByLote: Record<string, string> = {};
+        if (inventoryResponse && inventoryResponse.ok) {
+          try {
+            const invPayload = await inventoryResponse.json();
+            if (Array.isArray(invPayload)) {
+              for (const item of invPayload) {
+                const lote = item.lote || "";
+                const fecha = item.fecha || null;
+                if (lote && fecha && !fechaByLote[lote]) {
+                  fechaByLote[lote] = fecha;
+                }
+              }
+            }
+          } catch { /* ignore parse errors */ }
+        }
+
+        // Helper to enrich detallesAlmacen with fecha from inventory
+        const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
+          details.map((d) => ({
+            ...d,
+            fecha: d.fecha || fechaByLote[d.lote] || null,
+          }));
 
         setSapOrderData(sapItem);
 
@@ -288,8 +321,8 @@ export default function OrderDetail() {
           ((parseApiNumber(sapItem.cantidad) || 0) * 1000);
         const shipped = parseApiNumber(sapItem.cantidadEnviada) ?? 0;
         const pending = Math.max(0, requested - shipped);
-        const lotsCurrent = sapItem.detallesAlmacen || [];
-        const lotsOther = sapItem.detallesAlmacenTotal || [];
+        const lotsCurrent = enrichWithFecha(sapItem.detallesAlmacen || []);
+        const lotsOther = enrichWithFecha(sapItem.detallesAlmacenTotal || []);
         const assignedFromLots = sumWarehouseQty(lotsCurrent);
         const otherFromLots = sumWarehouseQty(lotsOther);
         const totalStock =
