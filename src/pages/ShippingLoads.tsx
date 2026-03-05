@@ -507,7 +507,7 @@ export default function ShippingLoads() {
               {t('page.shippingLoads.subtitle')}
             </p>
           </div>
-          {isAdmin && (
+          {canEditShipping && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New Load
