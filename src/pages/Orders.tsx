@@ -567,7 +567,8 @@ export default function Orders() {
       }
     }
 
-    const formattedOrders = combinedOrdersSource.map((order: any) => {
+    const finalOrdersSource = ordersData || combinedOrdersSource;
+    const formattedOrders = finalOrdersSource.map((order: any) => {
       const catOrdenItem = catOrdenByPO[normalizePoKey(order.po_number)];
       const apiCantidad = parseApiNumber(catOrdenItem?.cantidad);
       const apiPrecio = parseApiNumber(catOrdenItem?.precio);
