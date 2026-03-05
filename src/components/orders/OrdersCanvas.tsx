@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
-import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock, Loader2 } from "lucide-react";
+import { Flame, ShieldAlert, DollarSign, Package, Truck, Clock, Loader2, Boxes } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CanvasOrder {
