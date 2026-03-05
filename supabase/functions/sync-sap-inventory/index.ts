@@ -55,6 +55,8 @@ export async function getSapInventory(endpoint = SAP_INVENTORY_ENDPOINT) {
   const now = new Date().toISOString();
   const today = now.split("T")[0];
 
+  // NOTE: When fecha is not provided by SAP, the caller should
+  // supply existing fecha values to preserve historical dates.
   const rows: NormalizedSapInventoryItem[] = payload.map((item) => {
     let fechaFormatted = today;
     if (item.fecha) {

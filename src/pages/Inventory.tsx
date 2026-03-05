@@ -225,7 +225,7 @@ export default function Inventory() {
   const hasActiveFilters = Object.values(filters).some(arr => arr.length > 0) || searchQuery.length > 0;
 
   // Get unique values for filter options
-  const uniqueDates = [...new Set(inventory.map(i => new Date(i.fecha).toLocaleDateString()))].sort();
+  const uniqueDates = [...new Set(inventory.map(i => parseDateLocal(i.fecha).toLocaleDateString()))].sort();
   const uniquePtCodes = [...new Set(inventory.map(i => i.pt_code))].filter(Boolean).sort();
   const uniqueDescriptions = [...new Set(inventory.map(i => i.description))].filter(Boolean).sort();
   const uniqueUnits = [...new Set(inventory.map(i => i.unit))].filter(Boolean).sort();
