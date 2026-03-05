@@ -3548,7 +3548,7 @@ export default function LoadDetail() {
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{pallet.actioned_by ? profilesMap.get(pallet.actioned_by) || "-" : "-"}</TableCell>
                             <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
-                            {isAdmin && (
+                            {canEditShipping && (
                               <TableCell>
                                 {pallet.pallet.is_virtual && (
                                   <Button
