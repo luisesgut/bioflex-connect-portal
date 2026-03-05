@@ -2209,7 +2209,7 @@ export default function LoadDetail() {
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <span className="font-medium">{format(new Date(load.shipping_date), "MMM d, yyyy")}</span>
+                  <span className="font-medium">{format(parseDateLocal(load.shipping_date), "MMM d, yyyy")}</span>
                 )}
               </div>
               <span className="text-muted-foreground">•</span>
