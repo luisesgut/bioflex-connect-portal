@@ -476,7 +476,7 @@ export default function ShippingLoads() {
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>
-                      {isAdmin && load.status === "assembling" && load.total_pallets > 0 && (
+                      {canEditShipping && load.status === "assembling" && load.total_pallets > 0 && (
                         <Button
                           variant="default"
                           size="sm"
