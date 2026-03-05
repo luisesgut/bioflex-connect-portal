@@ -885,7 +885,7 @@ export default function OrderDetail() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm text-muted-foreground">Customer Delivery (Requested)</label>
+                    <label className="text-sm text-muted-foreground">Customer Ship Date (Requested)</label>
                     {!isAdmin && order.status !== "closed" && editingDeliveryDate ? (
                       <div className="flex items-center gap-2 mt-1">
                         <Popover>
@@ -925,7 +925,7 @@ export default function OrderDetail() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Bioflex Delivery (Estimated)</label>
+                    <label className="text-sm text-muted-foreground">Bioflex Ship Date (Estimated)</label>
                     <p className="font-medium">{formatDate(order.estimated_delivery_date)}</p>
                   </div>
                 </div>
