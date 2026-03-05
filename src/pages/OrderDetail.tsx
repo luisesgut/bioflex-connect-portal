@@ -1181,6 +1181,7 @@ export default function OrderDetail() {
                                                 className="border-t border-sky-100/80 odd:bg-background/60 even:bg-sky-50/40"
                                               >
                                                 {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
+                                                <td className="px-3 py-1 text-muted-foreground font-medium">{detalle.po_number || detalle.bfx_order || "—"}</td>
                                                 <td className="px-3 py-1 text-muted-foreground">
                                                   {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }) : "—"}
                                                 </td>
