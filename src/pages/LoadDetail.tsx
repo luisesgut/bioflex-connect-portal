@@ -2790,7 +2790,7 @@ export default function LoadDetail() {
                                       View POD
                                     </button>
                                   ) : null}
-                                  {isAdmin && (
+                                  {canEditShipping && (
                                     <label className="cursor-pointer">
                                       <input
                                         type="file"
