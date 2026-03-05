@@ -2947,7 +2947,7 @@ export default function LoadDetail() {
         )}
 
         {/* Carrier Tracking - Admin Only */}
-        {isAdmin && (load.status === "in_transit" || load.status === "delivered") && (
+        {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
