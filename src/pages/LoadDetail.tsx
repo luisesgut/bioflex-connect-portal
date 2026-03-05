@@ -2624,7 +2624,7 @@ export default function LoadDetail() {
                 // Step 1: Departed BFX
                 steps.push({
                   label: "Departed BFX",
-                  date: format(new Date(load.shipping_date), "MMM d, yyyy"),
+                  date: format(parseDateLocal(load.shipping_date), "MMM d, yyyy"),
                   completed: true,
                   active: false,
                   type: "departed",
