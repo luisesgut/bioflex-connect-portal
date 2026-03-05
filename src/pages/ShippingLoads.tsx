@@ -447,7 +447,7 @@ export default function ShippingLoads() {
                     })()}
                   </TableCell>
                   <TableCell>
-                    {isAdmin ? (
+                    {canEditShipping ? (
                       <Select
                         value={load.status}
                         onValueChange={(value) => handleStatusChange(load, value)}
