@@ -3943,7 +3943,7 @@ export default function LoadDetail() {
                               {pallet.description}
                             </TableCell>
                             <TableCell className="text-right font-medium">
-                              {pallet.stock.toLocaleString()}
+                              {(pallet.unit === "MIL" ? pallet.stock * 1000 : pallet.stock).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-center">
                               {(() => {
