@@ -486,7 +486,7 @@ export default function LoadDetail() {
           total_quantity: po.quantity,
           pieces_per_pallet: po.product?.pieces_per_pallet || null,
           inventory_pallets: matchingPallets.length,
-          inventory_volume: matchingPallets.reduce((sum, p) => sum + p.stock, 0),
+          inventory_volume: matchingPallets.reduce((sum, p) => sum + (p.unit === "MIL" ? p.stock * 1000 : p.stock), 0),
           shipped_quantity: shippedByPO.get(po.po_number) || 0,
         });
       });
@@ -4012,7 +4012,7 @@ export default function LoadDetail() {
                               <Badge variant="secondary">{po.inventory_pallets}</Badge>
                             </TableCell>
                             <TableCell className="text-right font-medium text-primary">
-                              {(po.inventory_volume * 1000).toLocaleString()}
+                              {po.inventory_volume.toLocaleString()}
                             </TableCell>
                           </TableRow>
                         ))}
