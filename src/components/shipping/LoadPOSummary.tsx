@@ -69,10 +69,11 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
 
       const price = poPriceMap?.get(key);
       const palletSubtotal = price ? (pallet.quantity / 1000) * price : 0;
+      const displayQuantity = pallet.pallet.unit === "MIL" ? pallet.quantity * 1000 : pallet.quantity;
       
       if (existing) {
         existing.pallet_count++;
-        existing.total_quantity += pallet.quantity;
+        existing.total_quantity += displayQuantity;
         if (isReleased) existing.released_count++;
         if (isPending) existing.pending_count++;
         if (isOnHold) existing.on_hold_count++;
