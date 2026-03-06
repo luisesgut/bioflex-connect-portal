@@ -86,7 +86,7 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
           pt_code: pallet.pallet.pt_code,
           description: pallet.pallet.description,
           pallet_count: 1,
-          total_quantity: pallet.quantity,
+          total_quantity: displayQuantity,
           released_count: isReleased ? 1 : 0,
           pending_count: isPending ? 1 : 0,
           on_hold_count: isOnHold ? 1 : 0,
