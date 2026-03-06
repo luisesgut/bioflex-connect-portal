@@ -3233,7 +3233,7 @@ export default function LoadDetail() {
                             <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                             <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                             <TableCell className="text-xs">{getFirstNames(ptCodeToCsrMap.get(pallet.pallet.pt_code))}</TableCell>
-                            <TableCell className="text-right">{pallet.quantity.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">{(pallet.pallet.unit === "MIL" ? pallet.quantity * 1000 : pallet.quantity).toLocaleString()}</TableCell>
                             <TableCell>
                               {getDestinationLabel(pallet.destination)}
                             </TableCell>
