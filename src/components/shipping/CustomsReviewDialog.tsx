@@ -233,7 +233,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     const group = grouped.get(key)!;
 
     group.totalPallets += 1;
-    group.totalUnits += lp.quantity;
+    group.totalUnits += lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity;
     group.totalGrossWeight += lp.pallet.gross_weight || 0;
     group.totalNetWeight += lp.pallet.net_weight || 0;
 
