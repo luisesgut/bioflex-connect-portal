@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -541,49 +541,53 @@ export default function Inventory() {
           </Card>
         </div>
 
-        {/* Pallet Intake Chart */}
+        {/* Pallet Intake Chart by Product */}
         {(() => {
           const now = new Date();
           const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
           const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-          const monthLabel = (d: Date) => d.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
-          let currentCount = 0, prevCount = 0, twoAgoCount = 0, olderCount = 0;
+          const currentLabel = currentMonth.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+          const prevLabel = prevMonth.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+          const twoAgoLabel = twoMonthsAgo.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+
+          const productMap: Record<string, { current: number; prev: number; twoAgo: number; older: number }> = {};
           inventory.forEach(item => {
+            const desc = item.description.length > 28 ? item.description.slice(0, 26) + '..' : item.description;
+            const key = `${item.pt_code} - ${desc}`;
+            if (!productMap[key]) productMap[key] = { current: 0, prev: 0, twoAgo: 0, older: 0 };
             const d = parseDateLocal(item.fecha);
-            if (d >= currentMonth) currentCount++;
-            else if (d >= prevMonth) prevCount++;
-            else if (d >= twoMonthsAgo) twoAgoCount++;
-            else olderCount++;
+            if (d >= currentMonth) productMap[key].current++;
+            else if (d >= prevMonth) productMap[key].prev++;
+            else if (d >= twoMonthsAgo) productMap[key].twoAgo++;
+            else productMap[key].older++;
           });
-          const chartData = [
-            { name: monthLabel(currentMonth), pallets: currentCount },
-            { name: monthLabel(prevMonth), pallets: prevCount },
-            { name: monthLabel(twoMonthsAgo), pallets: twoAgoCount },
-            { name: 'Anteriores', pallets: olderCount },
-          ];
-          const barColors = ['hsl(var(--primary))', 'hsl(142 71% 45%)', 'hsl(38 92% 50%)', 'hsl(var(--muted-foreground))'];
+
+          const chartData = Object.entries(productMap)
+            .map(([name, counts]) => ({ name, ...counts, total: counts.current + counts.prev + counts.twoAgo + counts.older }))
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 15);
+
+          const chartHeight = Math.max(260, chartData.length * 38);
+
           return (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Ingreso de Tarimas por Periodo</CardTitle>
-                <p className="text-xs text-muted-foreground">Distribución de tarimas según fecha de producción</p>
+                <CardTitle className="text-sm font-medium">Ingreso de Tarimas por Producto y Periodo</CardTitle>
+                <p className="text-xs text-muted-foreground">Top 15 productos por fecha de producción</p>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} margin={{ left: 0, right: 16 }}>
+                <ResponsiveContainer width="100%" height={chartHeight}>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                    <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
-                      formatter={(value: number) => [`${value} tarimas`, 'Cantidad']}
-                    />
-                    <Bar dataKey="pallets" radius={[4, 4, 0, 0]} barSize={48}>
-                      {chartData.map((_, index) => (
-                        <Cell key={index} fill={barColors[index]} />
-                      ))}
-                    </Bar>
+                    <XAxis type="number" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                    <YAxis dataKey="name" type="category" width={220} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                    <Bar dataKey="current" name={currentLabel} stackId="a" fill="hsl(var(--primary))" />
+                    <Bar dataKey="prev" name={prevLabel} stackId="a" fill="hsl(142 71% 45%)" />
+                    <Bar dataKey="twoAgo" name={twoAgoLabel} stackId="a" fill="hsl(38 92% 50%)" />
+                    <Bar dataKey="older" name="Anteriores" stackId="a" fill="hsl(var(--muted-foreground))" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
