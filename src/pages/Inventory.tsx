@@ -541,53 +541,75 @@ export default function Inventory() {
           </Card>
         </div>
 
-        {/* Pallet Intake Chart by Product */}
+        {/* Pallet Intake Chart by Month */}
         {(() => {
           const now = new Date();
           const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
           const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-          const currentLabel = currentMonth.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
-          const prevLabel = prevMonth.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
-          const twoAgoLabel = twoMonthsAgo.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
 
-          const productMap: Record<string, { current: number; prev: number; twoAgo: number; older: number }> = {};
+          const monthLabel = (d: Date) => d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+          let currentCount = 0, prevCount = 0, twoAgoCount = 0, olderCount = 0;
           inventory.forEach(item => {
-            const desc = item.description.length > 28 ? item.description.slice(0, 26) + '..' : item.description;
-            const key = `${item.pt_code} - ${desc}`;
-            if (!productMap[key]) productMap[key] = { current: 0, prev: 0, twoAgo: 0, older: 0 };
             const d = parseDateLocal(item.fecha);
-            if (d >= currentMonth) productMap[key].current++;
-            else if (d >= prevMonth) productMap[key].prev++;
-            else if (d >= twoMonthsAgo) productMap[key].twoAgo++;
-            else productMap[key].older++;
+            if (d >= currentMonth) currentCount++;
+            else if (d >= prevMonth) prevCount++;
+            else if (d >= twoMonthsAgo) twoAgoCount++;
+            else olderCount++;
           });
 
-          const chartData = Object.entries(productMap)
-            .map(([name, counts]) => ({ name, ...counts, total: counts.current + counts.prev + counts.twoAgo + counts.older }))
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 15);
+          const chartData = [
+            { name: monthLabel(currentMonth), pallets: currentCount, period: 'current' },
+            { name: monthLabel(prevMonth), pallets: prevCount, period: 'prev' },
+            { name: monthLabel(twoMonthsAgo), pallets: twoAgoCount, period: 'twoAgo' },
+            { name: 'Anteriores', pallets: olderCount, period: 'older' },
+          ];
 
-          const chartHeight = Math.max(260, chartData.length * 38);
+          const colors = [
+            'hsl(var(--primary))',
+            'hsl(142 71% 45%)',
+            'hsl(38 92% 50%)',
+            'hsl(var(--muted-foreground))',
+          ];
+
+          const handleBarClick = (data: any) => {
+            if (!data || !data.period) return;
+            const period = data.period as string;
+
+            // Build list of matching date strings
+            const matchingDates = new Set<string>();
+            inventory.forEach(item => {
+              const d = parseDateLocal(item.fecha);
+              let belongs = false;
+              if (period === 'current' && d >= currentMonth) belongs = true;
+              else if (period === 'prev' && d >= prevMonth && d < currentMonth) belongs = true;
+              else if (period === 'twoAgo' && d >= twoMonthsAgo && d < prevMonth) belongs = true;
+              else if (period === 'older' && d < twoMonthsAgo) belongs = true;
+              if (belongs) matchingDates.add(d.toLocaleDateString());
+            });
+
+            setFilters(prev => ({ ...prev, fecha: Array.from(matchingDates) }));
+          };
 
           return (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Ingreso de Tarimas por Producto y Periodo</CardTitle>
-                <p className="text-xs text-muted-foreground">Top 15 productos por fecha de producción</p>
+                <CardTitle className="text-sm font-medium">Ingreso de Tarimas por Periodo</CardTitle>
+                <p className="text-xs text-muted-foreground">Haz clic en una columna para filtrar las tarimas de ese periodo</p>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={chartHeight}>
-                  <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={chartData} margin={{ left: 10, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
-                    <YAxis dataKey="name" type="category" width={220} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Bar dataKey="current" name={currentLabel} stackId="a" fill="hsl(var(--primary))" />
-                    <Bar dataKey="prev" name={prevLabel} stackId="a" fill="hsl(142 71% 45%)" />
-                    <Bar dataKey="twoAgo" name={twoAgoLabel} stackId="a" fill="hsl(38 92% 50%)" />
-                    <Bar dataKey="older" name="Anteriores" stackId="a" fill="hsl(var(--muted-foreground))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="pallets" name="Tarimas" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(_: any, index: number) => handleBarClick(chartData[index])}>
+                      {chartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={colors[index]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
