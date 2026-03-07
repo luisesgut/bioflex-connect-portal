@@ -233,7 +233,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     const group = grouped.get(key)!;
 
     group.totalPallets += 1;
-    group.totalUnits += lp.quantity;
+    group.totalUnits += lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity;
     group.totalGrossWeight += lp.pallet.gross_weight || 0;
     group.totalNetWeight += lp.pallet.net_weight || 0;
 
@@ -243,7 +243,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       palletIndex: group.palletDetails.length + 1,
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
-      pieces: lp.quantity,
+      pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
