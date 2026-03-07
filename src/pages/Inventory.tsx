@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -539,6 +540,56 @@ export default function Inventory() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Pallet Intake Chart */}
+        {(() => {
+          const now = new Date();
+          const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+          const monthLabel = (d: Date) => d.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+          let currentCount = 0, prevCount = 0, twoAgoCount = 0, olderCount = 0;
+          inventory.forEach(item => {
+            const d = parseDateLocal(item.fecha);
+            if (d >= currentMonth) currentCount++;
+            else if (d >= prevMonth) prevCount++;
+            else if (d >= twoMonthsAgo) twoAgoCount++;
+            else olderCount++;
+          });
+          const chartData = [
+            { name: monthLabel(currentMonth), pallets: currentCount },
+            { name: monthLabel(prevMonth), pallets: prevCount },
+            { name: monthLabel(twoMonthsAgo), pallets: twoAgoCount },
+            { name: 'Anteriores', pallets: olderCount },
+          ];
+          const barColors = ['hsl(var(--primary))', 'hsl(142 71% 45%)', 'hsl(38 92% 50%)', 'hsl(var(--muted-foreground))'];
+          return (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Ingreso de Tarimas por Periodo</CardTitle>
+                <p className="text-xs text-muted-foreground">Distribución de tarimas según fecha de producción</p>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={chartData} margin={{ left: 0, right: 16 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                      formatter={(value: number) => [`${value} tarimas`, 'Cantidad']}
+                    />
+                    <Bar dataKey="pallets" radius={[4, 4, 0, 0]} barSize={48}>
+                      {chartData.map((_, index) => (
+                        <Cell key={index} fill={barColors[index]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Search and Clear Filters */}
         <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
