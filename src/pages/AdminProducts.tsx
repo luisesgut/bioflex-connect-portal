@@ -39,26 +39,17 @@ interface AdminFilters {
 interface Product {
   id: string;
   name: string;
-  sku: string;
-  category: string;
-  material: string | null;
-  size: string | null;
-  image: string | null;
   pt_code: string | null;
   pc_number: string | null;
   et: string | null;
   activa: boolean | null;
-  descripcion_cliente: string | null;
   et_verificada: boolean | null;
   codigo_producto: string | null;
-  print_card: string | null;
-  nombre_producto_2: string | null;
   tipo_empaque: string | null;
   estructura: string | null;
   ancho: number | null;
   alto: number | null;
   fuelle_de_fondo: number | null;
-  pestana_al_ancho: number | null;
   pestana_al_alto: number | null;
   refilado: string | null;
   metros_x_bobina: number | null;
@@ -78,8 +69,11 @@ interface Product {
   item_type: string | null;
   pieces_per_pallet: number | null;
   print_card_url: string | null;
+  bfx_spec_url: string | null;
   units: string | null;
   dp_sales_csr_names: string | null;
+  customer_tech_spec_url: string | null;
+  product_line: string | null;
   created_at: string;
   updated_at: string;
 }
