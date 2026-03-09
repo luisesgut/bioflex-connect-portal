@@ -221,7 +221,7 @@ function SectionHeader({
 
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
-  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6]);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
@@ -410,7 +410,21 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               onChange={(layers) => update({ structure_layers: layers })}
               productType={data.product_type}
             />
+          </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
 
+      {/* ═══════════ SECTION 3: Complementos ═══════════ */}
+      <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
+        <SectionHeader title="Complementos" number={3} open={openSections.includes(3)} />
+        <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+            </div>
+          ) : (
+          <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Film & Printing */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {!isWicket && (
@@ -595,9 +609,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 3: Packaging & Packing ═══════════ */}
-      <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
-        <SectionHeader title="Packaging & Shipping Format" number={3} open={openSections.includes(3)} />
+      {/* ═══════════ SECTION 4: Packaging & Packing ═══════════ */}
+      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
+        <SectionHeader title="Packaging & Shipping Format" number={4} open={openSections.includes(4)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
@@ -687,9 +701,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 4: Complementary Information ═══════════ */}
-      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
-        <SectionHeader title="Complementary Information" number={4} open={openSections.includes(4)} />
+      {/* ═══════════ SECTION 5: Complementary Information ═══════════ */}
+      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
+        <SectionHeader title="Complementary Information" number={5} open={openSections.includes(5)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Authorization */}
@@ -785,9 +799,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 5: Volumes to Quote ═══════════ */}
-      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
-        <SectionHeader title="Volumes to Quote" number={5} open={openSections.includes(5)} />
+      {/* ═══════════ SECTION 6: Volumes to Quote ═══════════ */}
+      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
+        <SectionHeader title="Volumes to Quote" number={6} open={openSections.includes(6)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2">
             <div className="flex items-center justify-end mb-3">
