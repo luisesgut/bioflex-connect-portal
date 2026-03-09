@@ -562,7 +562,6 @@ export default function AdminProducts() {
       pt_code: [],
       pc_number: [],
       has_pc_file: [],
-      has_pc_file: [],
       activa: [],
       customer_item: [],
       item_description: [],
