@@ -277,11 +277,11 @@ export default function AdminProducts() {
           productData.category = productData.tipo_empaque || 'Other';
         }
 
-        // Check if product exists by codigo_producto or sku
+        // Check if product exists by codigo_producto or customer_item
         const { data: existing } = await supabase
           .from('products')
           .select('id')
-          .or(`codigo_producto.eq.${codigoProducto},sku.eq.${sku}`)
+          .or(`codigo_producto.eq.${codigoProducto},customer_item.eq.${customerItem}`)
           .maybeSingle();
 
         if (existing) {
