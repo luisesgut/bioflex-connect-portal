@@ -417,7 +417,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
       {/* ═══════════ SECTION 3: Complementos ═══════════ */}
       <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
-        <SectionHeader title="Complementos" number={3} open={openSections.includes(3)} />
+        <SectionHeader title="Complements" number={3} open={openSections.includes(3)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
