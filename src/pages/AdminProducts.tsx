@@ -551,7 +551,7 @@ export default function AdminProducts() {
     const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
       (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
-    return matchesSearch && matchesCodigo && matchesPtCode && matchesNombre && matchesPrintCard && matchesPcFile && 
+    return matchesSearch && matchesCodigo && matchesPtCode && matchesPcNumber && matchesPcFile && 
            matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
            matchesItemType && matchesPieces && matchesUnits && matchesDpSalesCsr;
   });
