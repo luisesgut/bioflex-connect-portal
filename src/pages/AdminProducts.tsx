@@ -230,11 +230,11 @@ export default function AdminProducts() {
       });
 
       // Check for required identifier (codigo_producto or sku)
-      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.sku !== undefined;
+      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.customer_item !== undefined;
       if (!hasIdentifier) {
         toast({
           title: "Invalid CSV",
-          description: "CSV must have a 'codigoProducto' or 'sku' column",
+          description: "CSV must have a 'codigoProducto' or 'customer item' column",
           variant: "destructive",
         });
         setImporting(false);
