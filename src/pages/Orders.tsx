@@ -207,7 +207,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, sku, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `;
 
     let { data: ordersData, error: ordersError } = await supabase
