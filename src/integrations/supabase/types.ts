@@ -1123,14 +1123,12 @@ export type Database = {
           alto: number | null
           ancho: number | null
           bfx_spec_url: string | null
-          category: string
           codigo_producto: string | null
           created_at: string
           customer: string | null
           customer_item: string | null
           customer_tech_spec_url: string | null
           descripcion_caja: string | null
-          descripcion_cliente: string | null
           dp_sales_csr_names: string | null
           empacado_de_producto_por: string | null
           estructura: string | null
@@ -1138,28 +1136,21 @@ export type Database = {
           et_verificada: boolean | null
           fuelle_de_fondo: number | null
           id: string
-          image: string | null
           item_description: string | null
           item_type: string | null
-          material: string | null
           metros_x_bobina: number | null
           name: string
-          nombre_producto_2: string | null
           paquete_por_caja: number | null
           pc_number: string | null
           pestana_al_alto: number | null
-          pestana_al_ancho: number | null
           pieces_per_pallet: number | null
           piezas_por_paquete: number | null
           piezas_totales_por_caja: number | null
           pisos: number | null
-          print_card: string | null
           print_card_url: string | null
           product_line: string | null
           pt_code: string | null
           refilado: string | null
-          size: string | null
-          sku: string
           tipo_embalaje: string | null
           tipo_empaque: string | null
           unidades_en_ancho: number | null
@@ -1173,14 +1164,12 @@ export type Database = {
           alto?: number | null
           ancho?: number | null
           bfx_spec_url?: string | null
-          category?: string
           codigo_producto?: string | null
           created_at?: string
           customer?: string | null
           customer_item?: string | null
           customer_tech_spec_url?: string | null
           descripcion_caja?: string | null
-          descripcion_cliente?: string | null
           dp_sales_csr_names?: string | null
           empacado_de_producto_por?: string | null
           estructura?: string | null
@@ -1188,28 +1177,21 @@ export type Database = {
           et_verificada?: boolean | null
           fuelle_de_fondo?: number | null
           id?: string
-          image?: string | null
           item_description?: string | null
           item_type?: string | null
-          material?: string | null
           metros_x_bobina?: number | null
           name: string
-          nombre_producto_2?: string | null
           paquete_por_caja?: number | null
           pc_number?: string | null
           pestana_al_alto?: number | null
-          pestana_al_ancho?: number | null
           pieces_per_pallet?: number | null
           piezas_por_paquete?: number | null
           piezas_totales_por_caja?: number | null
           pisos?: number | null
-          print_card?: string | null
           print_card_url?: string | null
           product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
-          size?: string | null
-          sku: string
           tipo_embalaje?: string | null
           tipo_empaque?: string | null
           unidades_en_ancho?: number | null
@@ -1223,14 +1205,12 @@ export type Database = {
           alto?: number | null
           ancho?: number | null
           bfx_spec_url?: string | null
-          category?: string
           codigo_producto?: string | null
           created_at?: string
           customer?: string | null
           customer_item?: string | null
           customer_tech_spec_url?: string | null
           descripcion_caja?: string | null
-          descripcion_cliente?: string | null
           dp_sales_csr_names?: string | null
           empacado_de_producto_por?: string | null
           estructura?: string | null
@@ -1238,28 +1218,21 @@ export type Database = {
           et_verificada?: boolean | null
           fuelle_de_fondo?: number | null
           id?: string
-          image?: string | null
           item_description?: string | null
           item_type?: string | null
-          material?: string | null
           metros_x_bobina?: number | null
           name?: string
-          nombre_producto_2?: string | null
           paquete_por_caja?: number | null
           pc_number?: string | null
           pestana_al_alto?: number | null
-          pestana_al_ancho?: number | null
           pieces_per_pallet?: number | null
           piezas_por_paquete?: number | null
           piezas_totales_por_caja?: number | null
           pisos?: number | null
-          print_card?: string | null
           print_card_url?: string | null
           product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
-          size?: string | null
-          sku?: string
           tipo_embalaje?: string | null
           tipo_empaque?: string | null
           unidades_en_ancho?: number | null

@@ -31,7 +31,7 @@ import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpa
 
 interface Product {
   id: string;
-  codigo_producto?: string | null;
+  codigo_producto: string | null;
   customer_item: string | null;
   item_description: string | null;
   customer: string | null;
@@ -43,7 +43,7 @@ interface Product {
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
-  print_card: string | null;
+  pc_number: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
   bfx_spec_url: string | null;
@@ -155,7 +155,7 @@ export default function Products() {
     const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
+        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, pc_number, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
         .order("customer_item"),
       supabase
         .from("product_requests")
@@ -229,7 +229,7 @@ export default function Products() {
           piezas_por_paquete: destiny.piezasPorPaquete ?? product.piezas_por_paquete,
           piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product.piezas_totales_por_caja,
           pieces_per_pallet: destiny.piecesPerPallet ?? product.pieces_per_pallet,
-          print_card: destiny.printCard || product.print_card,
+          pc_number: destiny.printCard || product.pc_number,
           customer: product.customer,
           customer_tech_spec_url: product.customer_tech_spec_url,
           bfx_spec_url: product.bfx_spec_url,
@@ -431,10 +431,10 @@ export default function Products() {
                     {product.print_card_url ? (
                       <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
-                        {product.print_card || "View"}
+                        {product.pc_number || "View"}
                       </button>
-                    ) : product.print_card ? (
-                      <span className="font-mono text-muted-foreground">{product.print_card}</span>
+                    ) : product.pc_number ? (
+                      <span className="font-mono text-muted-foreground">{product.pc_number}</span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -452,10 +452,10 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {getPrintCardDocumentUrl(product.print_card) ? (
+                    {getPrintCardDocumentUrl(product.pc_number) ? (
                       <button
                         onClick={() => {
-                          const url = getPrintCardDocumentUrl(product.print_card);
+                          const url = getPrintCardDocumentUrl(product.pc_number);
                           if (url) window.open(url, "_blank", "noopener,noreferrer");
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
