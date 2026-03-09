@@ -30,11 +30,10 @@ import {
 interface Product {
   id: string;
   name: string;
-  sku: string;
+  customer_item: string | null;
   units: string | null;
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
-  customer_item: string | null;
   item_description: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
