@@ -255,7 +255,7 @@ export default function AdminProducts() {
           ? values[columnIndices.customer_item]?.trim() 
           : null;
 
-        if (!codigoProducto && !sku) continue;
+        if (!codigoProducto && !customerItem) continue;
 
         const productData: Record<string, unknown> = {};
 
