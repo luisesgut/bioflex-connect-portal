@@ -23,8 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface AdminFilters {
   codigo_producto: string[];
   pt_code: string[];
-  nombre_producto_2: string[];
-  print_card: string[];
+  pc_number: string[];
   has_pc_file: string[];
   activa: string[];
   customer_item: string[];
@@ -39,26 +38,17 @@ interface AdminFilters {
 interface Product {
   id: string;
   name: string;
-  sku: string;
-  category: string;
-  material: string | null;
-  size: string | null;
-  image: string | null;
   pt_code: string | null;
   pc_number: string | null;
   et: string | null;
   activa: boolean | null;
-  descripcion_cliente: string | null;
   et_verificada: boolean | null;
   codigo_producto: string | null;
-  print_card: string | null;
-  nombre_producto_2: string | null;
   tipo_empaque: string | null;
   estructura: string | null;
   ancho: number | null;
   alto: number | null;
   fuelle_de_fondo: number | null;
-  pestana_al_ancho: number | null;
   pestana_al_alto: number | null;
   refilado: string | null;
   metros_x_bobina: number | null;
@@ -78,8 +68,11 @@ interface Product {
   item_type: string | null;
   pieces_per_pallet: number | null;
   print_card_url: string | null;
+  bfx_spec_url: string | null;
   units: string | null;
   dp_sales_csr_names: string | null;
+  customer_tech_spec_url: string | null;
+  product_line: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -88,17 +81,14 @@ interface Product {
 const CSV_COLUMN_MAP: Record<string, keyof Product> = {
   'et': 'et',
   'activa': 'activa',
-  'descripcioncliente': 'descripcion_cliente',
   'etverificada': 'et_verificada',
   'codigoproducto': 'codigo_producto',
-  'printcard': 'print_card',
-  'nombreproducto2': 'nombre_producto_2',
+  'pcnumber': 'pc_number',
   'tipoempaque': 'tipo_empaque',
   'estructura': 'estructura',
   'ancho': 'ancho',
   'alto': 'alto',
   'fuelledefondo': 'fuelle_de_fondo',
-  'pestanaalancho': 'pestana_al_ancho',
   'pestanaalalto': 'pestana_al_alto',
   'refilado': 'refilado',
   'metrosxbobina': 'metros_x_bobina',
@@ -112,22 +102,16 @@ const CSV_COLUMN_MAP: Record<string, keyof Product> = {
   'piezasporpaquete': 'piezas_por_paquete',
   'paqueteporcaja': 'paquete_por_caja',
   'piezastotalesporcaja': 'piezas_totales_por_caja',
-      'customer item': 'customer_item',
-      'item description': 'item_description',
-      'customer': 'customer',
-      'item type': 'item_type',
-      'pieces per pallet': 'pieces_per_pallet',
-      'units': 'units',
-      'dp sales/csr names': 'dp_sales_csr_names',
-      'dpsales/csrnames': 'dp_sales_csr_names',
-      // Old columns for backward compatibility
-  'sku': 'sku',
+  'customer item': 'customer_item',
+  'item description': 'item_description',
+  'customer': 'customer',
+  'item type': 'item_type',
+  'pieces per pallet': 'pieces_per_pallet',
+  'units': 'units',
+  'dp sales/csr names': 'dp_sales_csr_names',
+  'dpsales/csrnames': 'dp_sales_csr_names',
   'name': 'name',
-  'category': 'category',
-  'material': 'material',
-  'size': 'size',
   'pt_code': 'pt_code',
-  'pc_number': 'pc_number',
 };
 
 export default function AdminProducts() {
@@ -140,8 +124,7 @@ export default function AdminProducts() {
   const [filters, setFilters] = useState<AdminFilters>({
     codigo_producto: [],
     pt_code: [],
-    nombre_producto_2: [],
-    print_card: [],
+    pc_number: [],
     has_pc_file: [],
     activa: [],
     customer_item: [],
@@ -245,11 +228,11 @@ export default function AdminProducts() {
       });
 
       // Check for required identifier (codigo_producto or sku)
-      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.sku !== undefined;
+      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.customer_item !== undefined;
       if (!hasIdentifier) {
         toast({
           title: "Invalid CSV",
-          description: "CSV must have a 'codigoProducto' or 'sku' column",
+          description: "CSV must have a 'codigoProducto' or 'customer item' column",
           variant: "destructive",
         });
         setImporting(false);
@@ -266,11 +249,11 @@ export default function AdminProducts() {
         const codigoProducto = columnIndices.codigo_producto !== undefined 
           ? values[columnIndices.codigo_producto]?.trim() 
           : null;
-        const sku = columnIndices.sku !== undefined 
-          ? values[columnIndices.sku]?.trim() 
-          : codigoProducto; // Use codigoProducto as sku if no sku column
+        const customerItem = columnIndices.customer_item !== undefined 
+          ? values[columnIndices.customer_item]?.trim() 
+          : null;
 
-        if (!codigoProducto && !sku) continue;
+        if (!codigoProducto && !customerItem) continue;
 
         const productData: Record<string, unknown> = {};
 
@@ -282,21 +265,18 @@ export default function AdminProducts() {
         }
 
         // Ensure required fields
-        if (!productData.sku && codigoProducto) {
-          productData.sku = codigoProducto;
+        if (!productData.codigo_producto && codigoProducto) {
+          productData.codigo_producto = codigoProducto;
         }
         if (!productData.name) {
-          productData.name = productData.nombre_producto_2 || productData.item_description || productData.sku || 'Unknown';
-        }
-        if (!productData.category) {
-          productData.category = productData.tipo_empaque || 'Other';
+          productData.name = productData.item_description || productData.codigo_producto || 'Unknown';
         }
 
-        // Check if product exists by codigo_producto or sku
+        // Check if product exists by codigo_producto or customer_item
         const { data: existing } = await supabase
           .from('products')
           .select('id')
-          .or(`codigo_producto.eq.${codigoProducto},sku.eq.${sku}`)
+          .or(`codigo_producto.eq.${codigoProducto},customer_item.eq.${customerItem}`)
           .maybeSingle();
 
         if (existing) {
@@ -314,7 +294,10 @@ export default function AdminProducts() {
         } else {
           const { error } = await supabase
             .from('products')
-            .insert(productData as { sku: string; name: string });
+            .insert({
+              name: productData.item_description as string || productData.customer_item as string || 'Unknown',
+              ...productData,
+            } as any);
 
           if (error) {
             console.error('Insert error:', error);
@@ -366,9 +349,9 @@ export default function AdminProducts() {
 
   const downloadCSVTemplate = () => {
     const headers = [
-      'et', 'activa', 'descripcionCliente', 'ETVerificada', 'codigoProducto', 'printCard',
-      'NombreProducto2', 'TipoEmpaque', 'Estructura', 'Ancho', 'Alto', 'FuelleDeFondo',
-      'PestanaAlAncho', 'PestanaAlAlto', 'Refilado', 'MetrosXBobina', 'UnidadesEnAncho',
+      'et', 'activa', 'codigoProducto', 'PC Number',
+      'TipoEmpaque', 'Estructura', 'Ancho', 'Alto', 'FuelleDeFondo',
+      'PestanaAlAlto', 'Refilado', 'MetrosXBobina', 'UnidadesEnAncho',
       'UnidadesEnLargo', 'Pisos', 'UnidadesPorTarima', 'TipoEmbalaje', 'DescripcionCaja',
       'EmpacadoDeProductoPor', 'PiezasPorPaquete', 'PaquetePorCaja', 'PiezasTotalePorCaja',
       'CUSTOMER ITEM', 'ITEM DESCRIPTION', 'CUSTOMER', 'ITEM TYPE', 'PIECES PER PALLET',
@@ -380,17 +363,13 @@ export default function AdminProducts() {
       ...products.map(p => [
         p.et || '',
         p.activa ? '1' : '0',
-        `"${(p.descripcion_cliente || '').replace(/"/g, '""')}"`,
-        p.et_verificada ? '1' : '0',
         p.codigo_producto || '',
-        p.print_card || '',
-        `"${(p.nombre_producto_2 || '').replace(/"/g, '""')}"`,
+        p.pc_number || '',
         p.tipo_empaque || '',
         `"${(p.estructura || '').replace(/"/g, '""')}"`,
         p.ancho || '',
         p.alto || '',
         p.fuelle_de_fondo || '',
-        p.pestana_al_ancho || '',
         p.pestana_al_alto || '',
         p.refilado || '',
         p.metros_x_bobina || '',
@@ -458,9 +437,9 @@ export default function AdminProducts() {
       const fileName = file.name;
       const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
 
-      // Find matching product by print_card
+      // Find matching product by pc_number
       const matchingProduct = products.find(p => 
-        p.print_card && p.print_card.toLowerCase() === fileNameWithoutExt.toLowerCase()
+        p.pc_number && p.pc_number.toLowerCase() === fileNameWithoutExt.toLowerCase()
       );
 
       if (!matchingProduct) {
@@ -524,8 +503,7 @@ export default function AdminProducts() {
 
   const uniqueCodigos = getUniqueValues('codigo_producto');
   const uniquePtCodes = getUniqueValues('pt_code');
-  const uniqueNombres = getUniqueValues('nombre_producto_2');
-  const uniquePrintCards = getUniqueValues('print_card');
+  const uniquePcNumbers = getUniqueValues('pc_number');
   const uniqueCustomerItems = getUniqueValues('customer_item');
   const uniqueDescriptions = getUniqueValues('item_description');
   const uniqueCustomers = getUniqueValues('customer');
@@ -539,7 +517,7 @@ export default function AdminProducts() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
       product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -547,10 +525,8 @@ export default function AdminProducts() {
       (product.codigo_producto && filters.codigo_producto.includes(product.codigo_producto));
     const matchesPtCode = filters.pt_code.length === 0 || 
       (product.pt_code && filters.pt_code.includes(product.pt_code));
-    const matchesNombre = filters.nombre_producto_2.length === 0 || 
-      (product.nombre_producto_2 && filters.nombre_producto_2.includes(product.nombre_producto_2));
-    const matchesPrintCard = filters.print_card.length === 0 || 
-      (product.print_card && filters.print_card.includes(product.print_card));
+    const matchesPcNumber = filters.pc_number.length === 0 || 
+      (product.pc_number && filters.pc_number.includes(product.pc_number));
     const matchesPcFile = filters.has_pc_file.length === 0 || 
       (filters.has_pc_file.includes("Has File") && product.print_card_url) ||
       (filters.has_pc_file.includes("No File") && !product.print_card_url);
@@ -572,7 +548,7 @@ export default function AdminProducts() {
     const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
       (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
-    return matchesSearch && matchesCodigo && matchesPtCode && matchesNombre && matchesPrintCard && matchesPcFile && 
+    return matchesSearch && matchesCodigo && matchesPtCode && matchesPcNumber && matchesPcFile && 
            matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
            matchesItemType && matchesPieces && matchesUnits && matchesDpSalesCsr;
   });
@@ -581,8 +557,7 @@ export default function AdminProducts() {
     setFilters({
       codigo_producto: [],
       pt_code: [],
-      nombre_producto_2: [],
-      print_card: [],
+      pc_number: [],
       has_pc_file: [],
       activa: [],
       customer_item: [],
@@ -833,8 +808,8 @@ export default function AdminProducts() {
                     <TableRow>
                       <ColumnFilterHeader label="Código" filterKey="codigo_producto" options={uniqueCodigos} />
                       <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
-                      <ColumnFilterHeader label="Nombre Producto" filterKey="nombre_producto_2" options={uniqueNombres} />
-                      <ColumnFilterHeader label="Print Card" filterKey="print_card" options={uniquePrintCards} />
+                      <ColumnFilterHeader label="Item Description" filterKey="item_description" options={uniqueDescriptions} />
+                      <ColumnFilterHeader label="PC Number" filterKey="pc_number" options={uniquePcNumbers} />
                       <ColumnFilterHeader label="PC File" filterKey="has_pc_file" options={pcFileOptions} isGreen />
                       <ColumnFilterHeader label="Activa" filterKey="activa" options={activaOptions} />
                       <ColumnFilterHeader label="Customer Item" filterKey="customer_item" options={uniqueCustomerItems} isGreen />
@@ -857,10 +832,10 @@ export default function AdminProducts() {
                           {product.codigo_producto || '-'}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
-                          {product.nombre_producto_2 || product.name}
+                          {product.item_description || product.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {product.print_card || '-'}
+                          {product.pc_number || '-'}
                         </TableCell>
                         <TableCell className="bg-green-500/5">
                           {product.print_card_url ? (

@@ -37,7 +37,7 @@ interface Product {
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
-  print_card: string | null;
+  pc_number: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
   bfx_spec_url: string | null;
@@ -170,7 +170,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         piezas_por_paquete: product.piezas_por_paquete,
         paquete_por_caja: product.paquete_por_caja,
         piezas_totales_por_caja: product.piezas_totales_por_caja,
-        print_card: product.print_card,
+        pc_number: product.pc_number,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
         bfx_spec_url: (product as any).bfx_spec_url || null,
@@ -201,7 +201,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         piezas_por_paquete: product.piezas_por_paquete,
         paquete_por_caja: product.paquete_por_caja,
         piezas_totales_por_caja: product.piezas_totales_por_caja,
-        print_card: product.print_card,
+        pc_number: product.pc_number,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
         bfx_spec_url: (product as any).bfx_spec_url || null,
@@ -263,7 +263,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         piezas_por_paquete: form.piezas_por_paquete || null,
         paquete_por_caja: form.paquete_por_caja || null,
         piezas_totales_por_caja: form.piezas_totales_por_caja || null,
-        print_card: form.print_card || null,
+        pc_number: form.pc_number || null,
         print_card_url: form.print_card_url || null,
         customer_tech_spec_url: form.customer_tech_spec_url || null,
         bfx_spec_url: form.bfx_spec_url || null,
@@ -392,8 +392,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           <div className="space-y-2">
             <Label>PC Number</Label>
             <Input
-              value={form.print_card || ""}
-              onChange={(e) => setForm({ ...form, print_card: e.target.value })}
+              value={form.pc_number || ""}
+              onChange={(e) => setForm({ ...form, pc_number: e.target.value })}
               placeholder="e.g. PC-001"
               readOnly={isApiManagedProduct}
               className={isApiManagedProduct ? "bg-muted" : ""}

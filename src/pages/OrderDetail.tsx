@@ -58,7 +58,6 @@ interface OrderDetails {
   pallets_needed: number | null;
   product: {
     name: string;
-    sku: string;
     customer: string | null;
     item_type: string | null;
     tipo_empaque: string | null;
@@ -68,7 +67,7 @@ interface OrderDetails {
     codigo_producto: string | null;
     pt_code: string | null;
     pieces_per_pallet: number | null;
-    print_card: string | null;
+    pc_number: string | null;
     print_card_url: string | null;
     customer_tech_spec_url: string | null;
     bfx_spec_url: string | null;
@@ -405,7 +404,6 @@ export default function OrderDetail() {
         pallets_needed,
         products (
           name,
-          sku,
           customer,
           item_type,
           tipo_empaque,
@@ -415,7 +413,7 @@ export default function OrderDetail() {
           codigo_producto,
           pt_code,
           pieces_per_pallet,
-          print_card,
+          pc_number,
           print_card_url,
           customer_tech_spec_url,
           bfx_spec_url
@@ -734,7 +732,7 @@ export default function OrderDetail() {
                     <div>
                       <label className="text-sm text-muted-foreground">PC Number</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.print_card || "—"}</p>
+                        <p className="font-medium">{order.product?.pc_number || "—"}</p>
                         {order.product?.print_card_url && (
                           <Button
                             variant="link"

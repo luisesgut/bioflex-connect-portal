@@ -27,17 +27,11 @@ import {
 import { EditProductDialog } from "@/components/products/EditProductDialog";
 import { BulkProductsManager } from "@/components/products/BulkProductsManager";
 import { useLanguage } from "@/hooks/useLanguage";
-import {
-  fetchDestinyProducts,
-  buildDestinyLookupKeys,
-  findDestinyProductByCodes,
-  mapTipoEmpaqueToProductLine,
-  mapProductLineToItemType,
-} from "@/utils/destinyProducts";
+import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpaqueToProductLine, mapProductLineToItemType } from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
-  codigo_producto?: string | null;
+  codigo_producto: string | null;
   customer_item: string | null;
   item_description: string | null;
   customer: string | null;
@@ -49,14 +43,13 @@ interface Product {
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
-  print_card: string | null;
+  pc_number: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
   bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
   product_line: string | null;
-  is_from_destiny_only?: boolean;
 }
 
 interface ProductRequest {
@@ -116,32 +109,6 @@ const customerVisibleStatuses = [
 ];
 
 const PRINTCARD_API_BASE_URL = "http://172.16.10.31/api/Printcard";
-const DESTINY_ONLY_ID_PREFIX = "destiny:";
-const hasPersistedProductId = (id: string) => !id.startsWith(DESTINY_ONLY_ID_PREFIX);
-const isMissingField = (value: string | number | null | undefined) =>
-  value === null || value === undefined || (typeof value === "string" && value.trim() === "");
-const normalizeSearchCode = (value: string | null | undefined) =>
-  (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-const isLikelyProductCodeQuery = (query: string) => /^[A-Z0-9-_/]+$/i.test(query.trim()) && query.trim().length >= 4;
-
-const getProductMissingFieldsCount = (product: Product) => {
-  let missing = 0;
-
-  if (isMissingField(product.customer_item)) missing += 1;
-  if (isMissingField(product.item_description)) missing += 1;
-  if (isMissingField(product.customer)) missing += 1;
-  if (isMissingField(product.item_type)) missing += 1;
-  if (isMissingField(product.tipo_empaque)) missing += 1;
-  if (isMissingField(product.codigo_producto) && isMissingField(product.pt_code)) missing += 1;
-  if (isMissingField(product.unidades_por_tarima)) missing += 1;
-  if (isMissingField(product.piezas_por_paquete)) missing += 1;
-  if (isMissingField(product.paquete_por_caja)) missing += 1;
-  if (isMissingField(product.piezas_totales_por_caja)) missing += 1;
-  if (isMissingField(product.pieces_per_pallet)) missing += 1;
-  if (isMissingField(product.print_card)) missing += 1;
-
-  return missing;
-};
 
 function getCustomerVisibleStatus(status: string, isAdmin: boolean): string {
   if (isAdmin) return requestStatusLabels[status] || status;
@@ -178,7 +145,6 @@ export default function Products() {
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [syncingDestiny, setSyncingDestiny] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -189,7 +155,7 @@ export default function Products() {
     const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
+        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, pc_number, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
         .order("customer_item"),
       supabase
         .from("product_requests")
@@ -199,41 +165,36 @@ export default function Products() {
       fetchDestinyProducts()
         .catch((error) => {
           console.error("Error loading DestinyDatos in Products page:", error);
-          return [];
+          return [] as DestinyProduct[];
         }),
     ]);
 
     if (productsRes.error) {
       toast({ title: "Error", description: "Failed to fetch products", variant: "destructive" });
     } else {
-      const supabaseByCode = (productsRes.data || []).reduce<Record<string, Product>>((acc, product) => {
-        const keys = [
-          ...buildDestinyLookupKeys(product.pt_code),
-          ...buildDestinyLookupKeys(product.codigo_producto),
-          ...buildDestinyLookupKeys(product.customer_item),
-        ];
-        keys.forEach((key) => {
-          acc[key] = product;
-        });
+      const destinyByCode = (destinyRes || []).reduce<Record<string, DestinyProduct>>((acc, item) => {
+        const key = normalizeDestinyCode(item.codigoProducto);
+        if (key) acc[key] = item;
         return acc;
       }, {});
 
-      // Track products that need product_line or item_type backfill in Supabase
+      // Track products that need product_line or item_type backfill
       const backfillUpdates: { id: string; product_line?: string; item_type?: string }[] = [];
 
-      const syncedProducts = (destinyRes || []).map((destiny, index) => {
-        const product = findDestinyProductByCodes(supabaseByCode, [
-          destiny.codigoProducto,
-          destiny.customer_item,
-        ]);
+      const syncedProducts = (productsRes.data || []).map((product) => {
+        const lookupCode =
+          normalizeDestinyCode(product.pt_code) ||
+          normalizeDestinyCode(product.codigo_producto) ||
+          normalizeDestinyCode(product.customer_item);
+        const destiny = destinyByCode[lookupCode];
 
-        const tipoEmpaque = destiny.tipoEmpaque || product?.tipo_empaque || null;
+        const tipoEmpaque = destiny?.tipoEmpaque || product.tipo_empaque;
 
         // Auto-map product_line and item_type from tipo_empaque if not already set
-        let productLine = product?.product_line || null;
-        let itemType = product?.item_type || null;
+        let productLine = product.product_line;
+        let itemType = product.item_type;
         const mapped = tipoEmpaque ? mapTipoEmpaqueToProductLine(tipoEmpaque) : null;
-        const updates: { id: string; product_line?: string; item_type?: string } = { id: product?.id || "" };
+        const updates: { id: string; product_line?: string; item_type?: string } = { id: product.id };
         let needsUpdate = false;
 
         if (!productLine && mapped) {
@@ -251,30 +212,29 @@ export default function Products() {
           }
         }
 
-        if (needsUpdate && product?.id) backfillUpdates.push(updates);
+        if (needsUpdate) backfillUpdates.push(updates);
+
+        if (!destiny) return { ...product, product_line: productLine };
 
         return {
-          id: product?.id || `${DESTINY_ONLY_ID_PREFIX}${destiny.codigoProducto || destiny.et || destiny.customer_item || `unknown-${index}`}`,
-          customer_item: destiny.customer_item || product?.customer_item || null,
-          item_description: destiny.item_description || product?.item_description || null,
-          customer: destiny.descripcionCliente || product?.customer || null,
-          item_type: itemType || null,
+          ...product,
+          customer_item: destiny.customer_item || product.customer_item,
+          item_description: destiny.item_description || product.item_description,
+          item_type: itemType || product.item_type,
           tipo_empaque: tipoEmpaque,
-          pt_code: destiny.codigoProducto || product?.pt_code || null,
-          codigo_producto: destiny.codigoProducto || product?.codigo_producto || null,
-          unidades_por_tarima: destiny.unidadesPorTarima ?? product?.unidades_por_tarima ?? null,
-          paquete_por_caja: destiny.paquetePorCaja ?? product?.paquete_por_caja ?? null,
-          piezas_por_paquete: destiny.piezasPorPaquete ?? product?.piezas_por_paquete ?? null,
-          piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product?.piezas_totales_por_caja ?? null,
-          pieces_per_pallet: destiny.piecesPerPallet ?? product?.pieces_per_pallet ?? null,
-          print_card: destiny.printCard || product?.print_card || null,
-          print_card_url: product?.print_card_url || null,
-          customer_tech_spec_url: product?.customer_tech_spec_url || null,
-          bfx_spec_url: product?.bfx_spec_url || null,
-          dp_sales_csr_names: product?.dp_sales_csr_names || null,
-          activa: destiny.activa ?? product?.activa ?? true,
+          pt_code: destiny.codigoProducto || product.pt_code,
+          codigo_producto: destiny.codigoProducto || product.codigo_producto,
+          unidades_por_tarima: destiny.unidadesPorTarima ?? product.unidades_por_tarima,
+          paquete_por_caja: destiny.paquetePorCaja ?? product.paquete_por_caja,
+          piezas_por_paquete: destiny.piezasPorPaquete ?? product.piezas_por_paquete,
+          piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product.piezas_totales_por_caja,
+          pieces_per_pallet: destiny.piecesPerPallet ?? product.pieces_per_pallet,
+          pc_number: destiny.printCard || product.pc_number,
+          customer: product.customer,
+          customer_tech_spec_url: product.customer_tech_spec_url,
+          bfx_spec_url: product.bfx_spec_url,
+          dp_sales_csr_names: product.dp_sales_csr_names,
           product_line: productLine,
-          is_from_destiny_only: !product?.id,
         };
       });
 
@@ -290,19 +250,7 @@ export default function Products() {
         ).catch((err) => console.error("Failed to backfill product data:", err))
       }
 
-      // Include products that exist only in Supabase (without Destiny match)
-      const destinyMatchedIds = new Set(syncedProducts.map((p) => p.id).filter(hasPersistedProductId));
-      const supabaseOnlyProducts = (productsRes.data || [])
-        .filter((p) => !destinyMatchedIds.has(p.id))
-        .map((p) => ({ ...p, is_from_destiny_only: false }));
-
-      const mergedProducts = [...syncedProducts, ...supabaseOnlyProducts].sort((a, b) => {
-        const missingA = getProductMissingFieldsCount(a);
-        const missingB = getProductMissingFieldsCount(b);
-        if (missingA !== missingB) return missingA - missingB;
-        return (a.customer_item || "").localeCompare(b.customer_item || "");
-      });
-      setProducts(mergedProducts);
+      setProducts(syncedProducts);
     }
 
     if (requestsRes.error) {
@@ -311,102 +259,6 @@ export default function Products() {
       setProductRequests(requestsRes.data || []);
     }
     setLoading(false);
-  };
-
-  const handleSyncDestinyToSupabase = async () => {
-    setSyncingDestiny(true);
-    try {
-      const destiny = await fetchDestinyProducts();
-      if (!destiny.length) {
-        toast({
-          title: "No data",
-          description: "DestinyDatos returned no products.",
-        });
-        return;
-      }
-
-      const { data: existingProducts, error: existingError } = await supabase
-        .from("products")
-        .select("id, codigo_producto, pt_code, customer_item, item_description, customer, item_type, tipo_empaque, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line");
-
-      if (existingError) throw existingError;
-
-      const existingByCode = (existingProducts || []).reduce<Record<string, Product>>((acc, product) => {
-        const keys = [
-          ...buildDestinyLookupKeys(product.codigo_producto),
-          ...buildDestinyLookupKeys(product.pt_code),
-          ...buildDestinyLookupKeys(product.customer_item),
-        ];
-        keys.forEach((key) => {
-          acc[key] = product;
-        });
-        return acc;
-      }, {});
-
-      const rows = destiny
-        .map((d) => {
-          const productCode = (d.codigoProducto || "").trim();
-          if (!productCode) return null;
-
-          const existing = findDestinyProductByCodes(existingByCode, [productCode, d.customer_item]);
-          const tipoEmpaque = d.tipoEmpaque || existing?.tipo_empaque || null;
-          const mappedProductLine = mapTipoEmpaqueToProductLine(tipoEmpaque);
-          const mappedItemType = mappedProductLine ? mapProductLineToItemType(mappedProductLine) : null;
-
-          return {
-            codigo_producto: productCode,
-            pt_code: productCode,
-            customer_item: d.customer_item || existing?.customer_item || null,
-            item_description: d.item_description || existing?.item_description || null,
-            customer: d.descripcionCliente || existing?.customer || null,
-            item_type: existing?.item_type || mappedItemType || null,
-            tipo_empaque: tipoEmpaque,
-            pieces_per_pallet: d.piecesPerPallet ?? existing?.pieces_per_pallet ?? null,
-            unidades_por_tarima: d.unidadesPorTarima ?? existing?.unidades_por_tarima ?? null,
-            piezas_por_paquete: d.piezasPorPaquete ?? existing?.piezas_por_paquete ?? null,
-            paquete_por_caja: d.paquetePorCaja ?? existing?.paquete_por_caja ?? null,
-            piezas_totales_por_caja: d.piezasTotalePorCaja ?? existing?.piezas_totales_por_caja ?? null,
-            print_card: d.printCard || existing?.print_card || null,
-            product_line: existing?.product_line || mappedProductLine || null,
-            activa: d.activa ?? existing?.activa ?? true,
-          };
-        })
-        .filter((row): row is Record<string, string | number | boolean | null> => row !== null);
-
-      if (!rows.length) {
-        toast({
-          title: "No valid products",
-          description: "No products with product code were found in DestinyDatos.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const chunkSize = 200;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
-        const { error } = await supabase
-          .from("products")
-          .upsert(chunk, { onConflict: "codigo_producto" });
-        if (error) throw error;
-      }
-
-      await fetchData();
-      toast({
-        title: "Sync completed",
-        description: `${rows.length} products synced from DestinyDatos to Supabase.`,
-      });
-    } catch (error: unknown) {
-      console.error("Error syncing DestinyDatos to Supabase:", error);
-      const errorMessage = error instanceof Error ? error.message : "Could not sync products from DestinyDatos.";
-      toast({
-        title: "Sync failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setSyncingDestiny(false);
-    }
   };
 
   // Filtered products (only active)
@@ -424,35 +276,13 @@ export default function Products() {
   };
 
   // Apply search + filters to products
-  const normalizedQuery = normalizeSearchCode(searchQuery);
-  const isCodeSearch = Boolean(searchQuery.trim()) && isLikelyProductCodeQuery(searchQuery);
-  const hasExactCodeMatch =
-    isCodeSearch &&
-    tabProducts.some((product) => {
-      const codeA = normalizeSearchCode(product.codigo_producto);
-      const codeB = normalizeSearchCode(product.pt_code);
-      return codeA === normalizedQuery || codeB === normalizedQuery;
-    });
-
   const filteredProducts = tabProducts.filter((product) => {
-    const codeA = normalizeSearchCode(product.codigo_producto);
-    const codeB = normalizeSearchCode(product.pt_code);
-    const exactCodeMatch = codeA === normalizedQuery || codeB === normalizedQuery;
-    const startsWithCodeMatch =
-      (!!codeA && codeA.startsWith(normalizedQuery)) ||
-      (!!codeB && codeB.startsWith(normalizedQuery));
-
-    const matchesSearch = !searchQuery
-      ? true
-      : isCodeSearch
-      ? hasExactCodeMatch
-        ? exactCodeMatch
-        : startsWithCodeMatch
-      : (
-        product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.item_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.codigo_producto || product.pt_code || "").toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    const ptCode = product.codigo_producto || product.pt_code || "";
+    const matchesSearch =
+      !searchQuery ||
+      product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.item_description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ptCode.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesFilters =
       (filters.customer_item.length === 0 || (product.customer_item && filters.customer_item.includes(product.customer_item))) &&
@@ -598,24 +428,13 @@ export default function Products() {
                 <td className="px-4 py-3 text-right font-mono text-muted-foreground">{product.pieces_per_pallet?.toLocaleString() || "-"}</td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {getPrintCardDocumentUrl(product.print_card) ? (
-                      <button
-                        onClick={() => {
-                          const url = getPrintCardDocumentUrl(product.print_card);
-                          if (url) window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                      >
+                    {product.print_card_url ? (
+                      <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
-                        {product.print_card || "View"}
+                        {product.pc_number || "View"}
                       </button>
-                    ) : product.bfx_spec_url ? (
-                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
-                        <FileText className="h-4 w-4" />
-                        {product.print_card || "View"}
-                      </button>
-                    ) : product.print_card ? (
-                      <span className="font-mono text-muted-foreground">{product.print_card}</span>
+                    ) : product.pc_number ? (
+                      <span className="font-mono text-muted-foreground">{product.pc_number}</span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
@@ -633,10 +452,10 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {getPrintCardDocumentUrl(product.print_card) ? (
+                    {getPrintCardDocumentUrl(product.pc_number) ? (
                       <button
                         onClick={() => {
-                          const url = getPrintCardDocumentUrl(product.print_card);
+                          const url = getPrintCardDocumentUrl(product.pc_number);
                           if (url) window.open(url, "_blank", "noopener,noreferrer");
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
@@ -661,26 +480,13 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      disabled={!hasPersistedProductId(product.id)}
-                      title={!hasPersistedProductId(product.id) ? "Product not registered in Supabase yet" : undefined}
-                      onClick={() => { setEditingProduct(product); setEditDialogOpen(true); }}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(product); setEditDialogOpen(true); }}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                   </td>
                 )}
                 <td className="px-4 py-3 text-right">
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    className="gap-1"
-                    disabled={!hasPersistedProductId(product.id)}
-                    title={!hasPersistedProductId(product.id) ? "Product not registered in Supabase yet" : undefined}
-                    onClick={() => navigate(`/orders/new?productId=${product.id}`)}
-                  >
+                  <Button variant="accent" size="sm" className="gap-1" onClick={() => navigate(`/orders/new?productId=${product.id}`)}>
                     Order
                   </Button>
                 </td>
@@ -824,19 +630,7 @@ export default function Products() {
             </Button>
           )}
           {isAdmin && activeTab !== "in_process" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={handleSyncDestinyToSupabase}
-                disabled={syncingDestiny}
-              >
-                {syncingDestiny ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Sync Destiny
-              </Button>
-              <BulkProductsManager products={filteredProducts} onImported={fetchData} />
-            </>
+            <BulkProductsManager products={filteredProducts} onImported={fetchData} />
           )}
         </div>
 

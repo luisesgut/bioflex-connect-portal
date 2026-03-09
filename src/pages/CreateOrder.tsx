@@ -30,11 +30,10 @@ import {
 interface Product {
   id: string;
   name: string;
-  sku: string;
+  customer_item: string | null;
   units: string | null;
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
-  customer_item: string | null;
   item_description: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
@@ -84,7 +83,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item, item_description, print_card_url, customer_tech_spec_url")
+        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, print_card_url, customer_tech_spec_url")
         .order("name");
 
       if (error) {
@@ -230,16 +229,12 @@ export default function CreateOrder() {
             
             matchedProduct = products.find(p => {
               const customerItem = p.customer_item?.toLowerCase() || '';
-              const sku = p.sku?.toLowerCase() || '';
               const description = p.item_description?.toLowerCase() || '';
               
               return (
                 // Match against customer_item (most reliable)
                 customerItem.includes(searchCode) ||
                 searchCode.includes(customerItem) ||
-                // Match against SKU
-                sku.includes(searchCode) ||
-                searchCode.includes(sku) ||
                 // Match against item_description
                 description.includes(searchCode) ||
                 searchCode.includes(description)
