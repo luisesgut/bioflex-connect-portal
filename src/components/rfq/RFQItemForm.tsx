@@ -221,7 +221,7 @@ function SectionHeader({
 
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
-  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6]);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
