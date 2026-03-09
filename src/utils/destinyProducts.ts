@@ -1,18 +1,25 @@
 export const DESTINY_DATOS_ENDPOINT = "http://172.16.10.31/api/DestinyDatos";
 
 interface DestinyDatosApiItem {
-  nombreProducto?: string | null;
-  codigoProducto?: string | null;
-  printCard?: string | null;
-  tipoEmpaque?: string | null;
+  et?: number | null;
+  nombreProducto?: string | number | null;
+  codigoProducto?: string | number | null;
+  activa?: boolean | null;
+  descripcionCliente?: string | number | null;
+  printCard?: string | number | null;
+  tipoEmpaque?: string | number | null;
   unidadesPorTarima?: number | null;
   piezasTotalePorCaja?: number | null;
+  piezasTotalesPorCaja?: number | null;
   paquetePorCaja?: number | null;
   piezasPorPaquete?: number | null;
 }
 
 export interface DestinyProduct {
+  et: number | null;
   codigoProducto: string | null;
+  activa: boolean | null;
+  descripcionCliente: string | null;
   customer_item: string | null;
   item_description: string | null;
   printCard: string | null;
@@ -24,7 +31,34 @@ export interface DestinyProduct {
   piecesPerPallet: number | null;
 }
 
-export const normalizeDestinyCode = (value: string | null | undefined) => value?.trim().toUpperCase() || "";
+const toCleanString = (value: unknown) => {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+};
+
+export const normalizeDestinyCode = (value: unknown) => toCleanString(value).toUpperCase();
+
+export const buildDestinyLookupKeys = (value: unknown) => {
+  const normalized = normalizeDestinyCode(value);
+  if (!normalized) return [];
+
+  const compact = normalized.replace(/[^A-Z0-9]/g, "");
+  return compact && compact !== normalized ? [normalized, compact] : [normalized];
+};
+
+export const findDestinyProductByCodes = <T>(
+  destinyByCode: Record<string, T>,
+  values: unknown[],
+) => {
+  for (const value of values) {
+    const keys = buildDestinyLookupKeys(value);
+    for (const key of keys) {
+      const match = destinyByCode[key];
+      if (match) return match;
+    }
+  }
+  return undefined;
+};
 
 const parseNullableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -32,8 +66,8 @@ const parseNullableNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const splitNombreProducto = (value: string | null | undefined) => {
-  const normalized = (value || "").trim().replace(/\s+/g, " ");
+const splitNombreProducto = (value: unknown) => {
+  const normalized = toCleanString(value).replace(/\s+/g, " ");
   if (!normalized) {
     return {
       customer_item: null,
@@ -101,7 +135,7 @@ export async function fetchDestinyProducts(endpoint = DESTINY_DATOS_ENDPOINT): P
 
   return payload.map((item) => {
     const unidadesPorTarima = parseNullableNumber(item.unidadesPorTarima);
-    const piezasTotalePorCaja = parseNullableNumber(item.piezasTotalePorCaja);
+    const piezasTotalePorCaja = parseNullableNumber(item.piezasTotalePorCaja ?? item.piezasTotalesPorCaja);
     const piecesPerPallet =
       unidadesPorTarima !== null && piezasTotalePorCaja !== null
         ? unidadesPorTarima * piezasTotalePorCaja
@@ -109,11 +143,14 @@ export async function fetchDestinyProducts(endpoint = DESTINY_DATOS_ENDPOINT): P
     const { customer_item, item_description } = splitNombreProducto(item.nombreProducto);
 
     return {
-      codigoProducto: item.codigoProducto || null,
+      et: parseNullableNumber(item.et),
+      codigoProducto: toCleanString(item.codigoProducto) || null,
+      activa: typeof item.activa === "boolean" ? item.activa : null,
+      descripcionCliente: toCleanString(item.descripcionCliente) || null,
       customer_item,
       item_description,
-      printCard: item.printCard || null,
-      tipoEmpaque: item.tipoEmpaque || null,
+      printCard: toCleanString(item.printCard) || null,
+      tipoEmpaque: toCleanString(item.tipoEmpaque) || null,
       unidadesPorTarima,
       piezasTotalePorCaja,
       paquetePorCaja: parseNullableNumber(item.paquetePorCaja),

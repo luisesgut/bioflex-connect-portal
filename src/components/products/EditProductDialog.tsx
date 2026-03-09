@@ -17,7 +17,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, X, ChevronDown } from "lucide-react";
-import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode } from "@/utils/destinyProducts";
+import {
+  DestinyProduct,
+  fetchDestinyProducts,
+  buildDestinyLookupKeys,
+  findDestinyProductByCodes,
+} from "@/utils/destinyProducts";
 
 interface Product {
   id: string;
@@ -50,10 +55,8 @@ interface EditProductDialogProps {
 export function EditProductDialog({ product, open, onOpenChange, onSaved }: EditProductDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [uploadingPC, setUploadingPC] = useState(false);
   const [uploadingCustomerSpec, setUploadingCustomerSpec] = useState(false);
   const [uploadingBFXSpec, setUploadingBFXSpec] = useState(false);
-  const pcFileRef = useRef<HTMLInputElement>(null);
   const customerSpecRef = useRef<HTMLInputElement>(null);
   const bfxSpecRef = useRef<HTMLInputElement>(null);
 
@@ -93,8 +96,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const isMissingTextValue = (value: string | null | undefined) => !value || value.trim() === "" || value.trim() === "0";
 
   const buildFormWithDestinyData = (base: Partial<Product>) => {
-    const record =
-      destinyProductsByCode[normalizeDestinyCode(base.pt_code)];
+    const record = findDestinyProductByCodes(destinyProductsByCode, [base.pt_code, base.customer_item]);
 
     if (!record) return base;
 
@@ -109,9 +111,12 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     };
   };
 
-  const destinyRecord =
-    destinyProductsByCode[normalizeDestinyCode(form.pt_code)] ||
-    destinyProductsByCode[normalizeDestinyCode(product?.pt_code)];
+  const destinyRecord = findDestinyProductByCodes(destinyProductsByCode, [
+    form.pt_code,
+    form.customer_item,
+    product?.pt_code,
+    product?.customer_item,
+  ]);
   const isApiManagedProduct = Boolean(destinyRecord);
 
   useEffect(() => {
@@ -125,8 +130,10 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         if (!isMounted) return;
 
         const mapped = raw.reduce<Record<string, DestinyProduct>>((acc, item) => {
-          const key = normalizeDestinyCode(item.codigoProducto);
-          if (key) acc[key] = item;
+          const keys = buildDestinyLookupKeys(item.codigoProducto);
+          keys.forEach((key) => {
+            acc[key] = item;
+          });
           return acc;
         }, {});
 
@@ -394,25 +401,13 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           </div>
           <div className="space-y-2">
             <Label>PC PDF</Label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-h-9">
               {form.print_card_url && (
                 <button onClick={() => openStorageFile(form.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                   <FileText className="h-4 w-4" /> View current
                 </button>
               )}
-              <Button type="button" variant="outline" size="sm" onClick={() => pcFileRef.current?.click()} disabled={uploadingPC}>
-                <Upload className="h-4 w-4 mr-1" />
-                {uploadingPC ? "Uploading..." : "Upload PDF"}
-              </Button>
-              <input ref={pcFileRef} type="file" accept=".pdf" className="hidden" onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleFileUpload(f, "pc-files", "print_card_url", setUploadingPC);
-              }} />
-              {form.print_card_url && (
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setForm({ ...form, print_card_url: null })}>
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+              {!form.print_card_url && <span className="text-sm text-muted-foreground">No file</span>}
             </div>
           </div>
 
