@@ -520,7 +520,7 @@ export default function AdminProducts() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
       product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.nombre_producto_2?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -528,10 +528,8 @@ export default function AdminProducts() {
       (product.codigo_producto && filters.codigo_producto.includes(product.codigo_producto));
     const matchesPtCode = filters.pt_code.length === 0 || 
       (product.pt_code && filters.pt_code.includes(product.pt_code));
-    const matchesNombre = filters.nombre_producto_2.length === 0 || 
-      (product.nombre_producto_2 && filters.nombre_producto_2.includes(product.nombre_producto_2));
-    const matchesPrintCard = filters.print_card.length === 0 || 
-      (product.print_card && filters.print_card.includes(product.print_card));
+    const matchesPcNumber = filters.pc_number.length === 0 || 
+      (product.pc_number && filters.pc_number.includes(product.pc_number));
     const matchesPcFile = filters.has_pc_file.length === 0 || 
       (filters.has_pc_file.includes("Has File") && product.print_card_url) ||
       (filters.has_pc_file.includes("No File") && !product.print_card_url);
