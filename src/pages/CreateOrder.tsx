@@ -229,16 +229,12 @@ export default function CreateOrder() {
             
             matchedProduct = products.find(p => {
               const customerItem = p.customer_item?.toLowerCase() || '';
-              const sku = p.sku?.toLowerCase() || '';
               const description = p.item_description?.toLowerCase() || '';
               
               return (
                 // Match against customer_item (most reliable)
                 customerItem.includes(searchCode) ||
                 searchCode.includes(customerItem) ||
-                // Match against SKU
-                sku.includes(searchCode) ||
-                searchCode.includes(sku) ||
                 // Match against item_description
                 description.includes(searchCode) ||
                 searchCode.includes(description)

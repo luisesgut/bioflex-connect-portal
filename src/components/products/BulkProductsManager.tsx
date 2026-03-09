@@ -35,7 +35,7 @@ const EXPORT_COLUMNS = [
   { key: "tipo_empaque", label: "Tipo Empaque" },
   { key: "pt_code", label: "PT Code" },
   { key: "pieces_per_pallet", label: "Pieces/Pallet" },
-  { key: "print_card", label: "PC Number" },
+  { key: "pc_number", label: "PC Number" },
   { key: "print_card_url", label: "PC PDF URL" },
   { key: "customer_tech_spec_url", label: "Customer Spec URL" },
   { key: "dp_sales_csr_names", label: "DP Sales/CSR" },

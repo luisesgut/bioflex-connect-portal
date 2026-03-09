@@ -518,16 +518,12 @@ export default function Orders() {
         );
 
         if (sapClaves.length > 0) {
-          const [bySku2, byPtCode2, byCodigoProducto2] = await Promise.all([
-            supabase.from("products").select("id, sku").in("sku", sapClaves),
+          const [byPtCode2, byCodigoProducto2] = await Promise.all([
             supabase.from("products").select("id, pt_code").in("pt_code", sapClaves),
             supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapClaves),
           ]);
 
           const linkMap = new Map<string, string>();
-          (bySku2.data || []).forEach((p: any) => {
-            if (p.sku) linkMap.set(String(p.sku).trim().toUpperCase(), p.id);
-          });
           (byPtCode2.data || []).forEach((p: any) => {
             if (p.pt_code) linkMap.set(String(p.pt_code).trim().toUpperCase(), p.id);
           });

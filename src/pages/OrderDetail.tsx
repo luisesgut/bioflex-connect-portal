@@ -732,7 +732,7 @@ export default function OrderDetail() {
                     <div>
                       <label className="text-sm text-muted-foreground">PC Number</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.print_card || "—"}</p>
+                        <p className="font-medium">{order.product?.pc_number || "—"}</p>
                         {order.product?.print_card_url && (
                           <Button
                             variant="link"
