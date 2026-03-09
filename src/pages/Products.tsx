@@ -432,10 +432,10 @@ export default function Products() {
                     {product.print_card_url ? (
                       <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
-                        {product.print_card || "View"}
+                        {product.pc_number || "View"}
                       </button>
-                    ) : product.print_card ? (
-                      <span className="font-mono text-muted-foreground">{product.print_card}</span>
+                    ) : product.pc_number ? (
+                      <span className="font-mono text-muted-foreground">{product.pc_number}</span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
