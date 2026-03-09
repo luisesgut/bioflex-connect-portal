@@ -626,7 +626,7 @@ export default function Orders() {
       const percentProduced = requestedForProgress > 0 ? Math.round((effectiveShipped / requestedForProgress) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
-      const productSkuForInventory = order.products?.sku || null;
+      const productSkuForInventory = order.products?.codigo_producto || order.products?.pt_code || null;
       const excessStockFromInventory = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
       const excessStockFromSap =
         hasSapWarehouseData && sapStockAvailable > pending
