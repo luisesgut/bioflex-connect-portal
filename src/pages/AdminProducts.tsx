@@ -299,7 +299,10 @@ export default function AdminProducts() {
         } else {
           const { error } = await supabase
             .from('products')
-            .insert(productData as { sku: string; name: string });
+            .insert({
+              name: productData.item_description as string || productData.customer_item as string || 'Unknown',
+              ...productData,
+            } as any);
 
           if (error) {
             console.error('Insert error:', error);
