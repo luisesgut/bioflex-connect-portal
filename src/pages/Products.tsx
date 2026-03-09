@@ -453,10 +453,10 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {getPrintCardDocumentUrl(product.print_card) ? (
+                    {getPrintCardDocumentUrl(product.pc_number) ? (
                       <button
                         onClick={() => {
-                          const url = getPrintCardDocumentUrl(product.print_card);
+                          const url = getPrintCardDocumentUrl(product.pc_number);
                           if (url) window.open(url, "_blank", "noopener,noreferrer");
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
