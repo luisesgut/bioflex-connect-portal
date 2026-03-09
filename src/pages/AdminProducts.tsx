@@ -812,8 +812,8 @@ export default function AdminProducts() {
                     <TableRow>
                       <ColumnFilterHeader label="Código" filterKey="codigo_producto" options={uniqueCodigos} />
                       <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
-                      <ColumnFilterHeader label="Nombre Producto" filterKey="nombre_producto_2" options={uniqueNombres} />
-                      <ColumnFilterHeader label="Print Card" filterKey="print_card" options={uniquePrintCards} />
+                      <ColumnFilterHeader label="Name" filterKey="customer_item" options={uniqueCustomerItems} />
+                      <ColumnFilterHeader label="PC Number" filterKey="pc_number" options={uniquePcNumbers} />
                       <ColumnFilterHeader label="PC File" filterKey="has_pc_file" options={pcFileOptions} isGreen />
                       <ColumnFilterHeader label="Activa" filterKey="activa" options={activaOptions} />
                       <ColumnFilterHeader label="Customer Item" filterKey="customer_item" options={uniqueCustomerItems} isGreen />
