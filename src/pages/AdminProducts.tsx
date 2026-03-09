@@ -506,8 +506,7 @@ export default function AdminProducts() {
 
   const uniqueCodigos = getUniqueValues('codigo_producto');
   const uniquePtCodes = getUniqueValues('pt_code');
-  const uniqueNombres = getUniqueValues('nombre_producto_2');
-  const uniquePrintCards = getUniqueValues('print_card');
+  const uniquePcNumbers = getUniqueValues('pc_number');
   const uniqueCustomerItems = getUniqueValues('customer_item');
   const uniqueDescriptions = getUniqueValues('item_description');
   const uniqueCustomers = getUniqueValues('customer');
