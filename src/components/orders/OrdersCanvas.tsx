@@ -200,9 +200,16 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                           >
                             <CardContent className="p-3">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-mono text-xs font-medium text-card-foreground">
-                                  {order.po_number}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-medium text-card-foreground">
+                                    {order.po_number}
+                                  </span>
+                                  {order.sales_order_number && (
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      SO: {order.sales_order_number}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-1">
                                   {order.is_hot_order && (
                                     <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
