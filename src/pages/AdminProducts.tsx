@@ -23,8 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface AdminFilters {
   codigo_producto: string[];
   pt_code: string[];
-  nombre_producto_2: string[];
-  print_card: string[];
+  pc_number: string[];
   has_pc_file: string[];
   activa: string[];
   customer_item: string[];
