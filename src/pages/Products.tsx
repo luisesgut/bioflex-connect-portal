@@ -156,7 +156,7 @@ export default function Products() {
     const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, print_card, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
+        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, pc_number, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
         .order("customer_item"),
       supabase
         .from("product_requests")
