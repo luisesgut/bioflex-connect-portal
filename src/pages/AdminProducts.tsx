@@ -442,9 +442,9 @@ export default function AdminProducts() {
       const fileName = file.name;
       const fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
 
-      // Find matching product by print_card
+      // Find matching product by pc_number
       const matchingProduct = products.find(p => 
-        p.print_card && p.print_card.toLowerCase() === fileNameWithoutExt.toLowerCase()
+        p.pc_number && p.pc_number.toLowerCase() === fileNameWithoutExt.toLowerCase()
       );
 
       if (!matchingProduct) {
