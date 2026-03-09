@@ -58,7 +58,6 @@ interface OrderDetails {
   pallets_needed: number | null;
   product: {
     name: string;
-    sku: string;
     customer: string | null;
     item_type: string | null;
     tipo_empaque: string | null;
@@ -68,7 +67,7 @@ interface OrderDetails {
     codigo_producto: string | null;
     pt_code: string | null;
     pieces_per_pallet: number | null;
-    print_card: string | null;
+    pc_number: string | null;
     print_card_url: string | null;
     customer_tech_spec_url: string | null;
     bfx_spec_url: string | null;
