@@ -354,9 +354,9 @@ export default function AdminProducts() {
 
   const downloadCSVTemplate = () => {
     const headers = [
-      'et', 'activa', 'descripcionCliente', 'ETVerificada', 'codigoProducto', 'printCard',
-      'NombreProducto2', 'TipoEmpaque', 'Estructura', 'Ancho', 'Alto', 'FuelleDeFondo',
-      'PestanaAlAncho', 'PestanaAlAlto', 'Refilado', 'MetrosXBobina', 'UnidadesEnAncho',
+      'et', 'activa', 'codigoProducto', 'PC Number',
+      'TipoEmpaque', 'Estructura', 'Ancho', 'Alto', 'FuelleDeFondo',
+      'PestanaAlAlto', 'Refilado', 'MetrosXBobina', 'UnidadesEnAncho',
       'UnidadesEnLargo', 'Pisos', 'UnidadesPorTarima', 'TipoEmbalaje', 'DescripcionCaja',
       'EmpacadoDeProductoPor', 'PiezasPorPaquete', 'PaquetePorCaja', 'PiezasTotalePorCaja',
       'CUSTOMER ITEM', 'ITEM DESCRIPTION', 'CUSTOMER', 'ITEM TYPE', 'PIECES PER PALLET',
