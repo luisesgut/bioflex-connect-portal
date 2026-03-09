@@ -560,8 +560,8 @@ export default function AdminProducts() {
     setFilters({
       codigo_producto: [],
       pt_code: [],
-      nombre_producto_2: [],
-      print_card: [],
+      pc_number: [],
+      has_pc_file: [],
       has_pc_file: [],
       activa: [],
       customer_item: [],
