@@ -410,7 +410,21 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               onChange={(layers) => update({ structure_layers: layers })}
               productType={data.product_type}
             />
+          </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
 
+      {/* ═══════════ SECTION 3: Complementos ═══════════ */}
+      <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
+        <SectionHeader title="Complementos" number={3} open={openSections.includes(3)} />
+        <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+            </div>
+          ) : (
+          <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Film & Printing */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {!isWicket && (
