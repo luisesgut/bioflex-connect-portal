@@ -124,8 +124,7 @@ export default function AdminProducts() {
   const [filters, setFilters] = useState<AdminFilters>({
     codigo_producto: [],
     pt_code: [],
-    nombre_producto_2: [],
-    print_card: [],
+    pc_number: [],
     has_pc_file: [],
     activa: [],
     customer_item: [],
