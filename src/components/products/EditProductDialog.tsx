@@ -385,8 +385,8 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           <div className="space-y-2">
             <Label>PC Number</Label>
             <Input
-              value={form.print_card || ""}
-              onChange={(e) => setForm({ ...form, print_card: e.target.value })}
+              value={form.pc_number || ""}
+              onChange={(e) => setForm({ ...form, pc_number: e.target.value })}
               placeholder="e.g. PC-001"
               readOnly={isApiManagedProduct}
               className={isApiManagedProduct ? "bg-muted" : ""}
