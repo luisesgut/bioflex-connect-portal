@@ -1122,6 +1122,8 @@ export type Database = {
           activa: boolean | null
           alto: number | null
           ancho: number | null
+          bfx_spec_url: string | null
+          codigo_producto: string | null
           created_at: string
           customer: string | null
           customer_item: string | null
@@ -1145,10 +1147,12 @@ export type Database = {
           piezas_por_paquete: number | null
           piezas_totales_por_caja: number | null
           pisos: number | null
+          print_card_url: string | null
           product_line: string | null
           pt_code: string | null
           refilado: string | null
           tipo_embalaje: string | null
+          tipo_empaque: string | null
           unidades_en_ancho: number | null
           unidades_en_largo: number | null
           unidades_por_tarima: number | null
@@ -1159,6 +1163,8 @@ export type Database = {
           activa?: boolean | null
           alto?: number | null
           ancho?: number | null
+          bfx_spec_url?: string | null
+          codigo_producto?: string | null
           created_at?: string
           customer?: string | null
           customer_item?: string | null
@@ -1182,10 +1188,12 @@ export type Database = {
           piezas_por_paquete?: number | null
           piezas_totales_por_caja?: number | null
           pisos?: number | null
+          print_card_url?: string | null
           product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
           tipo_embalaje?: string | null
+          tipo_empaque?: string | null
           unidades_en_ancho?: number | null
           unidades_en_largo?: number | null
           unidades_por_tarima?: number | null
@@ -1196,6 +1204,8 @@ export type Database = {
           activa?: boolean | null
           alto?: number | null
           ancho?: number | null
+          bfx_spec_url?: string | null
+          codigo_producto?: string | null
           created_at?: string
           customer?: string | null
           customer_item?: string | null
@@ -1219,10 +1229,12 @@ export type Database = {
           piezas_por_paquete?: number | null
           piezas_totales_por_caja?: number | null
           pisos?: number | null
+          print_card_url?: string | null
           product_line?: string | null
           pt_code?: string | null
           refilado?: string | null
           tipo_embalaje?: string | null
+          tipo_empaque?: string | null
           unidades_en_ancho?: number | null
           unidades_en_largo?: number | null
           unidades_por_tarima?: number | null
