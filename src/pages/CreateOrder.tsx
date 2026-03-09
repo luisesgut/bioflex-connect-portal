@@ -83,7 +83,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, sku, units, piezas_totales_por_caja, pieces_per_pallet, customer_item, item_description, print_card_url, customer_tech_spec_url")
+        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, print_card_url, customer_tech_spec_url")
         .order("name");
 
       if (error) {

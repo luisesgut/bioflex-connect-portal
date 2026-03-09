@@ -404,7 +404,6 @@ export default function OrderDetail() {
         pallets_needed,
         products (
           name,
-          sku,
           customer,
           item_type,
           tipo_empaque,
@@ -414,7 +413,7 @@ export default function OrderDetail() {
           codigo_producto,
           pt_code,
           pieces_per_pallet,
-          print_card,
+          pc_number,
           print_card_url,
           customer_tech_spec_url,
           bfx_spec_url

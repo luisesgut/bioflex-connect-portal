@@ -31,7 +31,7 @@ import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpa
 
 interface Product {
   id: string;
-  codigo_producto?: string | null;
+  codigo_producto: string | null;
   customer_item: string | null;
   item_description: string | null;
   customer: string | null;
@@ -50,7 +50,6 @@ interface Product {
   dp_sales_csr_names: string | null;
   activa: boolean | null;
   product_line: string | null;
-  codigo_producto: string | null;
 }
 
 interface ProductRequest {

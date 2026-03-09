@@ -271,9 +271,6 @@ export default function Orders() {
           supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapProductKeys),
         ]);
 
-        (bySku.data || []).forEach((p: any) => {
-          if (p.sku) productIdByKey.set(String(p.sku).trim().toUpperCase(), p.id);
-        });
         (byPtCode.data || []).forEach((p: any) => {
           if (p.pt_code) productIdByKey.set(String(p.pt_code).trim().toUpperCase(), p.id);
         });
