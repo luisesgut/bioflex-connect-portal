@@ -230,7 +230,7 @@ export default function Products() {
           piezas_por_paquete: destiny.piezasPorPaquete ?? product.piezas_por_paquete,
           piezas_totales_por_caja: destiny.piezasTotalePorCaja ?? product.piezas_totales_por_caja,
           pieces_per_pallet: destiny.piecesPerPallet ?? product.pieces_per_pallet,
-          print_card: destiny.printCard || product.print_card,
+          pc_number: destiny.printCard || product.pc_number,
           customer: product.customer,
           customer_tech_spec_url: product.customer_tech_spec_url,
           bfx_spec_url: product.bfx_spec_url,
