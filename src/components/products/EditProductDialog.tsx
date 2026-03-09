@@ -194,7 +194,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         piezas_por_paquete: product.piezas_por_paquete,
         paquete_por_caja: product.paquete_por_caja,
         piezas_totales_por_caja: product.piezas_totales_por_caja,
-        print_card: product.print_card,
+        pc_number: product.pc_number,
         print_card_url: product.print_card_url,
         customer_tech_spec_url: product.customer_tech_spec_url,
         bfx_spec_url: (product as any).bfx_spec_url || null,
