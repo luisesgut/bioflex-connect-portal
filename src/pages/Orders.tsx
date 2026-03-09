@@ -207,7 +207,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, sku, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `;
 
     let { data: ordersData, error: ordersError } = await supabase
@@ -478,7 +478,7 @@ export default function Orders() {
     }
 
     const ptCodes = combinedOrdersSource
-      .map((o: any) => o.products?.sku)
+      .map((o: any) => o.products?.codigo_producto || o.products?.pt_code)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
     
     let excessStockByPT: Record<string, ExcessStockDetail> = {};
@@ -626,7 +626,7 @@ export default function Orders() {
       const percentProduced = requestedForProgress > 0 ? Math.round((effectiveShipped / requestedForProgress) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
-      const productSkuForInventory = order.products?.sku || null;
+      const productSkuForInventory = order.products?.codigo_producto || order.products?.pt_code || null;
       const excessStockFromInventory = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
       const excessStockFromSap =
         hasSapWarehouseData && sapStockAvailable > pending

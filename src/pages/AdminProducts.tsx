@@ -265,14 +265,11 @@ export default function AdminProducts() {
         }
 
         // Ensure required fields
-        if (!productData.sku && codigoProducto) {
-          productData.sku = codigoProducto;
+        if (!productData.codigo_producto && codigoProducto) {
+          productData.codigo_producto = codigoProducto;
         }
         if (!productData.name) {
-          productData.name = productData.nombre_producto_2 || productData.item_description || productData.sku || 'Unknown';
-        }
-        if (!productData.category) {
-          productData.category = productData.tipo_empaque || 'Other';
+          productData.name = productData.item_description || productData.codigo_producto || 'Unknown';
         }
 
         // Check if product exists by codigo_producto or customer_item

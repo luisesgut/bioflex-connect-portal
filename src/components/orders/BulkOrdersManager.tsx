@@ -56,7 +56,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
       const rows = (data || []).map((order: any) => [
         order.id,
         order.po_number,
-        order.products?.sku || "",
+        order.products?.codigo_producto || "",
         order.products?.name || "",
         order.quantity,
         order.price_per_thousand || "",
