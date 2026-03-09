@@ -32,7 +32,7 @@ interface Product {
   piezas_por_paquete: number | null;
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
-  print_card: string | null;
+  pc_number: string | null;
   print_card_url: string | null;
   customer_tech_spec_url: string | null;
   bfx_spec_url: string | null;

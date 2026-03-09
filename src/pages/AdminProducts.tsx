@@ -836,10 +836,10 @@ export default function AdminProducts() {
                           {product.codigo_producto || '-'}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
-                          {product.nombre_producto_2 || product.name}
+                          {product.item_description || product.name}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {product.print_card || '-'}
+                          {product.pc_number || '-'}
                         </TableCell>
                         <TableCell className="bg-green-500/5">
                           {product.print_card_url ? (
