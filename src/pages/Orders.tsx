@@ -266,8 +266,7 @@ export default function Orders() {
 
       const productIdByKey = new Map<string, string>();
       if (sapProductKeys.length > 0) {
-        const [bySku, byPtCode, byCodigoProducto] = await Promise.all([
-          supabase.from("products").select("id, sku").in("sku", sapProductKeys),
+        const [byPtCode, byCodigoProducto] = await Promise.all([
           supabase.from("products").select("id, pt_code").in("pt_code", sapProductKeys),
           supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapProductKeys),
         ]);
