@@ -478,7 +478,7 @@ export default function Orders() {
     }
 
     const ptCodes = combinedOrdersSource
-      .map((o: any) => o.products?.sku)
+      .map((o: any) => o.products?.codigo_producto || o.products?.pt_code)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
     
     let excessStockByPT: Record<string, ExcessStockDetail> = {};
