@@ -251,9 +251,9 @@ export default function AdminProducts() {
         const codigoProducto = columnIndices.codigo_producto !== undefined 
           ? values[columnIndices.codigo_producto]?.trim() 
           : null;
-        const sku = columnIndices.sku !== undefined 
-          ? values[columnIndices.sku]?.trim() 
-          : codigoProducto; // Use codigoProducto as sku if no sku column
+        const customerItem = columnIndices.customer_item !== undefined 
+          ? values[columnIndices.customer_item]?.trim() 
+          : null;
 
         if (!codigoProducto && !sku) continue;
 
