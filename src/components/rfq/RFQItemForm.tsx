@@ -90,6 +90,14 @@ export interface RFQItemData {
   rubber_washers: boolean;
   extrusion_type: string;
   clarity_grade: string;
+  // Film-specific fields
+  core_size_inches: string;
+  max_splices_per_roll: string;
+  weight_kg_per_roll: string;
+  core_plug: boolean;
+  prints_per_roll: string;
+  meters_per_roll: string;
+  diameter_per_roll: string;
 
   // Section 3 - Packaging & Shipping Format
   wicket_hole: string;
