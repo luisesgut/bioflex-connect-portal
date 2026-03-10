@@ -892,9 +892,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 5: Complementary Information ═══════════ */}
-      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
-        <SectionHeader title="Complementary Information" number={5} open={openSections.includes(5)} />
+      {/* ═══════════ SECTION 6: Complementary Information ═══════════ */}
+      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
+        <SectionHeader title="Complementary Information" number={6} open={openSections.includes(6)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Authorization */}
