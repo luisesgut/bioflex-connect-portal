@@ -588,7 +588,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                     <Label className="text-xs">Core Plug</Label>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Prints per Roll</Label>
+                    <Label className="text-xs">Impressions per Roll</Label>
                     <Input
                       type="number"
                       step="1"
