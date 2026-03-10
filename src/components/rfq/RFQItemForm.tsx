@@ -602,7 +602,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Meters per Roll</Label>
+                    <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
                     <Input
                       type="number"
                       step="0.01"
