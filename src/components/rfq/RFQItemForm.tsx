@@ -990,9 +990,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 6: Volumes to Quote ═══════════ */}
-      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
-        <SectionHeader title="Volumes to Quote" number={6} open={openSections.includes(6)} />
+      {/* ═══════════ SECTION 7: Volumes to Quote ═══════════ */}
+      <Collapsible open={openSections.includes(7)} onOpenChange={() => toggleSection(7)}>
+        <SectionHeader title="Volumes to Quote" number={7} open={openSections.includes(7)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2">
             <div className="flex items-center justify-end mb-3">
