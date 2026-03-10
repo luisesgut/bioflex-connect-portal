@@ -17,7 +17,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { FileText, Plus, Trash2, Upload, X, ChevronDown } from "lucide-react";
+import { FileText, Plus, Trash2, Upload, X, ChevronDown, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   StructureLayersInput,
@@ -427,7 +438,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Film & Printing */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {!isWicket && (
+              {!isWicket && !isFilm && (
                 <div className="space-y-1">
                   <Label className="text-xs">Film Type</Label>
                   <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
@@ -438,13 +449,42 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   <Label className="text-xs">Seal Type</Label>
                   <Input value="Side Seal" disabled className="bg-muted text-muted-foreground" />
                 </div>
-              ) : (
+              ) : !isFilm ? (
                 <div className="space-y-1">
                   <Label className="text-xs">Seal Type</Label>
                   <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
                 </div>
-              )}
-              {!isWicket && (
+              ) : null}
+              {isFilm ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs">Sentido de Embobinado</Label>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-primary transition-colors">
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <img src="/images/winding-directions.png" alt="Referencia de sentidos de embobinado FIG 1-8" className="w-full rounded-md" />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <Select value={data.printing_side} onValueChange={(v) => update({ printing_side: v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fig1">FIG 1</SelectItem>
+                      <SelectItem value="fig2">FIG 2</SelectItem>
+                      <SelectItem value="fig3">FIG 3</SelectItem>
+                      <SelectItem value="fig4">FIG 4</SelectItem>
+                      <SelectItem value="fig5">FIG 5</SelectItem>
+                      <SelectItem value="fig6">FIG 6</SelectItem>
+                      <SelectItem value="fig7">FIG 7</SelectItem>
+                      <SelectItem value="fig8">FIG 8</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : !isWicket ? (
                 <div className="space-y-1">
                   <Label className="text-xs">Printing Side</Label>
                   <Select value={data.printing_side} onValueChange={(v) => update({ printing_side: v })}>
@@ -457,7 +497,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              ) : null}
               <div className="space-y-1">
                 <Label className="text-xs">Ink Type</Label>
                 <Select value={data.ink_type} onValueChange={(v) => update({ ink_type: v })}>
