@@ -472,10 +472,10 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </div>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between font-normal h-10">
+                      <Button variant="outline" className="w-full justify-between font-normal h-12">
                         {data.printing_side ? (
                           <span className="flex items-center gap-2">
-                            <img src={`/images/winding-fig${data.printing_side.replace('fig', '')}.png`} alt="" className="h-6 w-6 object-contain" />
+                            <img src={`/images/winding-fig${data.printing_side.replace('fig', '')}.png`} alt="" className="h-9 w-9 object-contain" />
                             FIG {data.printing_side.replace('fig', '')}
                           </span>
                         ) : (
@@ -484,19 +484,19 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
-                      <div className="grid grid-cols-2 gap-1">
+                    <PopoverContent className="w-80 p-2" align="start">
+                      <div className="grid grid-cols-2 gap-1.5">
                         {[1,2,3,4,5,6,7,8].map((n) => (
                           <button
                             key={n}
                             type="button"
                             onClick={() => update({ printing_side: `fig${n}` })}
                             className={cn(
-                              "flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted cursor-pointer text-sm transition-colors",
+                              "flex items-center gap-3 px-3 py-3 rounded-md hover:bg-muted cursor-pointer text-sm transition-colors",
                               data.printing_side === `fig${n}` && "bg-accent text-accent-foreground"
                             )}
                           >
-                            <img src={`/images/winding-fig${n}.png`} alt={`FIG ${n}`} className="h-10 w-10 object-contain" />
+                            <img src={`/images/winding-fig${n}.png`} alt={`FIG ${n}`} className="h-16 w-16 object-contain" />
                             <span className="font-medium">FIG {n}</span>
                           </button>
                         ))}
