@@ -466,23 +466,43 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                         </button>
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl">
-                        <img src="/images/winding-directions.png" alt="Referencia de sentidos de embobinado FIG 1-8" className="w-full rounded-md" />
+                        <img src="/images/winding-directions.png" alt="Winding direction reference FIG 1-8" className="w-full rounded-md" />
                       </DialogContent>
                     </Dialog>
                   </div>
-                  <Select value={data.printing_side} onValueChange={(v) => update({ printing_side: v })}>
-                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fig1">FIG 1</SelectItem>
-                      <SelectItem value="fig2">FIG 2</SelectItem>
-                      <SelectItem value="fig3">FIG 3</SelectItem>
-                      <SelectItem value="fig4">FIG 4</SelectItem>
-                      <SelectItem value="fig5">FIG 5</SelectItem>
-                      <SelectItem value="fig6">FIG 6</SelectItem>
-                      <SelectItem value="fig7">FIG 7</SelectItem>
-                      <SelectItem value="fig8">FIG 8</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal h-10">
+                        {data.printing_side ? (
+                          <span className="flex items-center gap-2">
+                            <img src={`/images/winding-fig${data.printing_side.replace('fig', '')}.png`} alt="" className="h-6 w-6 object-contain" />
+                            FIG {data.printing_side.replace('fig', '')}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Select</span>
+                        )}
+                        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
+                      <div className="grid grid-cols-2 gap-1">
+                        {[1,2,3,4,5,6,7,8].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => update({ printing_side: `fig${n}` })}
+                            className={cn(
+                              "flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted cursor-pointer text-sm transition-colors",
+                              data.printing_side === `fig${n}` && "bg-accent text-accent-foreground"
+                            )}
+                          >
+                            <img src={`/images/winding-fig${n}.png`} alt={`FIG ${n}`} className="h-10 w-10 object-contain" />
+                            <span className="font-medium">FIG {n}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               ) : !isWicket ? (
                 <div className="space-y-1">
