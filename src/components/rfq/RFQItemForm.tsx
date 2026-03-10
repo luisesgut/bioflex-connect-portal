@@ -458,7 +458,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               {isFilm ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <Label className="text-xs">Sentido de Embobinado</Label>
+                    <Label className="text-xs">Winding Direction</Label>
                     <Dialog>
                       <DialogTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-primary transition-colors">
