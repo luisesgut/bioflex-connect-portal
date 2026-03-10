@@ -1,0 +1,1 @@
+ALTER TABLE public.rfq_items ADD COLUMN number_of_colors integer;

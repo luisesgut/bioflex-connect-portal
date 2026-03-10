@@ -90,6 +90,8 @@ export interface RFQItemData {
   rubber_washers: boolean;
   extrusion_type: string;
   clarity_grade: string;
+  // Printing section
+  number_of_colors: string;
   // Film-specific fields
   core_size_inches: string;
   max_splices_per_roll: string;
@@ -240,7 +242,7 @@ function SectionHeader({
 
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
-  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
@@ -434,35 +436,45 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 3: Complementos ═══════════ */}
+      {/* ═══════════ SECTION 3: Printing ═══════════ */}
       <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
-        <SectionHeader title="Complements" number={3} open={openSections.includes(3)} />
+        <SectionHeader title="Printing" number={3} open={openSections.includes(3)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
-              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure printing.</p>
             </div>
           ) : (
-          <div className="px-3 pb-4 pt-2 space-y-4">
-            {/* Film & Printing */}
+          <div className="px-3 pb-4 pt-2">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {!isWicket && !isFilm && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Film Type</Label>
-                  <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
-                </div>
-              )}
-              {isWicket ? (
-                <div className="space-y-1">
-                  <Label className="text-xs">Seal Type</Label>
-                  <Input value="Side Seal" disabled className="bg-muted text-muted-foreground" />
-                </div>
-              ) : !isFilm ? (
-                <div className="space-y-1">
-                  <Label className="text-xs">Seal Type</Label>
-                  <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
-                </div>
-              ) : null}
+              <div className="space-y-1">
+                <Label className="text-xs">Number of Colors</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={data.number_of_colors}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ number_of_colors: val });
+                  }}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Ink Type</Label>
+                <Select value={data.ink_type} onValueChange={(v) => update({ ink_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lamination">Lamination</SelectItem>
+                    <SelectItem value="front_varnish">Front + Varnish</SelectItem>
+                    <SelectItem value="thermo_resistant">Thermo-resistant Front</SelectItem>
+                    <SelectItem value="frozen">Frozen</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="na">N/A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               {isFilm ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5">
@@ -524,20 +536,41 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </Select>
                 </div>
               ) : null}
-              <div className="space-y-1">
-                <Label className="text-xs">Ink Type</Label>
-                <Select value={data.ink_type} onValueChange={(v) => update({ ink_type: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="lamination">Lamination</SelectItem>
-                    <SelectItem value="front_varnish">Front + Varnish</SelectItem>
-                    <SelectItem value="thermo_resistant">Thermo-resistant Front</SelectItem>
-                    <SelectItem value="frozen">Frozen</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                    <SelectItem value="na">N/A</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+          </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ═══════════ SECTION 4: Complementos ═══════════ */}
+      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
+        <SectionHeader title="Complements" number={4} open={openSections.includes(4)} />
+        <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+            </div>
+          ) : (
+          <div className="px-3 pb-4 pt-2 space-y-4">
+            {/* Film & Printing */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {!isWicket && !isFilm && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Film Type</Label>
+                  <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
+                </div>
+              )}
+              {isWicket ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">Seal Type</Label>
+                  <Input value="Side Seal" disabled className="bg-muted text-muted-foreground" />
+                </div>
+              ) : !isFilm ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">Seal Type</Label>
+                  <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
+                </div>
+              ) : null}
             </div>
 
             {/* Film-specific roll fields */}
@@ -767,9 +800,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 4: Packaging & Packing ═══════════ */}
-      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
-        <SectionHeader title="Packaging & Shipping Format" number={4} open={openSections.includes(4)} />
+      {/* ═══════════ SECTION 5: Packaging & Packing ═══════════ */}
+      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
+        <SectionHeader title="Packaging & Shipping Format" number={5} open={openSections.includes(5)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
@@ -859,9 +892,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 5: Complementary Information ═══════════ */}
-      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
-        <SectionHeader title="Complementary Information" number={5} open={openSections.includes(5)} />
+      {/* ═══════════ SECTION 6: Complementary Information ═══════════ */}
+      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
+        <SectionHeader title="Complementary Information" number={6} open={openSections.includes(6)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Authorization */}
@@ -957,9 +990,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 6: Volumes to Quote ═══════════ */}
-      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
-        <SectionHeader title="Volumes to Quote" number={6} open={openSections.includes(6)} />
+      {/* ═══════════ SECTION 7: Volumes to Quote ═══════════ */}
+      <Collapsible open={openSections.includes(7)} onOpenChange={() => toggleSection(7)}>
+        <SectionHeader title="Volumes to Quote" number={7} open={openSections.includes(7)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2">
             <div className="flex items-center justify-end mb-3">

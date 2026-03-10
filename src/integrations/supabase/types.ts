@@ -1564,6 +1564,7 @@ export type Database = {
           max_splices_per_roll: number | null
           meters_per_roll: number | null
           notes: string | null
+          number_of_colors: number | null
           observations: string | null
           pallet_dimensions: string | null
           pantone_base: boolean | null
@@ -1630,6 +1631,7 @@ export type Database = {
           max_splices_per_roll?: number | null
           meters_per_roll?: number | null
           notes?: string | null
+          number_of_colors?: number | null
           observations?: string | null
           pallet_dimensions?: string | null
           pantone_base?: boolean | null
@@ -1696,6 +1698,7 @@ export type Database = {
           max_splices_per_roll?: number | null
           meters_per_roll?: number | null
           notes?: string | null
+          number_of_colors?: number | null
           observations?: string | null
           pallet_dimensions?: string | null
           pantone_base?: boolean | null
