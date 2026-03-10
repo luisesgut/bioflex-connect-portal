@@ -329,6 +329,7 @@ export default function CreateRFQ() {
             prints_per_roll: item.prints_per_roll ? Number(item.prints_per_roll) : null,
             meters_per_roll: item.meters_per_roll ? Number(item.meters_per_roll) : null,
             diameter_per_roll: item.diameter_per_roll ? Number(item.diameter_per_roll) : null,
+            number_of_colors: item.number_of_colors ? Number(item.number_of_colors) : null,
           } as any)
           .select()
           .single();
