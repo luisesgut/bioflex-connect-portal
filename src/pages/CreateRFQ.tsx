@@ -72,6 +72,13 @@ const EMPTY_ITEM: RFQItemData = {
   rubber_washers: false,
   extrusion_type: "",
   clarity_grade: "",
+  core_size_inches: "",
+  max_splices_per_roll: "",
+  weight_kg_per_roll: "",
+  core_plug: false,
+  prints_per_roll: "",
+  meters_per_roll: "",
+  diameter_per_roll: "",
   wicket_hole: "",
   wicket_size: "",
   wicket_type: "",
@@ -314,6 +321,13 @@ export default function CreateRFQ() {
             observations: item.observations || null,
             pieces_per_wicket: item.pieces_per_wicket ? Number(item.pieces_per_wicket) : null,
             pieces_per_case: item.pieces_per_case ? Number(item.pieces_per_case) : null,
+            core_size_inches: item.core_size_inches || null,
+            max_splices_per_roll: item.max_splices_per_roll ? Number(item.max_splices_per_roll) : null,
+            weight_kg_per_roll: item.weight_kg_per_roll ? Number(item.weight_kg_per_roll) : null,
+            core_plug: item.core_plug,
+            prints_per_roll: item.prints_per_roll ? Number(item.prints_per_roll) : null,
+            meters_per_roll: item.meters_per_roll ? Number(item.meters_per_roll) : null,
+            diameter_per_roll: item.diameter_per_roll ? Number(item.diameter_per_roll) : null,
           } as any)
           .select()
           .single();
