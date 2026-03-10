@@ -540,7 +540,99 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               </div>
             </div>
 
-            {/* Wicket-specific elements */}
+            {/* Film-specific roll fields */}
+            {isFilm && (
+              <div className="space-y-3 mt-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Roll Specifications</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Core (in)</Label>
+                    <Select value={data.core_size_inches} onValueChange={(v) => update({ core_size_inches: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3"</SelectItem>
+                        <SelectItem value="5">5"</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Max Splices per Roll</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={data.max_splices_per_roll}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ max_splices_per_roll: val });
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Weight per Roll (kg)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={data.weight_kg_per_roll}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || Number(val) >= 0) update({ weight_kg_per_roll: val });
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 mt-5">
+                    <Checkbox checked={data.core_plug} onCheckedChange={(c) => update({ core_plug: !!c })} />
+                    <Label className="text-xs">Core Plug</Label>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Prints per Roll</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={data.prints_per_roll}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ prints_per_roll: val });
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Meters per Roll</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={data.meters_per_roll}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || Number(val) >= 0) update({ meters_per_roll: val });
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Roll Diameter</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={data.diameter_per_roll}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "" || Number(val) >= 0) update({ diameter_per_roll: val });
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {showWicketFields && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Elements</p>
