@@ -90,6 +90,8 @@ export interface RFQItemData {
   rubber_washers: boolean;
   extrusion_type: string;
   clarity_grade: string;
+  // Printing section
+  number_of_colors: string;
   // Film-specific fields
   core_size_inches: string;
   max_splices_per_roll: string;
