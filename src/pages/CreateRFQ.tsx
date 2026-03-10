@@ -72,6 +72,7 @@ const EMPTY_ITEM: RFQItemData = {
   rubber_washers: false,
   extrusion_type: "",
   clarity_grade: "",
+  number_of_colors: "",
   core_size_inches: "",
   max_splices_per_roll: "",
   weight_kg_per_roll: "",
