@@ -834,7 +834,34 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                 </>
               )}
 
-              {!showWicketFields && (
+              {isFilm && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Rolls / Piso</Label>
+                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pisos / Pallet</Label>
+                    <Input type="number" value={data.floors_per_pallet} onChange={(e) => update({ floors_per_pallet: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Total Rolls / Pallet</Label>
+                    <Input
+                      type="number"
+                      value={
+                        data.rolls_per_floor && data.floors_per_pallet
+                          ? String(Number(data.rolls_per_floor) * Number(data.floors_per_pallet))
+                          : ""
+                      }
+                      disabled
+                      className="bg-muted text-muted-foreground"
+                      placeholder="—"
+                    />
+                  </div>
+                </>
+              )}
+
+              {!showWicketFields && !isFilm && (
                 <>
                   <div className="space-y-1">
                     <Label className="text-xs">Pieces / Case</Label>
@@ -849,7 +876,14 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
               <div className="space-y-1">
                 <Label className="text-xs">Pallet Size</Label>
-                <Input value={data.pallet_dimensions} onChange={(e) => update({ pallet_dimensions: e.target.value })} placeholder="e.g., 40 x 48" />
+                <Select value={data.pallet_dimensions} onValueChange={(v) => update({ pallet_dimensions: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pallet size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 x 1.1 mts">1 x 1.1 mts</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Max Pallet Height</Label>
