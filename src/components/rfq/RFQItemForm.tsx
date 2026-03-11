@@ -165,16 +165,70 @@ const toIn = (mm: string) => {
   const n = parseFloat(mm);
   return isNaN(n) ? "" : (n / IN_TO_MM).toFixed(4);
 };
-// Helper to get thickness in inches from structure layers or direct value
-const getThicknessInInches = (data: RFQItemData): number => {
-  const layer = data.structure_layers[0];
-  const thicknessVal = layer?.thickness_value ? Number(layer.thickness_value) : (data.thickness_value ? Number(data.thickness_value) : 0);
-  const unit = layer?.thickness_unit || data.thickness_unit || "gauge";
-  if (thicknessVal <= 0) return 0;
-  if (unit === "gauge") return thicknessVal * 0.00001; // 1 gauge = 0.00001 inches
-  if (unit === "mil") return thicknessVal * 0.001;
-  if (unit === "micron") return thicknessVal * 0.00003937;
-  return thicknessVal * 0.00001; // default gauge
+// --- Metric helpers for roll calculations ---
+
+/** Convert a layer's thickness value to microns based on its unit */
+const toMicrons = (value: number, unit: string): number => {
+  if (unit === "micron") return value;
+  if (unit === "mil") return value * 25.4;
+  // gauge: 1 gauge = 0.254 microns (100 gauge = 1 mil = 25.4 µm)
+  return value * 0.254;
+};
+
+/** Sum total thickness in mm across all structure layers */
+const getTotalThicknessMm = (layers: StructureLayer[]): number => {
+  return layers.reduce((sum, l) => {
+    const v = Number(l.thickness_value);
+    if (!v || v <= 0) return sum;
+    return sum + toMicrons(v, l.thickness_unit || "gauge") / 1000;
+  }, 0);
+};
+
+/** Gramaje Total (g/m²) = Σ(thickness_µm × density_g_cm3) + adhesive */
+const getGramajeTotal = (
+  layers: StructureLayer[],
+  densityMap: Record<string, number>,
+  adhesiveGsm: number = 2.0,
+): number => {
+  const layerGsm = layers.reduce((sum, l) => {
+    const v = Number(l.thickness_value);
+    if (!v || v <= 0) return sum;
+    const microns = toMicrons(v, l.thickness_unit || "gauge");
+    const density = densityMap[l.material] ?? 0.92; // fallback LDPE
+    return sum + microns * density;
+  }, 0);
+  return layerGsm + (layers.length > 1 ? adhesiveGsm : 0);
+};
+
+interface RollCalcResult {
+  diameterMm: number | null;
+  weightKg: number | null;
+}
+
+/** Calculate roll diameter (mm) and net weight (kg) using proper formulas */
+const calcRollDimensions = (
+  metersPerRoll: number,
+  widthMm: number,
+  layers: StructureLayer[],
+  densityMap: Record<string, number>,
+  coreDiaMm: number,
+): RollCalcResult => {
+  const thicknessMm = getTotalThicknessMm(layers);
+  const gramaje = getGramajeTotal(layers, densityMap);
+
+  let diameterMm: number | null = null;
+  if (thicknessMm > 0 && metersPerRoll > 0) {
+    const metrajeMm = metersPerRoll * 1000;
+    diameterMm = Math.sqrt((4 * metrajeMm * thicknessMm) / Math.PI + coreDiaMm * coreDiaMm);
+  }
+
+  let weightKg: number | null = null;
+  if (gramaje > 0 && widthMm > 0 && metersPerRoll > 0) {
+    const widthM = widthMm / 1000;
+    weightKg = (widthM * metersPerRoll * gramaje) / 1000;
+  }
+
+  return { diameterMm, weightKg };
 };
 
 function MeasureField({
