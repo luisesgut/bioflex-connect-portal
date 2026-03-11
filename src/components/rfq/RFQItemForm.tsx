@@ -311,8 +311,57 @@ function SectionHeader({
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
   const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
+  const [materialDensityMap, setMaterialDensityMap] = useState<Record<string, number>>({});
+
+  // Fetch material densities from structure_layer_options
+  useEffect(() => {
+    const fetchDensities = async () => {
+      const { data: opts } = await supabase
+        .from("structure_layer_options")
+        .select("label, density")
+        .eq("category", "material")
+        .eq("is_active", true);
+      if (opts) {
+        const map: Record<string, number> = {};
+        for (const o of opts) {
+          if (o.label && o.density) map[o.label] = o.density;
+        }
+        setMaterialDensityMap(map);
+      }
+    };
+    fetchDensities();
+  }, []);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
+
+  /** Compute diameter & weight and merge into updates object */
+  const computeRollUpdates = useCallback(
+    (metersPerRoll: number, currentData: RFQItemData): Partial<RFQItemData> => {
+      const widthVal = Number(currentData.width);
+      // Width is always in the current measureUnit
+      const widthMm = measureUnit === "in" ? widthVal * IN_TO_MM : widthVal;
+      const coreDiaInches = currentData.core_size_inches ? Number(currentData.core_size_inches) : 3;
+      const coreDiaMm = coreDiaInches * IN_TO_MM;
+
+      const { diameterMm, weightKg } = calcRollDimensions(
+        metersPerRoll,
+        widthMm,
+        currentData.structure_layers,
+        materialDensityMap,
+        coreDiaMm,
+      );
+
+      const result: Partial<RFQItemData> = {};
+      if (diameterMm !== null) {
+        result.diameter_per_roll = String(Math.round(diameterMm * 100) / 100);
+      }
+      if (weightKg !== null) {
+        result.weight_kg_per_roll = String(Math.round(weightKg * 100) / 100);
+      }
+      return result;
+    },
+    [measureUnit, materialDensityMap],
+  );
 
   const toggleSection = (n: number) => {
     setOpenSections((prev) =>
