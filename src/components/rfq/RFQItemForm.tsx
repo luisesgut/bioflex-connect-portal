@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,16 +165,70 @@ const toIn = (mm: string) => {
   const n = parseFloat(mm);
   return isNaN(n) ? "" : (n / IN_TO_MM).toFixed(4);
 };
-// Helper to get thickness in inches from structure layers or direct value
-const getThicknessInInches = (data: RFQItemData): number => {
-  const layer = data.structure_layers[0];
-  const thicknessVal = layer?.thickness_value ? Number(layer.thickness_value) : (data.thickness_value ? Number(data.thickness_value) : 0);
-  const unit = layer?.thickness_unit || data.thickness_unit || "gauge";
-  if (thicknessVal <= 0) return 0;
-  if (unit === "gauge") return thicknessVal * 0.00001; // 1 gauge = 0.00001 inches
-  if (unit === "mil") return thicknessVal * 0.001;
-  if (unit === "micron") return thicknessVal * 0.00003937;
-  return thicknessVal * 0.00001; // default gauge
+// --- Metric helpers for roll calculations ---
+
+/** Convert a layer's thickness value to microns based on its unit */
+const toMicrons = (value: number, unit: string): number => {
+  if (unit === "micron") return value;
+  if (unit === "mil") return value * 25.4;
+  // gauge: 1 gauge = 0.254 microns (100 gauge = 1 mil = 25.4 µm)
+  return value * 0.254;
+};
+
+/** Sum total thickness in mm across all structure layers */
+const getTotalThicknessMm = (layers: StructureLayer[]): number => {
+  return layers.reduce((sum, l) => {
+    const v = Number(l.thickness_value);
+    if (!v || v <= 0) return sum;
+    return sum + toMicrons(v, l.thickness_unit || "gauge") / 1000;
+  }, 0);
+};
+
+/** Gramaje Total (g/m²) = Σ(thickness_µm × density_g_cm3) + adhesive */
+const getGramajeTotal = (
+  layers: StructureLayer[],
+  densityMap: Record<string, number>,
+  adhesiveGsm: number = 2.0,
+): number => {
+  const layerGsm = layers.reduce((sum, l) => {
+    const v = Number(l.thickness_value);
+    if (!v || v <= 0) return sum;
+    const microns = toMicrons(v, l.thickness_unit || "gauge");
+    const density = densityMap[l.material] ?? 0.92; // fallback LDPE
+    return sum + microns * density;
+  }, 0);
+  return layerGsm + (layers.length > 1 ? adhesiveGsm : 0);
+};
+
+interface RollCalcResult {
+  diameterMm: number | null;
+  weightKg: number | null;
+}
+
+/** Calculate roll diameter (mm) and net weight (kg) using proper formulas */
+const calcRollDimensions = (
+  metersPerRoll: number,
+  widthMm: number,
+  layers: StructureLayer[],
+  densityMap: Record<string, number>,
+  coreDiaMm: number,
+): RollCalcResult => {
+  const thicknessMm = getTotalThicknessMm(layers);
+  const gramaje = getGramajeTotal(layers, densityMap);
+
+  let diameterMm: number | null = null;
+  if (thicknessMm > 0 && metersPerRoll > 0) {
+    const metrajeMm = metersPerRoll * 1000;
+    diameterMm = Math.sqrt((4 * metrajeMm * thicknessMm) / Math.PI + coreDiaMm * coreDiaMm);
+  }
+
+  let weightKg: number | null = null;
+  if (gramaje > 0 && widthMm > 0 && metersPerRoll > 0) {
+    const widthM = widthMm / 1000;
+    weightKg = (widthM * metersPerRoll * gramaje) / 1000;
+  }
+
+  return { diameterMm, weightKg };
 };
 
 function MeasureField({
@@ -256,8 +311,57 @@ function SectionHeader({
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
   const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
+  const [materialDensityMap, setMaterialDensityMap] = useState<Record<string, number>>({});
+
+  // Fetch material densities from structure_layer_options
+  useEffect(() => {
+    const fetchDensities = async () => {
+      const { data: opts } = await supabase
+        .from("structure_layer_options")
+        .select("label, density")
+        .eq("category", "material")
+        .eq("is_active", true);
+      if (opts) {
+        const map: Record<string, number> = {};
+        for (const o of opts) {
+          if (o.label && o.density) map[o.label] = o.density;
+        }
+        setMaterialDensityMap(map);
+      }
+    };
+    fetchDensities();
+  }, []);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
+
+  /** Compute diameter & weight and merge into updates object */
+  const computeRollUpdates = useCallback(
+    (metersPerRoll: number, currentData: RFQItemData): Partial<RFQItemData> => {
+      const widthVal = Number(currentData.width);
+      // Width is always in the current measureUnit
+      const widthMm = measureUnit === "in" ? widthVal * IN_TO_MM : widthVal;
+      const coreDiaInches = currentData.core_size_inches ? Number(currentData.core_size_inches) : 3;
+      const coreDiaMm = coreDiaInches * IN_TO_MM;
+
+      const { diameterMm, weightKg } = calcRollDimensions(
+        metersPerRoll,
+        widthMm,
+        currentData.structure_layers,
+        materialDensityMap,
+        coreDiaMm,
+      );
+
+      const result: Partial<RFQItemData> = {};
+      if (diameterMm !== null) {
+        result.diameter_per_roll = String(Math.round(diameterMm * 100) / 100);
+      }
+      if (weightKg !== null) {
+        result.weight_kg_per_roll = String(Math.round(weightKg * 100) / 100);
+      }
+      return result;
+    },
+    [measureUnit, materialDensityMap],
+  );
 
   const toggleSection = (n: number) => {
     setOpenSections((prev) =>
@@ -643,32 +747,12 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                             const repeatLength = Number(data.length);
                             if (impressions > 0 && repeatLength > 0) {
                               // When in mm mode, length is in mm → divide by 1000 to get meters
-                              // When in inches mode, length is in inches → total is inches
-                              const totalLength = measureUnit === "in"
-                                ? impressions * repeatLength
+                              // When in inches mode, length is in inches → convert to meters
+                              const totalMeters = measureUnit === "in"
+                                ? impressions * repeatLength * IN_TO_MM / 1000
                                 : (impressions * repeatLength) / 1000;
-                              updates.meters_per_roll = String(Math.round(totalLength * 100) / 100);
-                              // Convert totalLength to inches for diameter/weight calculations
-                              const totalInches = measureUnit === "in" ? totalLength : totalLength * 39.3701;
-                              const thicknessInches = getThicknessInInches(data);
-                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
-                              if (thicknessInches > 0) {
-                                const dia = Math.sqrt((4 * thicknessInches * totalInches) / Math.PI + coreDia * coreDia);
-                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
-                              }
-                              // Estimate weight
-                              const widthInches = Number(data.width);
-                              const widthIn = measureUnit === "in" ? widthInches : widthInches / 25.4;
-                              if (thicknessInches > 0 && widthIn > 0) {
-                                const volumeCubicIn = totalInches * widthIn * thicknessInches;
-                                const densityLbPerCubicIn = 0.0334; // ~LDPE density
-                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
-                                if (measureUnit === "in") {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
-                                } else {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
-                                }
-                              }
+                              updates.meters_per_roll = String(Math.round(totalMeters * 100) / 100);
+                              Object.assign(updates, computeRollUpdates(totalMeters, data));
                             }
                             update(updates);
                           }
@@ -677,7 +761,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
+                      <Label className="text-xs">Meters per Roll</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -687,25 +771,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                           const val = e.target.value;
                           if (val === "" || Number(val) >= 0) {
                             const updates: Partial<RFQItemData> = { meters_per_roll: val };
-                            const totalLength = Number(val);
-                            if (totalLength > 0 && !data.prints_per_roll) {
-                              const thicknessInches = getThicknessInInches(data);
-                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
-                              if (thicknessInches > 0) {
-                                const dia = Math.sqrt((4 * thicknessInches * totalLength) / Math.PI + coreDia * coreDia);
-                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
-                              }
-                              const widthInches = Number(data.width);
-                              if (thicknessInches > 0 && widthInches > 0) {
-                                const volumeCubicIn = totalLength * widthInches * thicknessInches;
-                                const densityLbPerCubicIn = 0.0334;
-                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
-                                if (measureUnit === "in") {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
-                                } else {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
-                                }
-                              }
+                            const totalMeters = Number(val);
+                            if (totalMeters > 0 && !data.prints_per_roll) {
+                              Object.assign(updates, computeRollUpdates(totalMeters, data));
                             }
                             update(updates);
                           }
@@ -714,7 +782,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Roll Diameter (in)</Label>
+                      <Label className="text-xs">Roll Diameter (mm)</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -728,7 +796,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{measureUnit === "in" ? "Weight per Roll (lb)" : "Weight per Roll (kg)"}</Label>
+                      <Label className="text-xs">Weight per Roll (kg)</Label>
                       <Input
                         type="number"
                         step="0.01"
