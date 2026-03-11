@@ -1212,17 +1212,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               )}
 
               <div className="space-y-1">
-                <Label className="text-xs">Pallet Size</Label>
-                <Select value={data.pallet_dimensions} onValueChange={(v) => update({ pallet_dimensions: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select pallet size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1 x 1.1 mts">1 x 1.1 mts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
                 <Label className="text-xs">Max Pallet Height</Label>
                 <Input value={data.max_pallet_height} onChange={(e) => update({ max_pallet_height: e.target.value })} placeholder="e.g., 1.4 mts" />
               </div>
