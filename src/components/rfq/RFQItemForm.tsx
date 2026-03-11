@@ -796,7 +796,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{measureUnit === "in" ? "Weight per Roll (lb)" : "Weight per Roll (kg)"}</Label>
+                      <Label className="text-xs">Weight per Roll (kg)</Label>
                       <Input
                         type="number"
                         step="0.01"
