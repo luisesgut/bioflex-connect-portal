@@ -176,7 +176,7 @@ const getThicknessInInches = (data: RFQItemData): number => {
   return thicknessVal * 0.00001; // default gauge
 };
 
-
+function MeasureField({
   label,
   value,
   onChange,
