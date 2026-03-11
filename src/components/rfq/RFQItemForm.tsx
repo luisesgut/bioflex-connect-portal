@@ -1174,8 +1174,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               {isFilm && (
                 <>
                   <div className="space-y-1">
-                    <Label className="text-xs">Rolls / Layer</Label>
-                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" />
+                    <Label className="text-xs">Rolls / Layer {data.diameter_per_roll && Number(data.diameter_per_roll) > 0 ? <span className="text-muted-foreground font-normal">(auto)</span> : null}</Label>
+                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" className={data.diameter_per_roll && Number(data.diameter_per_roll) > 0 ? "bg-muted/50" : ""} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Layers / Pallet</Label>
