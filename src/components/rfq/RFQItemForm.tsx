@@ -648,7 +648,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                                 ? impressions * repeatLength
                                 : (impressions * repeatLength) / 1000;
                               updates.meters_per_roll = String(Math.round(totalLength * 100) / 100);
-                              // Estimate diameter: D = sqrt((4 * T * L) / π + d²) where T=film thickness, L=total length, d=core diameter
+                              // Convert totalLength to inches for diameter/weight calculations
+                              const totalInches = measureUnit === "in" ? totalLength : totalLength * 39.3701;
                               const thicknessInches = getThicknessInInches(data);
                               const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
                               if (thicknessInches > 0) {
@@ -657,8 +658,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                               }
                               // Estimate weight
                               const widthInches = Number(data.width);
-                              if (thicknessInches > 0 && widthInches > 0) {
-                                const volumeCubicIn = totalInches * widthInches * thicknessInches;
+                              const widthIn = measureUnit === "in" ? widthInches : widthInches / 25.4;
+                              if (thicknessInches > 0 && widthIn > 0) {
+                                const volumeCubicIn = totalInches * widthIn * thicknessInches;
                                 const densityLbPerCubicIn = 0.0334; // ~LDPE density
                                 const weightLb = volumeCubicIn * densityLbPerCubicIn;
                                 if (measureUnit === "in") {
