@@ -164,6 +164,17 @@ const toIn = (mm: string) => {
   const n = parseFloat(mm);
   return isNaN(n) ? "" : (n / IN_TO_MM).toFixed(4);
 };
+// Helper to get thickness in inches from structure layers or direct value
+const getThicknessInInches = (data: RFQItemData): number => {
+  const layer = data.structure_layers[0];
+  const thicknessVal = layer?.thickness_value ? Number(layer.thickness_value) : (data.thickness_value ? Number(data.thickness_value) : 0);
+  const unit = layer?.thickness_unit || data.thickness_unit || "gauge";
+  if (thicknessVal <= 0) return 0;
+  if (unit === "gauge") return thicknessVal * 0.00001; // 1 gauge = 0.00001 inches
+  if (unit === "mil") return thicknessVal * 0.001;
+  if (unit === "micron") return thicknessVal * 0.00003937;
+  return thicknessVal * 0.00001; // default gauge
+};
 
 function MeasureField({
   label,
@@ -577,104 +588,172 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
             {/* Film-specific roll fields */}
             {isFilm && (
-              <div className="space-y-3 mt-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Roll Specifications</p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Core (in)</Label>
-                    <Select value={data.core_size_inches} onValueChange={(v) => update({ core_size_inches: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3">3"</SelectItem>
-                        <SelectItem value="5">5"</SelectItem>
-                      </SelectContent>
-                    </Select>
+              <div className="space-y-4 mt-3">
+                {/* Row 1: Core, Max Splices, Core Plug */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Roll Specifications</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Core (in)</Label>
+                      <Select value={data.core_size_inches} onValueChange={(v) => update({ core_size_inches: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3"</SelectItem>
+                          <SelectItem value="5">5"</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max Splices per Roll</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.max_splices_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ max_splices_per_roll: val });
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-6">
+                      <Checkbox checked={data.core_plug} onCheckedChange={(c) => update({ core_plug: !!c })} />
+                      <Label className="text-xs">Core Plug</Label>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Max Splices per Roll</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      value={data.max_splices_per_roll}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ max_splices_per_roll: val });
-                      }}
-                      placeholder="0"
-                    />
+                </div>
+
+                {/* Row 2: Impressions, Inches/Meters, Diameter, Weight — with auto-fill */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Roll Dimensions</p>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Impressions per Roll</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.prints_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) {
+                            const updates: Partial<RFQItemData> = { prints_per_roll: val };
+                            const impressions = Number(val);
+                            const repeatLength = Number(data.length);
+                            if (impressions > 0 && repeatLength > 0) {
+                              const totalInches = impressions * repeatLength;
+                              updates.meters_per_roll = String(Math.round(totalInches * 100) / 100);
+                              // Estimate diameter: D = sqrt((4 * T * L) / π + d²) where T=film thickness, L=total length, d=core diameter
+                              const thicknessInches = getThicknessInInches(data);
+                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
+                              if (thicknessInches > 0) {
+                                const dia = Math.sqrt((4 * thicknessInches * totalInches) / Math.PI + coreDia * coreDia);
+                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
+                              }
+                              // Estimate weight
+                              const widthInches = Number(data.width);
+                              if (thicknessInches > 0 && widthInches > 0) {
+                                const volumeCubicIn = totalInches * widthInches * thicknessInches;
+                                const densityLbPerCubicIn = 0.0334; // ~LDPE density
+                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
+                                if (measureUnit === "in") {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
+                                } else {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
+                                }
+                              }
+                            }
+                            update(updates);
+                          }
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.meters_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) {
+                            const updates: Partial<RFQItemData> = { meters_per_roll: val };
+                            const totalLength = Number(val);
+                            if (totalLength > 0 && !data.prints_per_roll) {
+                              const thicknessInches = getThicknessInInches(data);
+                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
+                              if (thicknessInches > 0) {
+                                const dia = Math.sqrt((4 * thicknessInches * totalLength) / Math.PI + coreDia * coreDia);
+                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
+                              }
+                              const widthInches = Number(data.width);
+                              if (thicknessInches > 0 && widthInches > 0) {
+                                const volumeCubicIn = totalLength * widthInches * thicknessInches;
+                                const densityLbPerCubicIn = 0.0334;
+                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
+                                if (measureUnit === "in") {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
+                                } else {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
+                                }
+                              }
+                            }
+                            update(updates);
+                          }
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Roll Diameter (in)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.diameter_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) update({ diameter_per_roll: val });
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{measureUnit === "in" ? "Weight per Roll (lb)" : "Weight per Roll (kg)"}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.weight_kg_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) update({ weight_kg_per_roll: val });
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">{measureUnit === "in" ? "Weight per Roll (lb)" : "Weight per Roll (kg)"}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={data.weight_kg_per_roll}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || Number(val) >= 0) update({ weight_kg_per_roll: val });
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 mt-5">
-                    <Checkbox checked={data.core_plug} onCheckedChange={(c) => update({ core_plug: !!c })} />
-                    <Label className="text-xs">Core Plug</Label>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Impressions per Roll</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      min="0"
-                      value={data.prints_per_roll}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ prints_per_roll: val });
-                      }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={data.meters_per_roll}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || Number(val) >= 0) update({ meters_per_roll: val });
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Roll Diameter</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={data.diameter_per_roll}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || Number(val) >= 0) update({ diameter_per_roll: val });
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Perforation Type</Label>
-                    <Select value={data.perforations} onValueChange={(v) => update({ perforations: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="laser">Laser</SelectItem>
-                        <SelectItem value="macro_4mm">Macroperforated 4mm (5/32")</SelectItem>
-                        <SelectItem value="macro_6mm">Macroperforated 6mm (1/4")</SelectItem>
-                      </SelectContent>
-                    </Select>
+                </div>
+
+                {/* Perforation Type - separate */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Perforations</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Perforation Type</Label>
+                      <Select value={data.perforations} onValueChange={(v) => update({ perforations: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="laser">Laser</SelectItem>
+                          <SelectItem value="macro_4mm">Macroperforated 4mm (5/32")</SelectItem>
+                          <SelectItem value="macro_6mm">Macroperforated 6mm (1/4")</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
