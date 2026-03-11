@@ -415,6 +415,20 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layersJson, data.core_size_inches, data.width, measureUnit, computeRollUpdates]);
 
+  // Auto-calculate rolls per layer when diameter changes (Film only)
+  useEffect(() => {
+    if (!isFilmForEffect) return;
+    const D = Number(data.diameter_per_roll);
+    if (!D || D <= 0) return;
+    const rollsPerRow = Math.floor(1200 / D);
+    const rows = Math.floor(1000 / D);
+    const calculated = rollsPerRow * rows;
+    if (calculated > 0 && String(calculated) !== data.rolls_per_floor) {
+      onChange({ ...data, rolls_per_floor: String(calculated) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.diameter_per_roll, isFilmForEffect]);
+
   // Dynamic field visibility based on product type
   const pt = data.product_type.toLowerCase();
   const isWicket = pt.includes("wicket");
@@ -1160,8 +1174,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               {isFilm && (
                 <>
                   <div className="space-y-1">
-                    <Label className="text-xs">Rolls / Layer</Label>
-                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" />
+                    <Label className="text-xs">Rolls / Layer {data.diameter_per_roll && Number(data.diameter_per_roll) > 0 ? <span className="text-muted-foreground font-normal">(auto)</span> : null}</Label>
+                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" className={data.diameter_per_roll && Number(data.diameter_per_roll) > 0 ? "bg-muted/50" : ""} />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Layers / Pallet</Label>
@@ -1197,17 +1211,6 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                 </>
               )}
 
-              <div className="space-y-1">
-                <Label className="text-xs">Pallet Size</Label>
-                <Select value={data.pallet_dimensions} onValueChange={(v) => update({ pallet_dimensions: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select pallet size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1 x 1.1 mts">1 x 1.1 mts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-1">
                 <Label className="text-xs">Max Pallet Height</Label>
                 <Input value={data.max_pallet_height} onChange={(e) => update({ max_pallet_height: e.target.value })} placeholder="e.g., 1.4 mts" />

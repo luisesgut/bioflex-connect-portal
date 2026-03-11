@@ -308,7 +308,7 @@ export default function CreateRFQ() {
             ink_type: item.ink_type || null,
             wire_type: item.wire_type || null,
             wicket_type: item.wicket_type || null,
-            pallet_dimensions: item.pallet_dimensions || null,
+            pallet_dimensions: "1 x 1.2 mts",
             max_pallet_height: item.max_pallet_height || null,
             perforations: item.perforations || null,
             perforation_size: item.perforation_size || null,
