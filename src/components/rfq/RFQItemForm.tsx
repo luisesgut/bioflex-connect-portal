@@ -642,8 +642,12 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                             const impressions = Number(val);
                             const repeatLength = Number(data.length);
                             if (impressions > 0 && repeatLength > 0) {
-                              const totalInches = impressions * repeatLength;
-                              updates.meters_per_roll = String(Math.round(totalInches * 100) / 100);
+                              // When in mm mode, length is in mm → divide by 1000 to get meters
+                              // When in inches mode, length is in inches → total is inches
+                              const totalLength = measureUnit === "in"
+                                ? impressions * repeatLength
+                                : (impressions * repeatLength) / 1000;
+                              updates.meters_per_roll = String(Math.round(totalLength * 100) / 100);
                               // Estimate diameter: D = sqrt((4 * T * L) / π + d²) where T=film thickness, L=total length, d=core diameter
                               const thicknessInches = getThicknessInInches(data);
                               const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
