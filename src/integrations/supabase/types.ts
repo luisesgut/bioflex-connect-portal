@@ -1542,12 +1542,16 @@ export type Database = {
           cases_per_pallet: number | null
           client_visit: boolean | null
           color_proof: boolean | null
+          core_plug: boolean | null
+          core_size_inches: string | null
           created_at: string
+          diameter_per_roll: number | null
           dp_sales_csr_name: string | null
           editable_files_needed: boolean | null
           film_type: string | null
           finish: string | null
           flip_size_inches: number | null
+          floors_per_pallet: number | null
           gusset_inches: number | null
           id: string
           ink_type: string | null
@@ -1558,7 +1562,10 @@ export type Database = {
           lip_front_inches: number | null
           material: string | null
           max_pallet_height: string | null
+          max_splices_per_roll: number | null
+          meters_per_roll: number | null
           notes: string | null
+          number_of_colors: number | null
           observations: string | null
           pallet_dimensions: string | null
           pantone_base: boolean | null
@@ -1571,12 +1578,14 @@ export type Database = {
           pre_cut_wicket: boolean | null
           prepress_cost_by: string | null
           printing_side: string | null
+          prints_per_roll: number | null
           product_name: string
           product_request_id: string | null
           product_type: Database["public"]["Enums"]["rfq_product_type"]
           reference_files: string[] | null
           reference_image_url: string | null
           rfq_id: string
+          rolls_per_floor: number | null
           sample_base: boolean | null
           seal_type: string | null
           sort_order: number
@@ -1587,6 +1596,7 @@ export type Database = {
           updated_at: string
           vent_size: string | null
           vents_count: number | null
+          weight_kg_per_roll: number | null
           wicket_hole: string | null
           wicket_separation: string | null
           wicket_size: string | null
@@ -1601,12 +1611,16 @@ export type Database = {
           cases_per_pallet?: number | null
           client_visit?: boolean | null
           color_proof?: boolean | null
+          core_plug?: boolean | null
+          core_size_inches?: string | null
           created_at?: string
+          diameter_per_roll?: number | null
           dp_sales_csr_name?: string | null
           editable_files_needed?: boolean | null
           film_type?: string | null
           finish?: string | null
           flip_size_inches?: number | null
+          floors_per_pallet?: number | null
           gusset_inches?: number | null
           id?: string
           ink_type?: string | null
@@ -1617,7 +1631,10 @@ export type Database = {
           lip_front_inches?: number | null
           material?: string | null
           max_pallet_height?: string | null
+          max_splices_per_roll?: number | null
+          meters_per_roll?: number | null
           notes?: string | null
+          number_of_colors?: number | null
           observations?: string | null
           pallet_dimensions?: string | null
           pantone_base?: boolean | null
@@ -1630,12 +1647,14 @@ export type Database = {
           pre_cut_wicket?: boolean | null
           prepress_cost_by?: string | null
           printing_side?: string | null
+          prints_per_roll?: number | null
           product_name: string
           product_request_id?: string | null
           product_type: Database["public"]["Enums"]["rfq_product_type"]
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id: string
+          rolls_per_floor?: number | null
           sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
@@ -1646,6 +1665,7 @@ export type Database = {
           updated_at?: string
           vent_size?: string | null
           vents_count?: number | null
+          weight_kg_per_roll?: number | null
           wicket_hole?: string | null
           wicket_separation?: string | null
           wicket_size?: string | null
@@ -1660,12 +1680,16 @@ export type Database = {
           cases_per_pallet?: number | null
           client_visit?: boolean | null
           color_proof?: boolean | null
+          core_plug?: boolean | null
+          core_size_inches?: string | null
           created_at?: string
+          diameter_per_roll?: number | null
           dp_sales_csr_name?: string | null
           editable_files_needed?: boolean | null
           film_type?: string | null
           finish?: string | null
           flip_size_inches?: number | null
+          floors_per_pallet?: number | null
           gusset_inches?: number | null
           id?: string
           ink_type?: string | null
@@ -1676,7 +1700,10 @@ export type Database = {
           lip_front_inches?: number | null
           material?: string | null
           max_pallet_height?: string | null
+          max_splices_per_roll?: number | null
+          meters_per_roll?: number | null
           notes?: string | null
+          number_of_colors?: number | null
           observations?: string | null
           pallet_dimensions?: string | null
           pantone_base?: boolean | null
@@ -1689,12 +1716,14 @@ export type Database = {
           pre_cut_wicket?: boolean | null
           prepress_cost_by?: string | null
           printing_side?: string | null
+          prints_per_roll?: number | null
           product_name?: string
           product_request_id?: string | null
           product_type?: Database["public"]["Enums"]["rfq_product_type"]
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id?: string
+          rolls_per_floor?: number | null
           sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
@@ -1705,6 +1734,7 @@ export type Database = {
           updated_at?: string
           vent_size?: string | null
           vents_count?: number | null
+          weight_kg_per_roll?: number | null
           wicket_hole?: string | null
           wicket_separation?: string | null
           wicket_size?: string | null

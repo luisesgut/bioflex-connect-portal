@@ -17,7 +17,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { FileText, Plus, Trash2, Upload, X, ChevronDown } from "lucide-react";
+import { FileText, Plus, Trash2, Upload, X, ChevronDown, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   StructureLayersInput,
@@ -79,6 +90,16 @@ export interface RFQItemData {
   rubber_washers: boolean;
   extrusion_type: string;
   clarity_grade: string;
+  // Printing section
+  number_of_colors: string;
+  // Film-specific fields
+  core_size_inches: string;
+  max_splices_per_roll: string;
+  weight_kg_per_roll: string;
+  core_plug: boolean;
+  prints_per_roll: string;
+  meters_per_roll: string;
+  diameter_per_roll: string;
 
   // Section 3 - Packaging & Shipping Format
   wicket_hole: string;
@@ -95,6 +116,8 @@ export interface RFQItemData {
   pieces_per_wicket: string;
   pieces_per_case: string;
   wickets_per_case: string;
+  rolls_per_floor: string;
+  floors_per_pallet: string;
   cornerboards: boolean;
   heat_treated: boolean;
   pallet_covers: boolean;
@@ -140,6 +163,17 @@ const toMm = (inches: string) => {
 const toIn = (mm: string) => {
   const n = parseFloat(mm);
   return isNaN(n) ? "" : (n / IN_TO_MM).toFixed(4);
+};
+// Helper to get thickness in inches from structure layers or direct value
+const getThicknessInInches = (data: RFQItemData): number => {
+  const layer = data.structure_layers[0];
+  const thicknessVal = layer?.thickness_value ? Number(layer.thickness_value) : (data.thickness_value ? Number(data.thickness_value) : 0);
+  const unit = layer?.thickness_unit || data.thickness_unit || "gauge";
+  if (thicknessVal <= 0) return 0;
+  if (unit === "gauge") return thicknessVal * 0.00001; // 1 gauge = 0.00001 inches
+  if (unit === "mil") return thicknessVal * 0.001;
+  if (unit === "micron") return thicknessVal * 0.00003937;
+  return thicknessVal * 0.00001; // default gauge
 };
 
 function MeasureField({
@@ -221,7 +255,7 @@ function SectionHeader({
 
 export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQItemFormProps) {
   const [measureUnit, setMeasureUnit] = useState<"in" | "mm">("in");
-  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [openSections, setOpenSections] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
 
   const update = (partial: Partial<RFQItemData>) => onChange({ ...data, ...partial });
 
@@ -415,49 +449,31 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 3: Complementos ═══════════ */}
+      {/* ═══════════ SECTION 3: Printing ═══════════ */}
       <Collapsible open={openSections.includes(3)} onOpenChange={() => toggleSection(3)}>
-        <SectionHeader title="Complements" number={3} open={openSections.includes(3)} />
+        <SectionHeader title="Printing" number={3} open={openSections.includes(3)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
-              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure printing.</p>
             </div>
           ) : (
-          <div className="px-3 pb-4 pt-2 space-y-4">
-            {/* Film & Printing */}
+          <div className="px-3 pb-4 pt-2">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {!isWicket && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Film Type</Label>
-                  <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
-                </div>
-              )}
-              {isWicket ? (
-                <div className="space-y-1">
-                  <Label className="text-xs">Seal Type</Label>
-                  <Input value="Side Seal" disabled className="bg-muted text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <Label className="text-xs">Seal Type</Label>
-                  <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
-                </div>
-              )}
-              {!isWicket && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Printing Side</Label>
-                  <Select value={data.printing_side} onValueChange={(v) => update({ printing_side: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="inside">Inside</SelectItem>
-                      <SelectItem value="outside">Outside</SelectItem>
-                      <SelectItem value="both">Both</SelectItem>
-                      <SelectItem value="none">N/A</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-1">
+                <Label className="text-xs">Number of Colors</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={data.number_of_colors}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ number_of_colors: val });
+                  }}
+                  placeholder="0"
+                />
+              </div>
               <div className="space-y-1">
                 <Label className="text-xs">Ink Type</Label>
                 <Select value={data.ink_type} onValueChange={(v) => update({ ink_type: v })}>
@@ -472,9 +488,283 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </SelectContent>
                 </Select>
               </div>
+              {isFilm ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs">Winding Direction</Label>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-primary transition-colors">
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <img src="/images/winding-directions.png" alt="Winding direction reference FIG 1-8" className="w-full rounded-md" />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal h-14">
+                        {data.printing_side ? (
+                          <span className="flex items-center gap-2">
+                            <img src={`/images/winding-fig${data.printing_side.replace('fig', '')}.png`} alt="" className="h-11 object-contain" />
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Select</span>
+                        )}
+                        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 p-3" align="start">
+                      <div className="grid grid-cols-2 gap-2">
+                        {[1,2,3,4,5,6,7,8].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => update({ printing_side: `fig${n}` })}
+                            className={cn(
+                              "flex items-center justify-center p-2 rounded-md hover:bg-muted cursor-pointer transition-colors border border-transparent",
+                              data.printing_side === `fig${n}` && "bg-accent text-accent-foreground border-primary"
+                            )}
+                          >
+                            <img src={`/images/winding-fig${n}.png`} alt={`FIG ${n}`} className="h-20 object-contain" />
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              ) : !isWicket ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">Printing Side</Label>
+                  <Select value={data.printing_side} onValueChange={(v) => update({ printing_side: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inside">Inside</SelectItem>
+                      <SelectItem value="outside">Outside</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                      <SelectItem value="none">N/A</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ═══════════ SECTION 4: Complementos ═══════════ */}
+      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
+        <SectionHeader title="Complements" number={4} open={openSections.includes(4)} />
+        <CollapsibleContent>
+          {!data.product_type ? (
+            <div className="px-3 pb-4 pt-2">
+              <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure complements.</p>
+            </div>
+          ) : (
+          <div className="px-3 pb-4 pt-2 space-y-4">
+            {/* Film & Printing */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {!isWicket && !isFilm && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Film Type</Label>
+                  <Input value={data.film_type} onChange={(e) => update({ film_type: e.target.value })} placeholder="e.g., LDPE" />
+                </div>
+              )}
+              {isWicket ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">Seal Type</Label>
+                  <Input value="Side Seal" disabled className="bg-muted text-muted-foreground" />
+                </div>
+              ) : !isFilm ? (
+                <div className="space-y-1">
+                  <Label className="text-xs">Seal Type</Label>
+                  <Input value={data.seal_type} onChange={(e) => update({ seal_type: e.target.value })} placeholder="Seal type" />
+                </div>
+              ) : null}
             </div>
 
-            {/* Wicket-specific elements */}
+            {/* Film-specific roll fields */}
+            {isFilm && (
+              <div className="space-y-4 mt-3">
+                {/* Row 1: Core, Max Splices, Core Plug */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Roll Specifications</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Core (in)</Label>
+                      <Select value={data.core_size_inches} onValueChange={(v) => update({ core_size_inches: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3"</SelectItem>
+                          <SelectItem value="5">5"</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Max Splices per Roll</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.max_splices_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) update({ max_splices_per_roll: val });
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-6">
+                      <Checkbox checked={data.core_plug} onCheckedChange={(c) => update({ core_plug: !!c })} />
+                      <Label className="text-xs">Core Plug</Label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Impressions, Inches/Meters, Diameter, Weight — with auto-fill */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Roll Dimensions</p>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Impressions per Roll</Label>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.prints_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || (Number.isInteger(Number(val)) && Number(val) >= 0)) {
+                            const updates: Partial<RFQItemData> = { prints_per_roll: val };
+                            const impressions = Number(val);
+                            const repeatLength = Number(data.length);
+                            if (impressions > 0 && repeatLength > 0) {
+                              // When in mm mode, length is in mm → divide by 1000 to get meters
+                              // When in inches mode, length is in inches → total is inches
+                              const totalLength = measureUnit === "in"
+                                ? impressions * repeatLength
+                                : (impressions * repeatLength) / 1000;
+                              updates.meters_per_roll = String(Math.round(totalLength * 100) / 100);
+                              // Convert totalLength to inches for diameter/weight calculations
+                              const totalInches = measureUnit === "in" ? totalLength : totalLength * 39.3701;
+                              const thicknessInches = getThicknessInInches(data);
+                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
+                              if (thicknessInches > 0) {
+                                const dia = Math.sqrt((4 * thicknessInches * totalInches) / Math.PI + coreDia * coreDia);
+                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
+                              }
+                              // Estimate weight
+                              const widthInches = Number(data.width);
+                              const widthIn = measureUnit === "in" ? widthInches : widthInches / 25.4;
+                              if (thicknessInches > 0 && widthIn > 0) {
+                                const volumeCubicIn = totalInches * widthIn * thicknessInches;
+                                const densityLbPerCubicIn = 0.0334; // ~LDPE density
+                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
+                                if (measureUnit === "in") {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
+                                } else {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
+                                }
+                              }
+                            }
+                            update(updates);
+                          }
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.meters_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) {
+                            const updates: Partial<RFQItemData> = { meters_per_roll: val };
+                            const totalLength = Number(val);
+                            if (totalLength > 0 && !data.prints_per_roll) {
+                              const thicknessInches = getThicknessInInches(data);
+                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
+                              if (thicknessInches > 0) {
+                                const dia = Math.sqrt((4 * thicknessInches * totalLength) / Math.PI + coreDia * coreDia);
+                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
+                              }
+                              const widthInches = Number(data.width);
+                              if (thicknessInches > 0 && widthInches > 0) {
+                                const volumeCubicIn = totalLength * widthInches * thicknessInches;
+                                const densityLbPerCubicIn = 0.0334;
+                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
+                                if (measureUnit === "in") {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
+                                } else {
+                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
+                                }
+                              }
+                            }
+                            update(updates);
+                          }
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Roll Diameter (in)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.diameter_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) update({ diameter_per_roll: val });
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">{measureUnit === "in" ? "Weight per Roll (lb)" : "Weight per Roll (kg)"}</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={data.weight_kg_per_roll}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || Number(val) >= 0) update({ weight_kg_per_roll: val });
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Perforation Type - separate */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Perforations</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Perforation Type</Label>
+                      <Select value={data.perforations} onValueChange={(v) => update({ perforations: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="laser">Laser</SelectItem>
+                          <SelectItem value="macro_4mm">Macroperforated 4mm (5/32")</SelectItem>
+                          <SelectItem value="macro_6mm">Macroperforated 6mm (1/4")</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {showWicketFields && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Elements</p>
@@ -609,9 +899,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 4: Packaging & Packing ═══════════ */}
-      <Collapsible open={openSections.includes(4)} onOpenChange={() => toggleSection(4)}>
-        <SectionHeader title="Packaging & Shipping Format" number={4} open={openSections.includes(4)} />
+      {/* ═══════════ SECTION 5: Packaging & Packing ═══════════ */}
+      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
+        <SectionHeader title="Packaging & Shipping Format" number={5} open={openSections.includes(5)} />
         <CollapsibleContent>
           {!data.product_type ? (
             <div className="px-3 pb-4 pt-2">
@@ -641,7 +931,34 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                 </>
               )}
 
-              {!showWicketFields && (
+              {isFilm && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Rolls / Layer</Label>
+                    <Input type="number" value={data.rolls_per_floor} onChange={(e) => update({ rolls_per_floor: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Layers / Pallet</Label>
+                    <Input type="number" value={data.floors_per_pallet} onChange={(e) => update({ floors_per_pallet: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Total Rolls / Pallet</Label>
+                    <Input
+                      type="number"
+                      value={
+                        data.rolls_per_floor && data.floors_per_pallet
+                          ? String(Number(data.rolls_per_floor) * Number(data.floors_per_pallet))
+                          : ""
+                      }
+                      disabled
+                      className="bg-muted text-muted-foreground"
+                      placeholder="—"
+                    />
+                  </div>
+                </>
+              )}
+
+              {!showWicketFields && !isFilm && (
                 <>
                   <div className="space-y-1">
                     <Label className="text-xs">Pieces / Case</Label>
@@ -656,7 +973,14 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
 
               <div className="space-y-1">
                 <Label className="text-xs">Pallet Size</Label>
-                <Input value={data.pallet_dimensions} onChange={(e) => update({ pallet_dimensions: e.target.value })} placeholder="e.g., 40 x 48" />
+                <Select value={data.pallet_dimensions} onValueChange={(v) => update({ pallet_dimensions: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select pallet size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1 x 1.1 mts">1 x 1.1 mts</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Max Pallet Height</Label>
@@ -701,9 +1025,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 5: Complementary Information ═══════════ */}
-      <Collapsible open={openSections.includes(5)} onOpenChange={() => toggleSection(5)}>
-        <SectionHeader title="Complementary Information" number={5} open={openSections.includes(5)} />
+      {/* ═══════════ SECTION 6: Complementary Information ═══════════ */}
+      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
+        <SectionHeader title="Complementary Information" number={6} open={openSections.includes(6)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2 space-y-4">
             {/* Authorization */}
@@ -799,9 +1123,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
         </CollapsibleContent>
       </Collapsible>
 
-      {/* ═══════════ SECTION 6: Volumes to Quote ═══════════ */}
-      <Collapsible open={openSections.includes(6)} onOpenChange={() => toggleSection(6)}>
-        <SectionHeader title="Volumes to Quote" number={6} open={openSections.includes(6)} />
+      {/* ═══════════ SECTION 7: Volumes to Quote ═══════════ */}
+      <Collapsible open={openSections.includes(7)} onOpenChange={() => toggleSection(7)}>
+        <SectionHeader title="Volumes to Quote" number={7} open={openSections.includes(7)} />
         <CollapsibleContent>
           <div className="px-3 pb-4 pt-2">
             <div className="flex items-center justify-end mb-3">
