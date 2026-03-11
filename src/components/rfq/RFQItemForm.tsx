@@ -594,8 +594,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
               <p className="text-sm text-muted-foreground italic">Select an Item Type first to configure printing.</p>
             </div>
           ) : (
-          <div className="px-3 pb-4 pt-2">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="px-3 pb-4 pt-2 space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-xs">Number of Colors</Label>
                 <Input
@@ -685,6 +685,132 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                   </Select>
                 </div>
               ) : null}
+              <div className="space-y-1">
+                <Label className="text-xs">Printing Process</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between font-normal h-10">
+                      <span className="truncate text-sm">
+                        {data.printing_process.length > 0
+                          ? data.printing_process.join(", ")
+                          : "Select process..."}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
+                    <div className="space-y-1">
+                      {["Flexographic", "Digital", "Flexographic HDS"].map((proc) => (
+                        <label
+                          key={proc}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={data.printing_process.includes(proc)}
+                            onCheckedChange={(checked) => {
+                              const processes = checked
+                                ? [...data.printing_process, proc]
+                                : data.printing_process.filter((p) => p !== proc);
+                              update({ printing_process: processes });
+                            }}
+                          />
+                          <span className="text-sm">{proc}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Product Authorization */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Product Authorization</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.pantone_base} onCheckedChange={(c) => update({ pantone_base: !!c })} />
+                  <Label className="text-xs">Pantone Base</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.sample_base} onCheckedChange={(c) => update({ sample_base: !!c })} />
+                  <Label className="text-xs">Sample Base</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.client_visit} onCheckedChange={(c) => update({ client_visit: !!c })} />
+                  <Label className="text-xs">Client Visit</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.color_proof} onCheckedChange={(c) => update({ color_proof: !!c })} />
+                  <Label className="text-xs">Color Proof</Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Complements */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Complements</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.editable_files_needed} onCheckedChange={(c) => update({ editable_files_needed: !!c })} />
+                  <Label className="text-xs">Editable Files</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={data.physical_samples_needed} onCheckedChange={(c) => update({ physical_samples_needed: !!c })} />
+                  <Label className="text-xs">Physical Samples</Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Reference files */}
+            <div className="space-y-2">
+              <Label>Reference Images / Documents</Label>
+              <label className="cursor-pointer inline-block">
+                <Button variant="outline" size="sm" asChild>
+                  <span><Upload className="h-4 w-4 mr-1" /> Attach</span>
+                </Button>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf,.ai,.ps,.svg"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      update({ reference_files: [...data.reference_files, ...Array.from(e.target.files)] });
+                    }
+                  }}
+                />
+              </label>
+              {data.reference_files.length > 0 && (
+                <div className="space-y-1 mt-2">
+                  {data.reference_files.map((file, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-primary" />
+                        <span className="text-sm truncate max-w-xs">{file.name}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => update({ reference_files: data.reference_files.filter((_, fi) => fi !== i) })}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Observations */}
+            <div className="space-y-2">
+              <Label>Observations / Critical Points</Label>
+              <Textarea
+                value={data.observations}
+                onChange={(e) => update({ observations: e.target.value })}
+                placeholder="Any observations or critical points..."
+                rows={2}
+              />
             </div>
           </div>
           )}
