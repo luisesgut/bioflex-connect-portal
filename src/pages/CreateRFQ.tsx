@@ -332,6 +332,8 @@ export default function CreateRFQ() {
             meters_per_roll: item.meters_per_roll ? Number(item.meters_per_roll) : null,
             diameter_per_roll: item.diameter_per_roll ? Number(item.diameter_per_roll) : null,
             number_of_colors: item.number_of_colors ? Number(item.number_of_colors) : null,
+            rolls_per_floor: item.rolls_per_floor ? Number(item.rolls_per_floor) : null,
+            floors_per_pallet: item.floors_per_pallet ? Number(item.floors_per_pallet) : null,
           } as any)
           .select()
           .single();
