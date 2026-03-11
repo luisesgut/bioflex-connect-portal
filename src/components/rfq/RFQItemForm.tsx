@@ -761,7 +761,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">{measureUnit === "in" ? "Inches per Roll" : "Meters per Roll"}</Label>
+                      <Label className="text-xs">Meters per Roll</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -771,25 +771,9 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                           const val = e.target.value;
                           if (val === "" || Number(val) >= 0) {
                             const updates: Partial<RFQItemData> = { meters_per_roll: val };
-                            const totalLength = Number(val);
-                            if (totalLength > 0 && !data.prints_per_roll) {
-                              const thicknessInches = getThicknessInInches(data);
-                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
-                              if (thicknessInches > 0) {
-                                const dia = Math.sqrt((4 * thicknessInches * totalLength) / Math.PI + coreDia * coreDia);
-                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
-                              }
-                              const widthInches = Number(data.width);
-                              if (thicknessInches > 0 && widthInches > 0) {
-                                const volumeCubicIn = totalLength * widthInches * thicknessInches;
-                                const densityLbPerCubicIn = 0.0334;
-                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
-                                if (measureUnit === "in") {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
-                                } else {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
-                                }
-                              }
+                            const totalMeters = Number(val);
+                            if (totalMeters > 0 && !data.prints_per_roll) {
+                              Object.assign(updates, computeRollUpdates(totalMeters, data));
                             }
                             update(updates);
                           }
