@@ -402,15 +402,15 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
     const meters = Number(data.meters_per_roll);
     if (!meters || meters <= 0) return;
 
-    const rollUpdates = computeRollUpdates(meters, data);
+    const updates = computeRollUpdates(meters, data);
     if (
-      rollUpdates.diameter_per_roll !== data.diameter_per_roll ||
-      rollUpdates.weight_kg_per_roll !== data.weight_kg_per_roll
+      updates.diameter_per_roll !== data.diameter_per_roll ||
+      updates.weight_kg_per_roll !== data.weight_kg_per_roll
     ) {
-      onChange({ ...data, ...rollUpdates });
+      onChange({ ...data, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layersJson, data.core_size_inches, data.width, measureUnit]);
+  }, [layersJson, data.core_size_inches, data.width, measureUnit, computeRollUpdates]);
 
   // Dynamic field visibility based on product type
   const pt = data.product_type.toLowerCase();
