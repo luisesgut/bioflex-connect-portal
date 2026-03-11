@@ -116,6 +116,8 @@ export interface RFQItemData {
   pieces_per_wicket: string;
   pieces_per_case: string;
   wickets_per_case: string;
+  rolls_per_floor: string;
+  floors_per_pallet: string;
   cornerboards: boolean;
   heat_treated: boolean;
   pallet_covers: boolean;
