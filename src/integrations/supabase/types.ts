@@ -2147,6 +2147,7 @@ export type Database = {
         Returns: boolean
       }
       is_internal_user: { Args: { _user_id: string }; Returns: boolean }
+      sync_sap_inventory: { Args: { payload: Json }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"
