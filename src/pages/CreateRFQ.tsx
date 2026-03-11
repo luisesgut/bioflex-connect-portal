@@ -73,6 +73,7 @@ const EMPTY_ITEM: RFQItemData = {
   extrusion_type: "",
   clarity_grade: "",
   number_of_colors: "",
+  printing_process: [],
   core_size_inches: "",
   max_splices_per_roll: "",
   weight_kg_per_roll: "",
