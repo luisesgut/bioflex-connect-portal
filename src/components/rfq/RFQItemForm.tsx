@@ -93,6 +93,7 @@ export interface RFQItemData {
   clarity_grade: string;
   // Printing section
   number_of_colors: string;
+  printing_process: string[];
   // Film-specific fields
   core_size_inches: string;
   max_splices_per_roll: string;
