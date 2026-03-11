@@ -428,8 +428,19 @@ export default function Products() {
                 <td className="px-4 py-3 text-right font-mono text-muted-foreground">{product.pieces_per_pallet?.toLocaleString() || "-"}</td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {product.print_card_url ? (
-                      <button onClick={() => openStorageFile(product.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
+                    {getPrintCardDocumentUrl(product.pc_number) ? (
+                      <button
+                        onClick={() => {
+                          const url = getPrintCardDocumentUrl(product.pc_number);
+                          if (url) window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        <FileText className="h-4 w-4" />
+                        {product.pc_number || "View"}
+                      </button>
+                    ) : product.bfx_spec_url ? (
+                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         {product.pc_number || "View"}
                       </button>

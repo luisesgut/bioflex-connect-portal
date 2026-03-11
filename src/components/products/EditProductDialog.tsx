@@ -399,17 +399,6 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
               className={isApiManagedProduct ? "bg-muted" : ""}
             />
           </div>
-          <div className="space-y-2">
-            <Label>PC PDF</Label>
-            <div className="flex items-center gap-2 min-h-9">
-              {form.print_card_url && (
-                <button onClick={() => openStorageFile(form.print_card_url, 'print-cards')} className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
-                  <FileText className="h-4 w-4" /> View current
-                </button>
-              )}
-              {!form.print_card_url && <span className="text-sm text-muted-foreground">No file</span>}
-            </div>
-          </div>
 
           {/* Customer Spec Sheet */}
           <div className="space-y-2">

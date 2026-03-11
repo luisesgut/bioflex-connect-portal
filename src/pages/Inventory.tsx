@@ -21,12 +21,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, AlertTriangle, Ghost, Trash2 } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, Ghost, Trash2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
-import { syncSapInventoryFromEndpoint } from "@/utils/sapInventorySync";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
 import { parseDateLocal } from "@/lib/utils";
 
@@ -71,7 +70,6 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-  const [sapUnavailable, setSapUnavailable] = useState(false);
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
@@ -167,19 +165,13 @@ export default function Inventory() {
 
   const syncSAPInventory = useCallback(async () => {
     setSyncing(true);
-    setSapUnavailable(false);
 
     try {
-      const data = await syncSapInventoryFromEndpoint();
-      setLastSyncTime(data.synced_at);
-      setSapUnavailable(false);
-      toast.success(`Inventario sincronizado: ${data.count} registros`);
       await loadFromDB();
+      toast.success("Inventario actualizado");
     } catch (err) {
-      console.error("SAP sync exception:", err);
-      setSapUnavailable(true);
-      toast.warning("SAP no disponible — mostrando último snapshot");
-      await loadFromDB();
+      console.error("Inventory refresh exception:", err);
+      toast.error("No fue posible actualizar el inventario");
     } finally {
       setSyncing(false);
       setLoading(false);
@@ -458,15 +450,6 @@ export default function Inventory() {
             <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
             <AlertDescription className="text-blue-800 dark:text-blue-300">
               Sincronizando con SAP...
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {sapUnavailable && !syncing && (
-          <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-800 dark:text-yellow-300">
-              SAP no disponible — mostrando último snapshot guardado
             </AlertDescription>
           </Alert>
         )}
