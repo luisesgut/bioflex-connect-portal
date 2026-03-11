@@ -96,6 +96,8 @@ const EMPTY_ITEM: RFQItemData = {
   wickets_per_case: "",
   cornerboards: false,
   heat_treated: false,
+  rolls_per_floor: "",
+  floors_per_pallet: "",
   pallet_covers: false,
   poly_wrap: false,
   four_way_strap: false,
