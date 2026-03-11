@@ -351,8 +351,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
       const widthVal = Number(currentData.width);
       // Width is always in the current measureUnit
       const widthMm = measureUnit === "in" ? widthVal * IN_TO_MM : widthVal;
-      const coreDiaInches = currentData.core_size_inches ? Number(currentData.core_size_inches) : 3;
-      const coreDiaMm = coreDiaInches * IN_TO_MM;
+      const coreSizeStr = currentData.core_size_inches || "3";
+      const coreDiaMm = getCoreOdMm(coreSizeStr);
 
       const { diameterMm, weightKg } = calcRollDimensions(
         metersPerRoll,
