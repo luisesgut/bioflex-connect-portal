@@ -164,8 +164,19 @@ const toIn = (mm: string) => {
   const n = parseFloat(mm);
   return isNaN(n) ? "" : (n / IN_TO_MM).toFixed(4);
 };
+// Helper to get thickness in inches from structure layers or direct value
+const getThicknessInInches = (data: RFQItemData): number => {
+  const layer = data.structure_layers[0];
+  const thicknessVal = layer?.thickness_value ? Number(layer.thickness_value) : (data.thickness_value ? Number(data.thickness_value) : 0);
+  const unit = layer?.thickness_unit || data.thickness_unit || "gauge";
+  if (thicknessVal <= 0) return 0;
+  if (unit === "gauge") return thicknessVal * 0.00001; // 1 gauge = 0.00001 inches
+  if (unit === "mil") return thicknessVal * 0.001;
+  if (unit === "micron") return thicknessVal * 0.00003937;
+  return thicknessVal * 0.00001; // default gauge
+};
 
-function MeasureField({
+
   label,
   value,
   onChange,
