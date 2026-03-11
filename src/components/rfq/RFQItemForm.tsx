@@ -747,32 +747,12 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                             const repeatLength = Number(data.length);
                             if (impressions > 0 && repeatLength > 0) {
                               // When in mm mode, length is in mm → divide by 1000 to get meters
-                              // When in inches mode, length is in inches → total is inches
-                              const totalLength = measureUnit === "in"
-                                ? impressions * repeatLength
+                              // When in inches mode, length is in inches → convert to meters
+                              const totalMeters = measureUnit === "in"
+                                ? impressions * repeatLength * IN_TO_MM / 1000
                                 : (impressions * repeatLength) / 1000;
-                              updates.meters_per_roll = String(Math.round(totalLength * 100) / 100);
-                              // Convert totalLength to inches for diameter/weight calculations
-                              const totalInches = measureUnit === "in" ? totalLength : totalLength * 39.3701;
-                              const thicknessInches = getThicknessInInches(data);
-                              const coreDia = data.core_size_inches ? Number(data.core_size_inches) : 3;
-                              if (thicknessInches > 0) {
-                                const dia = Math.sqrt((4 * thicknessInches * totalInches) / Math.PI + coreDia * coreDia);
-                                updates.diameter_per_roll = String(Math.round(dia * 100) / 100);
-                              }
-                              // Estimate weight
-                              const widthInches = Number(data.width);
-                              const widthIn = measureUnit === "in" ? widthInches : widthInches / 25.4;
-                              if (thicknessInches > 0 && widthIn > 0) {
-                                const volumeCubicIn = totalInches * widthIn * thicknessInches;
-                                const densityLbPerCubicIn = 0.0334; // ~LDPE density
-                                const weightLb = volumeCubicIn * densityLbPerCubicIn;
-                                if (measureUnit === "in") {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 100) / 100);
-                                } else {
-                                  updates.weight_kg_per_roll = String(Math.round(weightLb * 0.453592 * 100) / 100);
-                                }
-                              }
+                              updates.meters_per_roll = String(Math.round(totalMeters * 100) / 100);
+                              Object.assign(updates, computeRollUpdates(totalMeters, data));
                             }
                             update(updates);
                           }
