@@ -1195,6 +1195,52 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       placeholder="—"
                     />
                   </div>
+                  {/* Estimated Weight / Pallet */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Est. Weight / Pallet (kg)</Label>
+                    <Input
+                      type="number"
+                      value={
+                        (() => {
+                          const totalRolls = data.rolls_per_floor && data.floors_per_pallet
+                            ? Number(data.rolls_per_floor) * Number(data.floors_per_pallet)
+                            : 0;
+                          const wt = Number(data.weight_kg_per_roll) || 0;
+                          return totalRolls > 0 && wt > 0 ? String(Math.round(totalRolls * wt * 100) / 100) : "";
+                        })()
+                      }
+                      disabled
+                      className="bg-muted text-muted-foreground"
+                      placeholder="—"
+                    />
+                  </div>
+                  {/* Total Prints or Meters / Pallet */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">
+                      {data.prints_per_roll && Number(data.prints_per_roll) > 0
+                        ? "Total Prints / Pallet"
+                        : "Total Meters / Pallet"}
+                    </Label>
+                    <Input
+                      type="number"
+                      value={
+                        (() => {
+                          const totalRolls = data.rolls_per_floor && data.floors_per_pallet
+                            ? Number(data.rolls_per_floor) * Number(data.floors_per_pallet)
+                            : 0;
+                          if (totalRolls <= 0) return "";
+                          const prints = Number(data.prints_per_roll) || 0;
+                          if (prints > 0) return String(totalRolls * prints);
+                          const meters = Number(data.meters_per_roll) || 0;
+                          if (meters > 0) return String(Math.round(totalRolls * meters * 100) / 100);
+                          return "";
+                        })()
+                      }
+                      disabled
+                      className="bg-muted text-muted-foreground"
+                      placeholder="—"
+                    />
+                  </div>
                 </>
               )}
 
