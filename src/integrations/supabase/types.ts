@@ -1551,6 +1551,7 @@ export type Database = {
           film_type: string | null
           finish: string | null
           flip_size_inches: number | null
+          floors_per_pallet: number | null
           gusset_inches: number | null
           id: string
           ink_type: string | null
@@ -1584,6 +1585,7 @@ export type Database = {
           reference_files: string[] | null
           reference_image_url: string | null
           rfq_id: string
+          rolls_per_floor: number | null
           sample_base: boolean | null
           seal_type: string | null
           sort_order: number
@@ -1618,6 +1620,7 @@ export type Database = {
           film_type?: string | null
           finish?: string | null
           flip_size_inches?: number | null
+          floors_per_pallet?: number | null
           gusset_inches?: number | null
           id?: string
           ink_type?: string | null
@@ -1651,6 +1654,7 @@ export type Database = {
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id: string
+          rolls_per_floor?: number | null
           sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
@@ -1685,6 +1689,7 @@ export type Database = {
           film_type?: string | null
           finish?: string | null
           flip_size_inches?: number | null
+          floors_per_pallet?: number | null
           gusset_inches?: number | null
           id?: string
           ink_type?: string | null
@@ -1718,6 +1723,7 @@ export type Database = {
           reference_files?: string[] | null
           reference_image_url?: string | null
           rfq_id?: string
+          rolls_per_floor?: number | null
           sample_base?: boolean | null
           seal_type?: string | null
           sort_order?: number
