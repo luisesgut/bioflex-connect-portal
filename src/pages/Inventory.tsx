@@ -85,36 +85,27 @@ export default function Inventory() {
 
   const loadFromDB = useCallback(async () => {
     try {
-      // Fetch SAP inventory and real assigned pallets in parallel
-      const [sapResult, virtualResult, assignedResult] = await Promise.all([
-        supabase
-          .from("sap_inventory")
-          .select("*")
-          .order("pt_code", { ascending: true }),
+      // Fetch all pallets from inventory_pallets (source of truth) and load assignments
+      const [palletsResult, assignedResult] = await Promise.all([
         supabase
           .from("inventory_pallets")
           .select("*")
-          .eq("is_virtual", true),
+          .order("pt_code", { ascending: true }),
         supabase
           .from("load_pallets")
-          .select("pallet_id, inventory_pallets!inner(traceability, pt_code)")
+          .select("pallet_id")
       ]);
 
-      if (sapResult.error) throw sapResult.error;
+      if (palletsResult.error) throw palletsResult.error;
 
-      // Build a set of traceability+pt_code combos that are truly assigned to loads
-      const assignedKeys = new Set<string>();
+      // Build a set of pallet IDs that are assigned to loads
+      const assignedIds = new Set<string>();
       (assignedResult.data || []).forEach((lp: any) => {
-        const inv = lp.inventory_pallets;
-        if (inv) {
-          assignedKeys.add(`${inv.traceability}||${inv.pt_code}`);
-        }
+        if (lp.pallet_id) assignedIds.add(lp.pallet_id);
       });
 
-      const sapItems: SAPInventoryItem[] = (sapResult.data || []).map((d: any) => {
-        // Determine real status: assigned only if this pallet is actually in a load
-        const key = `${d.traceability || ""}||${d.pt_code || ""}`;
-        const realStatus = assignedKeys.has(key) ? "assigned" : "available";
+      const items: SAPInventoryItem[] = (palletsResult.data || []).map((d: any) => {
+        const realStatus = assignedIds.has(d.id) ? "assigned" : "available";
 
         return {
           id: d.id,
@@ -130,33 +121,25 @@ export default function Inventory() {
           pieces: d.pieces,
           pallet_type: d.pallet_type,
           status: realStatus,
-          synced_at: d.synced_at,
-          is_virtual: false,
+          synced_at: d.updated_at || d.created_at,
+          is_virtual: d.is_virtual || false,
         };
       });
 
-      const virtualItems: SAPInventoryItem[] = (virtualResult.data || []).map((d: any) => ({
-        id: d.id,
-        fecha: d.fecha,
-        pt_code: d.pt_code || "",
-        description: d.description || "",
-        stock: d.stock || 0,
-        unit: d.unit || "MIL",
-        gross_weight: d.gross_weight,
-        net_weight: d.net_weight,
-        traceability: d.traceability || "",
-        bfx_order: d.bfx_order,
-        pieces: d.pieces,
-        pallet_type: d.pallet_type,
-        status: d.status || "available",
-        synced_at: d.created_at,
-        is_virtual: true,
-      }));
+      // Put virtual items first
+      const sorted = items.sort((a, b) => {
+        if (a.is_virtual && !b.is_virtual) return -1;
+        if (!a.is_virtual && b.is_virtual) return 1;
+        return 0;
+      });
 
-      setInventory([...virtualItems, ...sapItems]);
+      setInventory(sorted);
 
-      if (sapItems.length > 0) {
-        setLastSyncTime(sapItems[0].synced_at);
+      // Use the most recent updated_at as last sync time
+      const realItems = sorted.filter(i => !i.is_virtual);
+      if (realItems.length > 0) {
+        const latest = realItems.reduce((max, i) => i.synced_at > max ? i.synced_at : max, realItems[0].synced_at);
+        setLastSyncTime(latest);
       }
     } catch (error) {
       console.error("Error loading inventory from DB:", error);
