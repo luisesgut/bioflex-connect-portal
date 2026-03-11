@@ -169,10 +169,21 @@ const toIn = (mm: string) => {
 
 /** Convert a layer's thickness value to microns based on its unit */
 const toMicrons = (value: number, unit: string): number => {
-  if (unit === "micron") return value;
-  if (unit === "mil") return value * 25.4;
+  if (unit === "micron" || unit === "microns") return value;
+  if (unit === "mil" || unit === "mils") return value * 25.4;
   // gauge: 1 gauge = 0.254 microns (100 gauge = 1 mil = 25.4 µm)
   return value * 0.254;
+};
+
+/** Map nominal core size (inner diameter in inches) to outer diameter in mm.
+ *  Standard paper cores have wall thickness ~6mm per side. */
+const CORE_OD_MM: Record<string, number> = {
+  "3": 88,   // 3" ID → ~88mm OD
+  "5": 139,  // 5" ID → ~139mm OD (5*25.4 + 12)
+  "6": 165,  // 6" ID → ~165mm OD
+};
+const getCoreOdMm = (coreSizeInches: string): number => {
+  return CORE_OD_MM[coreSizeInches] ?? (Number(coreSizeInches) * IN_TO_MM + 12);
 };
 
 /** Sum total thickness in mm across all structure layers */
@@ -340,8 +351,8 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
       const widthVal = Number(currentData.width);
       // Width is always in the current measureUnit
       const widthMm = measureUnit === "in" ? widthVal * IN_TO_MM : widthVal;
-      const coreDiaInches = currentData.core_size_inches ? Number(currentData.core_size_inches) : 3;
-      const coreDiaMm = coreDiaInches * IN_TO_MM;
+      const coreSizeStr = currentData.core_size_inches || "3";
+      const coreDiaMm = getCoreOdMm(coreSizeStr);
 
       const { diameterMm, weightKg } = calcRollDimensions(
         metersPerRoll,
