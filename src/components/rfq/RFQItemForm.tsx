@@ -394,6 +394,24 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
     update({ volumes: data.volumes.filter((_, i) => i !== index) });
   };
 
+  // Auto-recalculate roll dimensions when structure, core, or width changes
+  const isFilmForEffect = data.product_type.toLowerCase().includes("film") || data.product_type.toLowerCase().includes("bobina");
+  const layersJson = JSON.stringify(data.structure_layers);
+  useEffect(() => {
+    if (!isFilmForEffect) return;
+    const meters = Number(data.meters_per_roll);
+    if (!meters || meters <= 0) return;
+
+    const rollUpdates = computeRollUpdates(meters, data);
+    if (
+      rollUpdates.diameter_per_roll !== data.diameter_per_roll ||
+      rollUpdates.weight_kg_per_roll !== data.weight_kg_per_roll
+    ) {
+      onChange({ ...data, ...rollUpdates });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layersJson, data.core_size_inches, data.width, measureUnit]);
+
   // Dynamic field visibility based on product type
   const pt = data.product_type.toLowerCase();
   const isWicket = pt.includes("wicket");
