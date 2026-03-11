@@ -415,6 +415,20 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layersJson, data.core_size_inches, data.width, measureUnit, computeRollUpdates]);
 
+  // Auto-calculate rolls per layer when diameter changes (Film only)
+  useEffect(() => {
+    if (!isFilmForEffect) return;
+    const D = Number(data.diameter_per_roll);
+    if (!D || D <= 0) return;
+    const rollsPerRow = Math.floor(1200 / D);
+    const rows = Math.floor(1000 / D);
+    const calculated = rollsPerRow * rows;
+    if (calculated > 0 && String(calculated) !== data.rolls_per_floor) {
+      onChange({ ...data, rolls_per_floor: String(calculated) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.diameter_per_roll, isFilmForEffect]);
+
   // Dynamic field visibility based on product type
   const pt = data.product_type.toLowerCase();
   const isWicket = pt.includes("wicket");
