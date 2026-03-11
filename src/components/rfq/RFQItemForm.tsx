@@ -664,6 +664,18 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       placeholder="0.00"
                     />
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Perforation Type</Label>
+                    <Select value={data.perforations} onValueChange={(v) => update({ perforations: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="laser">Laser</SelectItem>
+                        <SelectItem value="macro_4mm">Macroperforated 4mm (5/32")</SelectItem>
+                        <SelectItem value="macro_6mm">Macroperforated 6mm (1/4")</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             )}
