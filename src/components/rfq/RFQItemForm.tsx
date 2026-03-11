@@ -782,7 +782,7 @@ export function RFQItemForm({ data, onChange, productTypes, dpContacts }: RFQIte
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Roll Diameter (in)</Label>
+                      <Label className="text-xs">Roll Diameter (mm)</Label>
                       <Input
                         type="number"
                         step="0.01"
