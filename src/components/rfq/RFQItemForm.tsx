@@ -208,7 +208,9 @@ const getGramajeTotal = (
     const density = densityMap[l.material] ?? 0.92; // fallback LDPE
     return sum + microns * density;
   }, 0);
-  return layerGsm + (layers.length > 1 ? adhesiveGsm : 0);
+  // Each lamination bond between layers adds adhesive weight
+  const laminationJoints = layers.length > 1 ? layers.length - 1 : 0;
+  return layerGsm + laminationJoints * adhesiveGsm;
 };
 
 interface RollCalcResult {
