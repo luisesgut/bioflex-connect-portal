@@ -193,16 +193,16 @@ export function CreateVirtualPalletDialog({
           {/* PO Selector */}
           <div className="space-y-2">
             <Label>Purchase Order *</Label>
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={popoverOpen}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-between font-normal h-auto min-h-10 py-2"
                 >
                   {selectedPO ? (
-                    <span className="truncate">{getPOLabel(selectedPO)}</span>
+                    <span className="truncate text-left">{getPOLabel(selectedPO)}</span>
                   ) : (
                     <span className="text-muted-foreground">
                       {loadingPOs ? "Cargando POs..." : "Buscar PO activa..."}
@@ -211,7 +211,7 @@ export function CreateVirtualPalletDialog({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0" align="start">
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom" sideOffset={4}>
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Buscar por PO, PT Code o producto..."
