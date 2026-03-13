@@ -1856,6 +1856,102 @@ export type Database = {
         }
         Relationships: []
       }
+      sap_orders: {
+        Row: {
+          cantidad: number | null
+          cantidad_enviada: number | null
+          cantidad_solicitada: number | null
+          clave_unidad: string | null
+          cliente: string | null
+          costo: string | null
+          customer: string | null
+          detalles_almacen: Json | null
+          detalles_almacen_total: Json | null
+          dias_restantes: number | null
+          entregado: number | null
+          estado_tiempo: string | null
+          fecha_documento: string | null
+          fecha_vencimiento: string | null
+          frgn_name: string | null
+          id: string
+          item_number: string | null
+          pedido: number | null
+          po_number: string | null
+          precio: number | null
+          producto: string | null
+          pt_code: string | null
+          synced_at: string | null
+          tipo_empaque: string | null
+          u_imp_rl: string | null
+          unidad: string | null
+          validado: string | null
+          value: number | null
+          vendedor: string | null
+        }
+        Insert: {
+          cantidad?: number | null
+          cantidad_enviada?: number | null
+          cantidad_solicitada?: number | null
+          clave_unidad?: string | null
+          cliente?: string | null
+          costo?: string | null
+          customer?: string | null
+          detalles_almacen?: Json | null
+          detalles_almacen_total?: Json | null
+          dias_restantes?: number | null
+          entregado?: number | null
+          estado_tiempo?: string | null
+          fecha_documento?: string | null
+          fecha_vencimiento?: string | null
+          frgn_name?: string | null
+          id?: string
+          item_number?: string | null
+          pedido?: number | null
+          po_number?: string | null
+          precio?: number | null
+          producto?: string | null
+          pt_code?: string | null
+          synced_at?: string | null
+          tipo_empaque?: string | null
+          u_imp_rl?: string | null
+          unidad?: string | null
+          validado?: string | null
+          value?: number | null
+          vendedor?: string | null
+        }
+        Update: {
+          cantidad?: number | null
+          cantidad_enviada?: number | null
+          cantidad_solicitada?: number | null
+          clave_unidad?: string | null
+          cliente?: string | null
+          costo?: string | null
+          customer?: string | null
+          detalles_almacen?: Json | null
+          detalles_almacen_total?: Json | null
+          dias_restantes?: number | null
+          entregado?: number | null
+          estado_tiempo?: string | null
+          fecha_documento?: string | null
+          fecha_vencimiento?: string | null
+          frgn_name?: string | null
+          id?: string
+          item_number?: string | null
+          pedido?: number | null
+          po_number?: string | null
+          precio?: number | null
+          producto?: string | null
+          pt_code?: string | null
+          synced_at?: string | null
+          tipo_empaque?: string | null
+          u_imp_rl?: string | null
+          unidad?: string | null
+          validado?: string | null
+          value?: number | null
+          vendedor?: string | null
+        }
+        Relationships: []
+      }
       shipped_pallets: {
         Row: {
           bfx_order: string | null
@@ -2148,6 +2244,7 @@ export type Database = {
       }
       is_internal_user: { Args: { _user_id: string }; Returns: boolean }
       sync_sap_inventory: { Args: { payload: Json }; Returns: Json }
+      sync_sap_orders: { Args: { payload: Json }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

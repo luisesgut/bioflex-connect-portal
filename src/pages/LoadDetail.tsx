@@ -3956,6 +3956,7 @@ export default function LoadDetail() {
                           <TableHead className="text-center">Vol. OK</TableHead>
                           <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
+                          <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -4011,6 +4012,34 @@ export default function LoadDetail() {
                             </TableCell>
                             <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            <TableCell>
+                              {pallet.is_virtual && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete virtual pallet"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                                    try {
+                                      await supabase.from("inventory_pallets").delete().eq("id", pallet.id);
+                                      toast.success("Tarima virtual eliminada");
+                                      setSelectedPalletIds(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(pallet.id);
+                                        return next;
+                                      });
+                                      fetchLoadData();
+                                    } catch {
+                                      toast.error("Error al eliminar tarima virtual");
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
