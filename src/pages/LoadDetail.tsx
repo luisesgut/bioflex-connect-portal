@@ -3956,6 +3956,7 @@ export default function LoadDetail() {
                           <TableHead className="text-center">Vol. OK</TableHead>
                           <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
+                          <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
