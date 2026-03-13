@@ -933,7 +933,7 @@ export default function LoadDetail() {
       if (poA !== poB) return poA.localeCompare(poB);
       return b.quantity - a.quantity;
     });
-  }, [ptCodeToPOMap]);
+  }, [ptCodeToPOMap, bfxOrderToPOMap]);
 
   // Check if a pallet is the first of a new PO group
   const isFirstOfGroup = useCallback((sortedList: LoadPallet[], index: number): boolean => {
@@ -941,7 +941,7 @@ export default function LoadDetail() {
     const currentPO = resolveCustomerPO(sortedList[index]);
     const prevPO = resolveCustomerPO(sortedList[index - 1]);
     return currentPO !== prevPO;
-  }, [ptCodeToPOMap]);
+  }, [ptCodeToPOMap, bfxOrderToPOMap]);
 
   // Computed values for pallet categories
   const releasedPallets = useMemo(() => 
