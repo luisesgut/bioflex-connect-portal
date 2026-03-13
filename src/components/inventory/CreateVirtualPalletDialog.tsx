@@ -261,14 +261,14 @@ export function CreateVirtualPalletDialog({
 
           {/* Auto-filled PT Code, Description & Pieces per Pallet */}
           {selectedPO && (
-            <div className="grid grid-cols-3 gap-4 rounded-md border p-3 bg-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border p-3 bg-muted/50">
               <div>
                 <p className="text-xs text-muted-foreground">PT Code</p>
                 <p className="text-sm font-medium">{ptCode || "—"}</p>
               </div>
-              <div>
+              <div className="sm:col-span-1">
                 <p className="text-xs text-muted-foreground">Producto</p>
-                <p className="text-sm font-medium truncate">{description || "—"}</p>
+                <p className="text-sm font-medium break-words">{description || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Pzas / Tarima</p>
