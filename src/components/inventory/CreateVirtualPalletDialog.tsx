@@ -58,6 +58,7 @@ export function CreateVirtualPalletDialog({
   const [loadingPOs, setLoadingPOs] = useState(false);
   const [selectedPOId, setSelectedPOId] = useState<string>("");
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [poSearch, setPOSearch] = useState("");
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("MIL");
   const [traceability, setTraceability] = useState("");
@@ -68,6 +69,15 @@ export function CreateVirtualPalletDialog({
     () => activePOs.find((po) => po.id === selectedPOId) || null,
     [activePOs, selectedPOId]
   );
+
+  const filteredPOs = useMemo(() => {
+    if (!poSearch.trim()) return activePOs;
+    const q = poSearch.toLowerCase();
+    return activePOs.filter((po) => {
+      const label = getPOLabel(po).toLowerCase();
+      return label.includes(q);
+    });
+  }, [activePOs, poSearch]);
 
   const ptCode = selectedPO?.product
     ? selectedPO.product.codigo_producto || selectedPO.product.pt_code || ""
@@ -119,6 +129,7 @@ export function CreateVirtualPalletDialog({
     setUnit("MIL");
     setTraceability("");
     setNetWeight("");
+    setPOSearch("");
   };
 
   const handleCreate = async () => {
@@ -155,13 +166,13 @@ export function CreateVirtualPalletDialog({
       setSaving(false);
     }
   };
+const getPOLabel = (po: ActivePO) => {
+  const product = po.product;
+  const code = product?.codigo_producto || product?.pt_code || "—";
+  const name = product?.name || "";
+  return `PO ${po.po_number} · ${code} · ${name}`;
+};
 
-  const getPOLabel = (po: ActivePO) => {
-    const product = po.product;
-    const code = product?.codigo_producto || product?.pt_code || "—";
-    const name = product?.name || "";
-    return `PO ${po.po_number} · ${code} · ${name}`;
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,18 +211,23 @@ export function CreateVirtualPalletDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar por PO, PT Code o producto..." />
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar por PO, PT Code o producto..."
+                    value={poSearch}
+                    onValueChange={setPOSearch}
+                  />
                   <CommandList>
                     <CommandEmpty>No se encontraron POs activas.</CommandEmpty>
                     <CommandGroup>
-                      {activePOs.map((po) => (
+                      {filteredPOs.map((po) => (
                         <CommandItem
                           key={po.id}
-                          value={getPOLabel(po)}
+                          value={po.id}
                           onSelect={() => {
                             setSelectedPOId(po.id);
                             setPopoverOpen(false);
+                            setPOSearch("");
                           }}
                         >
                           <Check
