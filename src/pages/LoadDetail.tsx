@@ -3141,7 +3141,7 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
+          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} bfxOrderToPOMap={bfxOrderToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
