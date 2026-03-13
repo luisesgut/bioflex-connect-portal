@@ -890,6 +890,10 @@ export default function LoadDetail() {
       poInfoMap,
       resolveCustomerPO: (pallet) => {
         if (pallet.customer_lot) return pallet.customer_lot;
+        if (pallet.bfx_order) {
+          const poFromBfx = bfxOrderToPOMap.get(pallet.bfx_order);
+          if (poFromBfx) return poFromBfx;
+        }
         return ptCodeToPOMap.get(pallet.pt_code) || "-";
       },
     });
