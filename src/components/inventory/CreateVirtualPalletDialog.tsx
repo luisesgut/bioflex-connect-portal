@@ -58,6 +58,7 @@ export function CreateVirtualPalletDialog({
   const [loadingPOs, setLoadingPOs] = useState(false);
   const [selectedPOId, setSelectedPOId] = useState<string>("");
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [poSearch, setPOSearch] = useState("");
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("MIL");
   const [traceability, setTraceability] = useState("");
@@ -68,6 +69,15 @@ export function CreateVirtualPalletDialog({
     () => activePOs.find((po) => po.id === selectedPOId) || null,
     [activePOs, selectedPOId]
   );
+
+  const filteredPOs = useMemo(() => {
+    if (!poSearch.trim()) return activePOs;
+    const q = poSearch.toLowerCase();
+    return activePOs.filter((po) => {
+      const label = getPOLabel(po).toLowerCase();
+      return label.includes(q);
+    });
+  }, [activePOs, poSearch]);
 
   const ptCode = selectedPO?.product
     ? selectedPO.product.codigo_producto || selectedPO.product.pt_code || ""
