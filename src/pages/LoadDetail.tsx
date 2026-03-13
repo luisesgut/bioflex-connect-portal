@@ -518,11 +518,14 @@ export default function LoadDetail() {
       setBfxOrderToPOMap(bfxToPO);
 
       // Fetch PO prices for load value calculation
-      // Collect PO numbers from customer_lot OR pt_code->PO fallback
+      // Collect PO numbers from customer_lot, bfx_order, OR pt_code->PO fallback
       const loadPOSet = new Set<string>();
       (palletsData as any || []).forEach((p: any) => {
         if (p.pallet?.customer_lot) {
           loadPOSet.add(p.pallet.customer_lot);
+        } else if (p.pallet?.bfx_order) {
+          const mappedPO = bfxToPO.get(p.pallet.bfx_order);
+          if (mappedPO) loadPOSet.add(mappedPO);
         } else if (p.pallet?.pt_code) {
           const mappedPO = ptToPO.get(p.pallet.pt_code);
           if (mappedPO) loadPOSet.add(mappedPO);
