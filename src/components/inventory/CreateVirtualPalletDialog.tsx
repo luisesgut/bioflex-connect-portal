@@ -166,6 +166,12 @@ export function CreateVirtualPalletDialog({
       setSaving(false);
     }
   };
+const getPOLabel = (po: ActivePO) => {
+  const product = po.product;
+  const code = product?.codigo_producto || product?.pt_code || "—";
+  const name = product?.name || "";
+  return `PO ${po.po_number} · ${code} · ${name}`;
+};
 
 
   return (
