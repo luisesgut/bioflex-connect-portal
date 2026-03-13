@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 interface PackingListPallet {
   description: string;
   customer_lot: string | null;
+  bfx_order: string | null;
   quantity: number;
   release_number: string | null;
   pt_code: string;
