@@ -61,7 +61,7 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
     const poMap = new Map<string, POSummary>();
     
     pallets.forEach((pallet) => {
-      const key = pallet.pallet.customer_lot || ptCodeToPOMap?.get(pallet.pallet.pt_code) || "unassigned";
+      const key = pallet.pallet.customer_lot || (pallet.pallet.bfx_order && bfxOrderToPOMap?.get(pallet.pallet.bfx_order)) || ptCodeToPOMap?.get(pallet.pallet.pt_code) || "unassigned";
       const existing = poMap.get(key);
       
       const isReleased = !!pallet.release_number || !!pallet.release_pdf_url;
