@@ -448,6 +448,7 @@ export default function LoadDetail() {
         .select(`
           po_number,
           quantity,
+          sales_order_number,
           product:products(codigo_producto, pt_code, name, pieces_per_pallet)
         `)
         .in("status", ["pending", "confirmed", "accepted", "in_production"]);
