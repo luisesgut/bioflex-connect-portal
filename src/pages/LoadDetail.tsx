@@ -879,6 +879,7 @@ export default function LoadDetail() {
       pallets: destPallets.map((p) => ({
         description: p.pallet.description,
         customer_lot: p.pallet.customer_lot,
+        bfx_order: p.pallet.bfx_order,
         quantity: p.quantity,
         release_number: p.release_number,
         pt_code: p.pallet.pt_code,
