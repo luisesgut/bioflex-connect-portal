@@ -508,12 +508,37 @@ export default function LoadDetail() {
       });
       setPtCodeToPOMap(ptToPO);
 
-      // Build bfx_order (sales_order_number) -> po_number map
+      // Build bfx_order -> po_number map
+      // Some inventory records store Sales Order in bfx_order, while others store PO number directly.
       const bfxToPO = new Map<string, string>();
+      const addBfxMapping = (rawKey: string | null | undefined, poNumber: string) => {
+        if (!rawKey || !poNumber) return;
+
+        const trimmedKey = String(rawKey).trim();
+        if (!trimmedKey) return;
+
+        const noPrefixKey = trimmedKey.replace(/^PO\s*/i, "").trim();
+        const candidates = new Set([
+          trimmedKey,
+          noPrefixKey,
+          noPrefixKey ? `PO ${noPrefixKey}` : "",
+        ]);
+
+        candidates.forEach((candidate) => {
+          if (candidate && !bfxToPO.has(candidate)) {
+            bfxToPO.set(candidate, poNumber);
+          }
+        });
+      };
+
       (activePOs || []).forEach((po: any) => {
-        if (po.sales_order_number && !bfxToPO.has(po.sales_order_number)) {
-          bfxToPO.set(po.sales_order_number, po.po_number);
-        }
+        const poNumber = String(po.po_number || "").trim();
+        if (!poNumber) return;
+
+        // Sales Order -> PO
+        addBfxMapping(po.sales_order_number, poNumber);
+        // PO -> PO fallback (when bfx_order contains the PO number)
+        addBfxMapping(po.po_number, poNumber);
       });
       setBfxOrderToPOMap(bfxToPO);
 
