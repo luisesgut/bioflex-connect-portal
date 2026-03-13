@@ -48,12 +48,13 @@ interface LoadPOSummaryProps {
   isAdmin: boolean;
   title?: string;
   ptCodeToPOMap?: Map<string, string>;
+  bfxOrderToPOMap?: Map<string, string>;
   poPriceMap?: Map<string, number>;
   loadStatus?: string;
   poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
 }
 
-export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, poPriceMap, loadStatus, poTotalsMap }: LoadPOSummaryProps) {
+export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, bfxOrderToPOMap, poPriceMap, loadStatus, poTotalsMap }: LoadPOSummaryProps) {
   const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
 
   const poSummary = useMemo(() => {
