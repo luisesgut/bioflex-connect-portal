@@ -98,7 +98,7 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
     });
     
     return Array.from(poMap.values());
-  }, [pallets, ptCodeToPOMap, poPriceMap]);
+  }, [pallets, ptCodeToPOMap, bfxOrderToPOMap, poPriceMap]);
 
   const grandTotal = useMemo(() => {
     if (!showSubtotals) return 0;
