@@ -290,6 +290,7 @@ export default function LoadDetail() {
   const [selectedPalletsForRelease, setSelectedPalletsForRelease] = useState<Set<string>>(new Set());
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [ptCodeToPOMap, setPtCodeToPOMap] = useState<Map<string, string>>(new Map());
+  const [bfxOrderToPOMap, setBfxOrderToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
@@ -346,9 +347,13 @@ export default function LoadDetail() {
   const [carrierUnitNumber, setCarrierUnitNumber] = useState("");
   const [savingCarrierInfo, setSavingCarrierInfo] = useState(false);
 
-  // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
+  // Resolve Customer PO: prefer customer_lot, then bfx_order (Sales Order), then pt_code fallback
   const resolveCustomerPO = (pallet: LoadPallet): string => {
     if (pallet.pallet.customer_lot) return pallet.pallet.customer_lot;
+    if (pallet.pallet.bfx_order) {
+      const poFromBfx = bfxOrderToPOMap.get(pallet.pallet.bfx_order);
+      if (poFromBfx) return poFromBfx;
+    }
     return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
   };
 
@@ -443,6 +448,7 @@ export default function LoadDetail() {
         .select(`
           po_number,
           quantity,
+          sales_order_number,
           product:products(codigo_producto, pt_code, name, pieces_per_pallet)
         `)
         .in("status", ["pending", "confirmed", "accepted", "in_production"]);
@@ -502,12 +508,24 @@ export default function LoadDetail() {
       });
       setPtCodeToPOMap(ptToPO);
 
+      // Build bfx_order (sales_order_number) -> po_number map
+      const bfxToPO = new Map<string, string>();
+      (activePOs || []).forEach((po: any) => {
+        if (po.sales_order_number && !bfxToPO.has(po.sales_order_number)) {
+          bfxToPO.set(po.sales_order_number, po.po_number);
+        }
+      });
+      setBfxOrderToPOMap(bfxToPO);
+
       // Fetch PO prices for load value calculation
-      // Collect PO numbers from customer_lot OR pt_code->PO fallback
+      // Collect PO numbers from customer_lot, bfx_order, OR pt_code->PO fallback
       const loadPOSet = new Set<string>();
       (palletsData as any || []).forEach((p: any) => {
         if (p.pallet?.customer_lot) {
           loadPOSet.add(p.pallet.customer_lot);
+        } else if (p.pallet?.bfx_order) {
+          const mappedPO = bfxToPO.get(p.pallet.bfx_order);
+          if (mappedPO) loadPOSet.add(mappedPO);
         } else if (p.pallet?.pt_code) {
           const mappedPO = ptToPO.get(p.pallet.pt_code);
           if (mappedPO) loadPOSet.add(mappedPO);
@@ -861,6 +879,7 @@ export default function LoadDetail() {
       pallets: destPallets.map((p) => ({
         description: p.pallet.description,
         customer_lot: p.pallet.customer_lot,
+        bfx_order: p.pallet.bfx_order,
         quantity: p.quantity,
         release_number: p.release_number,
         pt_code: p.pallet.pt_code,
@@ -872,6 +891,10 @@ export default function LoadDetail() {
       poInfoMap,
       resolveCustomerPO: (pallet) => {
         if (pallet.customer_lot) return pallet.customer_lot;
+        if (pallet.bfx_order) {
+          const poFromBfx = bfxOrderToPOMap.get(pallet.bfx_order);
+          if (poFromBfx) return poFromBfx;
+        }
         return ptCodeToPOMap.get(pallet.pt_code) || "-";
       },
     });
@@ -2346,7 +2369,7 @@ export default function LoadDetail() {
               <CardContent>
                 {(() => {
                   const uniquePOs = new Set(
-                    pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                    pallets.map((p) => p.pallet.customer_lot || (p.pallet.bfx_order && bfxOrderToPOMap.get(p.pallet.bfx_order)) || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
                   );
                   return (
                     <>
@@ -2381,7 +2404,7 @@ export default function LoadDetail() {
                   {(() => {
                     let totalValue = 0;
                     pallets.forEach((p) => {
-                      const poNumber = p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code);
+                      const poNumber = p.pallet.customer_lot || (p.pallet.bfx_order && bfxOrderToPOMap.get(p.pallet.bfx_order)) || ptCodeToPOMap.get(p.pallet.pt_code);
                       const price = poNumber ? poPriceMap.get(poNumber) : undefined;
                       if (price) {
                         totalValue += (p.quantity / 1000) * price;
@@ -2507,7 +2530,7 @@ export default function LoadDetail() {
                   <CardContent>
                     {(() => {
                       const uniquePOs = new Set(
-                        pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                        pallets.map((p) => p.pallet.customer_lot || (p.pallet.bfx_order && bfxOrderToPOMap.get(p.pallet.bfx_order)) || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
                       );
                       return (
                         <>
@@ -3118,7 +3141,7 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
+          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} bfxOrderToPOMap={bfxOrderToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
         )}
 
         {/* Release Phase - Split Pallet Views */}
