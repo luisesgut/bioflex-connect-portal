@@ -2368,7 +2368,7 @@ export default function LoadDetail() {
               <CardContent>
                 {(() => {
                   const uniquePOs = new Set(
-                    pallets.map((p) => p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
+                    pallets.map((p) => p.pallet.customer_lot || (p.pallet.bfx_order && bfxOrderToPOMap.get(p.pallet.bfx_order)) || ptCodeToPOMap.get(p.pallet.pt_code) || "unassigned")
                   );
                   return (
                     <>
