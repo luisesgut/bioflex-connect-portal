@@ -347,9 +347,13 @@ export default function LoadDetail() {
   const [carrierUnitNumber, setCarrierUnitNumber] = useState("");
   const [savingCarrierInfo, setSavingCarrierInfo] = useState(false);
 
-  // Resolve Customer PO: prefer customer_lot from inventory, fallback to PO match by pt_code
+  // Resolve Customer PO: prefer customer_lot, then bfx_order (Sales Order), then pt_code fallback
   const resolveCustomerPO = (pallet: LoadPallet): string => {
     if (pallet.pallet.customer_lot) return pallet.pallet.customer_lot;
+    if (pallet.pallet.bfx_order) {
+      const poFromBfx = bfxOrderToPOMap.get(pallet.pallet.bfx_order);
+      if (poFromBfx) return poFromBfx;
+    }
     return ptCodeToPOMap.get(pallet.pallet.pt_code) || "-";
   };
 
