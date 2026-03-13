@@ -211,18 +211,23 @@ const getPOLabel = (po: ActivePO) => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar por PO, PT Code o producto..." />
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar por PO, PT Code o producto..."
+                    value={poSearch}
+                    onValueChange={setPOSearch}
+                  />
                   <CommandList>
                     <CommandEmpty>No se encontraron POs activas.</CommandEmpty>
                     <CommandGroup>
-                      {activePOs.map((po) => (
+                      {filteredPOs.map((po) => (
                         <CommandItem
                           key={po.id}
-                          value={getPOLabel(po)}
+                          value={po.id}
                           onSelect={() => {
                             setSelectedPOId(po.id);
                             setPopoverOpen(false);
+                            setPOSearch("");
                           }}
                         >
                           <Check
