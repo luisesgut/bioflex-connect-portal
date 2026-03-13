@@ -20,6 +20,9 @@ interface CanvasOrder {
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
+  order_document_date: string | null;
+  order_due_date: string | null;
+  order_timing_status: string | null;
   accepted_at: string | null;
   inventoryStats: {
     inFloor: number;
@@ -67,6 +70,30 @@ function formatDate(dateString: string | null) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatLongDate(dateString: string | null) {
+  if (!dateString) return "TBD";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getTimingStatusClasses(status: string | null) {
+  const normalized = (status || "").trim().toLowerCase();
+  if (!normalized) return "border-border bg-muted/60 text-muted-foreground";
+  if (normalized.includes("tiempo") || normalized.includes("time")) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (normalized.includes("venc") || normalized.includes("late") || normalized.includes("over")) {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+  if (normalized.includes("hoy") || normalized.includes("today")) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-sky-200 bg-sky-50 text-sky-700";
 }
 
 function getSOAgeDays(acceptedAt: string | null): number | null {
@@ -246,6 +273,28 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                     SO: {soAge}d
                                   </Badge>
                                 )}
+                              </div>
+                              <div className="mt-2 grid gap-1.5">
+                                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                                  <div className="rounded-md border border-border/60 bg-muted/30 px-2 py-1.5">
+                                    <div className="text-muted-foreground">Fecha de creacion</div>
+                                    <div className="mt-0.5 font-semibold text-foreground">
+                                      {formatLongDate(order.order_document_date)}
+                                    </div>
+                                  </div>
+                                  <div className="rounded-md border border-border/60 bg-muted/30 px-2 py-1.5">
+                                    <div className="text-muted-foreground">Fecha de entrega</div>
+                                    <div className="mt-0.5 font-semibold text-foreground">
+                                      {formatLongDate(order.order_due_date)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className={cn("rounded-md border px-2 py-1.5 text-[10px]", getTimingStatusClasses(order.order_timing_status))}>
+                                  <div className="uppercase tracking-wide opacity-80">Status</div>
+                                  <div className="mt-0.5 text-xs font-semibold">
+                                    {order.order_timing_status || "Sin status"}
+                                  </div>
+                                </div>
                               </div>
                               {/* Mini progress bar */}
                               <div className="mt-2">

@@ -91,6 +91,9 @@ interface Order {
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
+  order_document_date: string | null;
+  order_due_date: string | null;
+  order_timing_status: string | null;
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
@@ -367,6 +370,64 @@ export function EditableOrderRow({
     </span>
   );
 
+  const formatOrderMetaDate = (date: string | null) => {
+    if (!date) return "TBD";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getTimingStatusClasses = (status: string | null) => {
+    const normalized = (status || "").trim().toLowerCase();
+    if (!normalized) return "border-border bg-muted/60 text-muted-foreground";
+    if (normalized.includes("tiempo") || normalized.includes("time")) {
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    }
+    if (normalized.includes("venc") || normalized.includes("late") || normalized.includes("over")) {
+      return "border-red-200 bg-red-50 text-red-700";
+    }
+    if (normalized.includes("hoy") || normalized.includes("today")) {
+      return "border-amber-200 bg-amber-50 text-amber-700";
+    }
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  };
+
+  const renderOrderMetaPanel = () => (
+    <div className="mt-2 grid gap-1.5">
+      <div className="grid grid-cols-1 gap-1.5 xl:grid-cols-3">
+        <div className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-2">
+          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            Fecha de creacion
+          </div>
+          <div className="mt-1 text-xs font-medium text-foreground">
+            {formatOrderMetaDate(order.order_document_date)}
+          </div>
+        </div>
+        <div className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-2">
+          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <Truck className="h-3 w-3" />
+            Fecha de entrega
+          </div>
+          <div className="mt-1 text-xs font-medium text-foreground">
+            {formatOrderMetaDate(order.order_due_date)}
+          </div>
+        </div>
+        <div className={cn("rounded-md border px-2.5 py-2", getTimingStatusClasses(order.order_timing_status))}>
+          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
+            <Clock className="h-3 w-3" />
+            Status
+          </div>
+          <div className="mt-1 text-xs font-semibold">
+            {order.order_timing_status || "Sin status"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   // Shared cell renderers for both view and edit modes
   const renderExcessStock = () => (
     order.inventoryStats.sapVerificationLoading ? renderVerificationLoading() :
@@ -514,14 +575,17 @@ export function EditableOrderRow({
   const buildEditCells = (): Record<string, React.ReactNode> => ({
     po_number: (
       <div className="flex flex-col gap-2">
-        {order.pdf_url ? (
-          <button onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')} type="button"
-            className="font-mono text-sm font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-left">
-            {order.po_number}
-          </button>
-        ) : (
-          <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {order.pdf_url ? (
+            <button onClick={() => openStorageFile(order.pdf_url, 'ncr-attachments')} type="button"
+              className="font-mono text-sm font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0 text-left">
+              {order.po_number}
+            </button>
+          ) : (
+            <span className="font-mono text-sm font-medium text-card-foreground">{order.po_number}</span>
+          )}
+        </div>
+        {renderOrderMetaPanel()}
         <input ref={fileInputRef} type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
         {!order.pdf_url && !uploadedFile && (
           <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1 h-7 text-xs">
@@ -663,17 +727,20 @@ export function EditableOrderRow({
   // Build cell map for VIEW mode
   const buildViewCells = (): Record<string, React.ReactNode> => ({
     po_number: (
-      <div className="flex items-center gap-2">
-        <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
-          onClick={(e) => e.stopPropagation()}>
-          {order.po_number}
-        </Link>
-        {order.pdf_url && (
-          <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
-            className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
-        )}
+      <div className="min-w-[320px]">
+        <div className="flex items-center gap-2">
+          <Link to={`/orders/${order.id}`} className="font-mono text-sm font-medium text-primary hover:underline"
+            onClick={(e) => e.stopPropagation()}>
+            {order.po_number}
+          </Link>
+          {order.pdf_url && (
+            <button onClick={(e) => { e.stopPropagation(); openStorageFile(order.pdf_url, 'ncr-attachments'); }}
+              className="text-muted-foreground hover:text-primary cursor-pointer bg-transparent border-none p-0" title="View PDF">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {renderOrderMetaPanel()}
       </div>
     ),
     product: (
@@ -838,6 +905,7 @@ export function EditableOrderRow({
             key={colId}
             className={cn(
               "px-6 py-4 text-sm overflow-hidden text-ellipsis",
+              colId === "po_number" && "whitespace-normal",
               rightAlignedColumns.has(colId) && "text-right",
               isEditing && "py-2",
             )}

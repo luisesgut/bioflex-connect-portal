@@ -132,6 +132,12 @@ function getPrintCardDocumentUrl(printCard: string | null | undefined): string |
   return `${PRINTCARD_API_BASE_URL}/${encodeURIComponent(pc)}`;
 }
 
+function getBfxSpecDocumentUrl(printCard: string | null | undefined): string | null {
+  const pc = printCard?.trim();
+  if (!pc) return null;
+  return `${PRINTCARD_API_BASE_URL}/ficha/${encodeURIComponent(pc)}`;
+}
+
 export default function Products() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -463,10 +469,10 @@ export default function Products() {
                 </td>
                 {isAdmin && (
                   <td className="px-4 py-3 text-center">
-                    {getPrintCardDocumentUrl(product.pc_number) ? (
+                    {getBfxSpecDocumentUrl(product.pc_number) ? (
                       <button
                         onClick={() => {
-                          const url = getPrintCardDocumentUrl(product.pc_number);
+                          const url = getBfxSpecDocumentUrl(product.pc_number);
                           if (url) window.open(url, "_blank", "noopener,noreferrer");
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"

@@ -77,6 +77,9 @@ interface CatOrdenOpenItem {
   value?: number | string | null;
   cantidadSolicitada?: number | string | null;
   cantidadEnviada?: number | string | null;
+  fechaDocumento?: string | null;
+  fechaVencimiento?: string | null;
+  estadoTiempo?: string | null;
   totalStockDisponible?: number | string | null;
   detallesAlmacen?: StockVerificationWarehouseDetail[] | null;
   detallesAlmacenTotal?: StockVerificationWarehouseDetail[] | null;
@@ -103,6 +106,9 @@ interface Order {
   estimated_delivery_date: string | null;
   printing_date: string | null;
   conversion_date: string | null;
+  order_document_date: string | null;
+  order_due_date: string | null;
+  order_timing_status: string | null;
   created_at: string;
   pdf_url: string | null;
   sales_order_number: string | null;
@@ -659,6 +665,9 @@ export default function Orders() {
         estimated_delivery_date: order.estimated_delivery_date,
         printing_date: order.printing_date || null,
         conversion_date: order.conversion_date || null,
+        order_document_date: catOrdenItem?.fechaDocumento || null,
+        order_due_date: catOrdenItem?.fechaVencimiento || null,
+        order_timing_status: catOrdenItem?.estadoTiempo || null,
         created_at: order.created_at,
         pdf_url: order.pdf_url,
         sales_order_number: mergedSalesOrder,
