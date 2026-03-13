@@ -2403,7 +2403,7 @@ export default function LoadDetail() {
                   {(() => {
                     let totalValue = 0;
                     pallets.forEach((p) => {
-                      const poNumber = p.pallet.customer_lot || ptCodeToPOMap.get(p.pallet.pt_code);
+                      const poNumber = p.pallet.customer_lot || (p.pallet.bfx_order && bfxOrderToPOMap.get(p.pallet.bfx_order)) || ptCodeToPOMap.get(p.pallet.pt_code);
                       const price = poNumber ? poPriceMap.get(poNumber) : undefined;
                       if (price) {
                         totalValue += (p.quantity / 1000) * price;
