@@ -177,7 +177,7 @@ export function CreateVirtualPalletDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ghost className="h-5 w-5 text-purple-500" />
@@ -193,16 +193,16 @@ export function CreateVirtualPalletDialog({
           {/* PO Selector */}
           <div className="space-y-2">
             <Label>Purchase Order *</Label>
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={popoverOpen}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-between font-normal h-auto min-h-10 py-2"
                 >
                   {selectedPO ? (
-                    <span className="truncate">{getPOLabel(selectedPO)}</span>
+                    <span className="truncate text-left">{getPOLabel(selectedPO)}</span>
                   ) : (
                     <span className="text-muted-foreground">
                       {loadingPOs ? "Cargando POs..." : "Buscar PO activa..."}
@@ -211,7 +211,7 @@ export function CreateVirtualPalletDialog({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0" align="start">
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom" sideOffset={4}>
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Buscar por PO, PT Code o producto..."
@@ -261,14 +261,14 @@ export function CreateVirtualPalletDialog({
 
           {/* Auto-filled PT Code, Description & Pieces per Pallet */}
           {selectedPO && (
-            <div className="grid grid-cols-3 gap-4 rounded-md border p-3 bg-muted/50">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-md border p-3 bg-muted/50">
               <div>
                 <p className="text-xs text-muted-foreground">PT Code</p>
                 <p className="text-sm font-medium">{ptCode || "—"}</p>
               </div>
-              <div>
+              <div className="sm:col-span-1">
                 <p className="text-xs text-muted-foreground">Producto</p>
-                <p className="text-sm font-medium truncate">{description || "—"}</p>
+                <p className="text-sm font-medium break-words">{description || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Pzas / Tarima</p>
