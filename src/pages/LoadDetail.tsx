@@ -507,6 +507,15 @@ export default function LoadDetail() {
       });
       setPtCodeToPOMap(ptToPO);
 
+      // Build bfx_order (sales_order_number) -> po_number map
+      const bfxToPO = new Map<string, string>();
+      (activePOs || []).forEach((po: any) => {
+        if (po.sales_order_number && !bfxToPO.has(po.sales_order_number)) {
+          bfxToPO.set(po.sales_order_number, po.po_number);
+        }
+      });
+      setBfxOrderToPOMap(bfxToPO);
+
       // Fetch PO prices for load value calculation
       // Collect PO numbers from customer_lot OR pt_code->PO fallback
       const loadPOSet = new Set<string>();
