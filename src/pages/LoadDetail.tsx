@@ -293,6 +293,7 @@ export default function LoadDetail() {
   const [bfxOrderToPOMap, setBfxOrderToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
+  const [poDocumentsMap, setPoDocumentsMap] = useState<Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
@@ -560,10 +561,11 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item)")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, print_card_url, bfx_spec_url)")
           .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
         const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
+        const documentsMap = new Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
@@ -572,9 +574,14 @@ export default function LoadDetail() {
             sales_order_number: po.sales_order_number || null,
             customer_item: po.product?.customer_item || null,
           });
+          documentsMap.set(po.po_number, {
+            print_card_url: po.product?.print_card_url || null,
+            bfx_spec_url: po.product?.bfx_spec_url || null,
+          });
         });
         setPoPriceMap(priceMap);
         setPoSalesOrderMap(salesMap);
+        setPoDocumentsMap(documentsMap);
 
         // Build PO totals map (total requested quantity)
         const totalsMap = new Map<string, { total_quantity: number; shipped_quantity: number }>();
@@ -3166,7 +3173,17 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} bfxOrderToPOMap={bfxOrderToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
+          <LoadPOSummary
+            pallets={pallets}
+            isAdmin={canEditShipping}
+            ptCodeToPOMap={ptCodeToPOMap}
+            bfxOrderToPOMap={bfxOrderToPOMap}
+            poPriceMap={poPriceMap}
+            loadStatus={load?.status}
+            poTotalsMap={poTotalsMap}
+            poDocumentsMap={poDocumentsMap}
+            onOpenStorageFile={openStorageFile}
+          />
         )}
 
         {/* Release Phase - Split Pallet Views */}

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Info, DollarSign } from "lucide-react";
+import { Info, DollarSign, FileText } from "lucide-react";
 
 interface LoadPallet {
   id: string;
@@ -43,6 +44,11 @@ interface POSummary {
   subtotal: number | null;
 }
 
+interface PODocuments {
+  print_card_url: string | null;
+  bfx_spec_url: string | null;
+}
+
 interface LoadPOSummaryProps {
   pallets: LoadPallet[];
   isAdmin: boolean;
@@ -52,10 +58,24 @@ interface LoadPOSummaryProps {
   poPriceMap?: Map<string, number>;
   loadStatus?: string;
   poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
+  poDocumentsMap?: Map<string, PODocuments>;
+  onOpenStorageFile?: (storedValue: string | null | undefined, defaultBucket?: string) => void;
 }
 
-export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", ptCodeToPOMap, bfxOrderToPOMap, poPriceMap, loadStatus, poTotalsMap }: LoadPOSummaryProps) {
+export function LoadPOSummary({
+  pallets,
+  isAdmin,
+  title = "POs in this Load",
+  ptCodeToPOMap,
+  bfxOrderToPOMap,
+  poPriceMap,
+  loadStatus,
+  poTotalsMap,
+  poDocumentsMap,
+  onOpenStorageFile,
+}: LoadPOSummaryProps) {
   const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
+  const showPoTotals = isAdmin && poTotalsMap && poTotalsMap.size > 0;
 
   const poSummary = useMemo(() => {
     const poMap = new Map<string, POSummary>();
@@ -128,13 +148,14 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
                 <TableHead>Customer PO</TableHead>
                 {isAdmin && <TableHead>PT Code</TableHead>}
                 <TableHead>Product</TableHead>
+                <TableHead>Docs</TableHead>
                 <TableHead className="text-center">Pallets</TableHead>
                 <TableHead className="text-right">Volume</TableHead>
                 <TableHead className="text-center">Released</TableHead>
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
                 {showSubtotals && <TableHead className="text-right">Subtotal</TableHead>}
-                {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (
+                {showPoTotals && (
                   <>
                     <TableHead className="text-right">PO Total</TableHead>
                     <TableHead className="text-right">Shipped</TableHead>
@@ -144,69 +165,101 @@ export function LoadPOSummary({ pallets, isAdmin, title = "POs in this Load", pt
               </TableRow>
             </TableHeader>
             <TableBody>
-              {poSummary.map((po) => (
-                <TableRow key={po.customer_lot}>
-                  <TableCell className="font-medium">{po.customer_lot}</TableCell>
-                  {isAdmin && <TableCell className="font-mono text-sm">{po.pt_code}</TableCell>}
-                  <TableCell className="max-w-[200px] truncate">{po.description}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary">{po.pallet_count}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {po.total_quantity.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {po.released_count > 0 && (
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                        {po.released_count}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {po.pending_count > 0 && (
-                      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
-                        {po.pending_count}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {po.on_hold_count > 0 && (
-                      <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
-                        {po.on_hold_count}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  {showSubtotals && (
-                    <TableCell className="text-right font-medium">
-                      {po.subtotal !== null ? formatCurrency(po.subtotal) : "-"}
+              {poSummary.map((po) => {
+                const docs = poDocumentsMap?.get(po.customer_lot);
+                return (
+                  <TableRow key={po.customer_lot}>
+                    <TableCell className="font-medium">{po.customer_lot}</TableCell>
+                    {isAdmin && <TableCell className="font-mono text-sm">{po.pt_code}</TableCell>}
+                    <TableCell className="max-w-[200px] truncate">{po.description}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {docs?.print_card_url ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => onOpenStorageFile?.(docs.print_card_url, "print-cards")}
+                          >
+                            <FileText className="mr-1 h-3.5 w-3.5" />
+                            PC
+                          </Button>
+                        ) : null}
+                        {docs?.bfx_spec_url ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => onOpenStorageFile?.(docs.bfx_spec_url, "print-cards")}
+                          >
+                            <FileText className="mr-1 h-3.5 w-3.5" />
+                            BFX Spec
+                          </Button>
+                        ) : null}
+                        {!docs?.print_card_url && !docs?.bfx_spec_url ? (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        ) : null}
+                      </div>
                     </TableCell>
-                  )}
-                  {isAdmin && poTotalsMap && poTotalsMap.size > 0 && (() => {
-                    const totals = poTotalsMap.get(po.customer_lot);
-                    const poTotal = totals?.total_quantity || 0;
-                    const shipped = totals?.shipped_quantity || 0;
-                    const pending = poTotal - shipped;
-                    return (
-                      <>
-                        <TableCell className="text-right">{poTotal > 0 ? poTotal.toLocaleString() : "-"}</TableCell>
-                        <TableCell className="text-right">{shipped > 0 ? shipped.toLocaleString() : "-"}</TableCell>
-                        <TableCell className="text-right">{poTotal > 0 ? pending.toLocaleString() : "-"}</TableCell>
-                      </>
-                    );
-                  })()}
-                </TableRow>
-              ))}
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">{po.pallet_count}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {po.total_quantity.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {po.released_count > 0 && (
+                        <Badge variant="secondary" className="border border-success/20 bg-success/10 text-success">
+                          {po.released_count}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {po.pending_count > 0 && (
+                        <Badge variant="secondary" className="border border-warning/20 bg-warning/10 text-warning">
+                          {po.pending_count}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {po.on_hold_count > 0 && (
+                        <Badge variant="secondary" className="border border-destructive/20 bg-destructive/10 text-destructive">
+                          {po.on_hold_count}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    {showSubtotals && (
+                      <TableCell className="text-right font-medium">
+                        {po.subtotal !== null ? formatCurrency(po.subtotal) : "-"}
+                      </TableCell>
+                    )}
+                    {showPoTotals && (() => {
+                      const totals = poTotalsMap?.get(po.customer_lot);
+                      const poTotal = totals?.total_quantity || 0;
+                      const shipped = totals?.shipped_quantity || 0;
+                      const pending = poTotal - shipped;
+                      return (
+                        <>
+                          <TableCell className="text-right">{poTotal > 0 ? poTotal.toLocaleString() : "-"}</TableCell>
+                          <TableCell className="text-right">{shipped > 0 ? shipped.toLocaleString() : "-"}</TableCell>
+                          <TableCell className="text-right">{poTotal > 0 ? pending.toLocaleString() : "-"}</TableCell>
+                        </>
+                      );
+                    })()}
+                  </TableRow>
+                );
+              })}
             </TableBody>
             {showSubtotals && grandTotal > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={(isAdmin ? 8 : 7) + (isAdmin && poTotalsMap && poTotalsMap.size > 0 ? 3 : 0)} className="text-right font-semibold">
+                  <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 3 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <DollarSign className="h-4 w-4 text-success" />
                       <span>Load Total:</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-green-700 dark:text-green-400">
+                  <TableCell className="text-right font-bold text-success">
                     {formatCurrency(grandTotal)}
                   </TableCell>
                 </TableRow>
