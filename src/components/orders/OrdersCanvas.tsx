@@ -233,26 +233,31 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                             key={order.id}
                             className={cn(
                               "cursor-pointer hover:shadow-md transition-shadow bg-card",
-                              order.is_hot_order && "ring-1 ring-accent/40"
+                              order.is_hot_order && "ring-1 ring-destructive/30 border-destructive/20"
                             )}
                             onClick={() => navigate(`/orders/${order.id}`)}
                           >
                             <CardContent className="p-3">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs font-medium text-card-foreground">
-                                    {order.po_number}
-                                  </span>
-                                  {order.sales_order_number && (
-                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                      SO: {order.sales_order_number}
+                              <div className="flex items-start justify-between mb-1 gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-mono text-xs font-medium text-card-foreground">
+                                      {order.po_number}
                                     </span>
+                                    {order.sales_order_number && (
+                                      <span className="font-mono text-[10px] text-muted-foreground">
+                                        SO: {order.sales_order_number}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {order.is_hot_order && (
+                                    <Badge variant="destructive" className="mt-1 gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                                      <Flame className="h-3 w-3" />
+                                      Hot Order
+                                    </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  {order.is_hot_order && (
-                                    <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
-                                  )}
+                                <div className="flex items-center gap-1 shrink-0">
                                   {order.do_not_delay && (
                                     <ShieldAlert className="h-3.5 w-3.5 text-warning" />
                                   )}
