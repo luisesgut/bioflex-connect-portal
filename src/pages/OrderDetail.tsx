@@ -761,6 +761,32 @@ export default function OrderDetail() {
                       <p className="font-medium">—</p>
                     )}
                   </div>
+                  {!isAdmin && order.product?.print_card_url && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">Print Card (PC)</label>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto block"
+                        onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
+                      >
+                        <FileText className="h-4 w-4 mr-1 inline" />
+                        View PC
+                      </Button>
+                    </div>
+                  )}
+                  {!isAdmin && order.product?.bfx_spec_url && (
+                    <div>
+                      <label className="text-sm text-muted-foreground">BFX Spec Sheet</label>
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto block"
+                        onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
+                      >
+                        <FileText className="h-4 w-4 mr-1 inline" />
+                        View BFX Spec
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
