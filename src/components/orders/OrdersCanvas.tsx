@@ -87,6 +87,9 @@ function getTimingStatusClasses(status: string | null) {
   if (normalized.includes("tiempo") || normalized.includes("time")) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
+  if (normalized.includes("por vencer") || normalized.includes("almost")) {
+    return "border-yellow-300 bg-yellow-50 text-yellow-700";
+  }
   if (normalized.includes("venc") || normalized.includes("late") || normalized.includes("over")) {
     return "border-red-200 bg-red-50 text-red-700";
   }
@@ -94,6 +97,15 @@ function getTimingStatusClasses(status: string | null) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
   return "border-sky-200 bg-sky-50 text-sky-700";
+}
+
+function translateTimingStatus(status: string | null): string {
+  if (!status) return "No status";
+  const normalized = status.trim().toLowerCase();
+  if (normalized.includes("a tiempo")) return "On Time";
+  if (normalized.includes("por vencer")) return "Almost Due";
+  if (normalized.includes("vencido") || normalized.includes("vencida")) return "Overdue";
+  return status;
 }
 
 function getSOAgeDays(acceptedAt: string | null): number | null {
@@ -289,11 +301,9 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                     </div>
                                   </div>
                                 </div>
-                                <div className={cn("rounded-md border px-2 py-1.5 text-[10px]", getTimingStatusClasses(order.order_timing_status))}>
-                                  <div className="uppercase tracking-wide opacity-80">Status</div>
-                                  <div className="mt-0.5 text-xs font-semibold">
-                                    {order.order_timing_status || "Sin status"}
-                                  </div>
+                                <div className={cn("rounded-md border px-2 py-1.5 text-[10px] flex items-center gap-1.5", getTimingStatusClasses(order.order_timing_status))}>
+                                  <span className="uppercase tracking-wide opacity-80">Status:</span>
+                                  <span className="text-xs font-semibold">{translateTimingStatus(order.order_timing_status)}</span>
                                 </div>
                               </div>
                               {/* Mini progress bar */}
