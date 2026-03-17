@@ -240,7 +240,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                             <CardContent className="p-3">
                               <div className="flex items-start justify-between mb-1 gap-2">
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2 min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                     <span className="font-mono text-xs font-medium text-card-foreground">
                                       {order.po_number}
                                     </span>
@@ -249,13 +249,13 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                         SO: {order.sales_order_number}
                                       </span>
                                     )}
+                                    {order.is_hot_order && (
+                                      <Badge variant="destructive" className="gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                                        <Flame className="h-3 w-3" />
+                                        Hot Order
+                                      </Badge>
+                                    )}
                                   </div>
-                                  {order.is_hot_order && (
-                                    <Badge variant="destructive" className="mt-1 gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                                      <Flame className="h-3 w-3" />
-                                      Hot Order
-                                    </Badge>
-                                  )}
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
                                   {order.do_not_delay && (
