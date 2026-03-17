@@ -209,21 +209,21 @@ export function LoadPOSummary({
                     </TableCell>
                     <TableCell className="text-center">
                       {po.released_count > 0 && (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                        <Badge variant="secondary" className="border border-success/20 bg-success/10 text-success">
                           {po.released_count}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
                       {po.pending_count > 0 && (
-                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                        <Badge variant="secondary" className="border border-warning/20 bg-warning/10 text-warning">
                           {po.pending_count}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
                       {po.on_hold_count > 0 && (
-                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
+                        <Badge variant="secondary" className="border border-destructive/20 bg-destructive/10 text-destructive">
                           {po.on_hold_count}
                         </Badge>
                       )}
