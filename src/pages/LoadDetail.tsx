@@ -293,6 +293,7 @@ export default function LoadDetail() {
   const [bfxOrderToPOMap, setBfxOrderToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
+  const [poDocumentsMap, setPoDocumentsMap] = useState<Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
