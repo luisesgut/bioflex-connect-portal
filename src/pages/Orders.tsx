@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { useLanguage } from "@/hooks/useLanguage";
+import { mapProductLineToItemType, mapTipoEmpaqueToProductLine } from "@/utils/destinyProducts";
 import { useQuery } from "@tanstack/react-query";
 
 interface LoadDetail {
