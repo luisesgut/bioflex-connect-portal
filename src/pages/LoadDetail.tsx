@@ -3735,20 +3735,47 @@ export default function LoadDetail() {
                         {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
-                                onClick={() => {
-                                  setLinkVirtualPalletId(pallet.pallet_id);
-                                  setLinkVirtualPtCode(pallet.pallet.pt_code);
-                                  setLinkLoadPalletId(pallet.id);
-                                  setLinkVirtualOpen(true);
-                                }}
-                              >
-                                <Link2 className="h-3.5 w-3.5 mr-1" />
-                                Link
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
+                                  onClick={() => {
+                                    setLinkVirtualPalletId(pallet.pallet_id);
+                                    setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                    setLinkLoadPalletId(pallet.id);
+                                    setLinkVirtualOpen(true);
+                                  }}
+                                >
+                                  <Link2 className="h-3.5 w-3.5 mr-1" />
+                                  Link
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete virtual pallet"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                                    try {
+                                      await supabase.from("load_pallets").delete().eq("id", pallet.id);
+                                      await supabase.from("inventory_pallets").delete().eq("id", pallet.pallet_id);
+                                      toast.success("Tarima virtual eliminada");
+                                      setSelectedPalletsToDelete(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(pallet.id);
+                                        return next;
+                                      });
+                                      fetchLoadData();
+                                    } catch {
+                                      toast.error("Error al eliminar tarima virtual");
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </TableCell>
                         )}
