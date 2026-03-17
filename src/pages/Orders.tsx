@@ -707,7 +707,7 @@ export default function Orders() {
     staleTime: 5_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     retry: 1,
   });
 
