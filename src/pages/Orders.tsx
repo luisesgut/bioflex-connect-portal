@@ -644,6 +644,10 @@ export default function Orders() {
           : null;
       const excessStock = excessStockFromSap ?? excessStockFromInventory;
       const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
+      const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
+      const derivedProductItemType =
+        order.products?.item_type ||
+        mapProductLineToItemType(mapTipoEmpaqueToProductLine(productTipoEmpaque));
 
       return {
         id: order.id,
@@ -652,8 +656,9 @@ export default function Orders() {
         product_name: catOrdenItem?.producto || catOrdenItem?.frgnName || order.products?.name || null,
         product_pt_code: catOrdenItem?.clave || productPtCode,
         product_customer: catOrdenItem?.u_Cl1 || order.products?.customer || null,
-        product_item_type: order.products?.item_type || null,
-        product_tipo_empaque: catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null,
+        product_item_type: derivedProductItemType,
+        product_tipo_empaque: productTipoEmpaque,
+
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         product_customer_item: catOrdenItem?.u_ItemNo || order.products?.customer_item || null,
         product_item_description: catOrdenItem?.frgnName || order.products?.item_description || null,
