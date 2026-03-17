@@ -255,11 +255,11 @@ export function LoadPOSummary({
                 <TableRow>
                   <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 3 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <DollarSign className="h-4 w-4 text-success" />
                       <span>Load Total:</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-green-700 dark:text-green-400">
+                  <TableCell className="text-right font-bold text-success">
                     {formatCurrency(grandTotal)}
                   </TableCell>
                 </TableRow>
