@@ -771,8 +771,10 @@ export default function Orders() {
     };
 
     let result = orders.filter((order) => {
-      const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = order.po_number.toLowerCase().includes(q) ||
+                           (order.product_name?.toLowerCase().includes(q) ?? false) ||
+                           (order.sales_order_number?.toLowerCase().includes(q) ?? false);
       const matchesStatus = selectedStatus === "All" || 
                            getStatusFilter(order.status) === selectedStatus;
       const matchesProduct = productFilter.length === 0 || 
