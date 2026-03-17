@@ -301,11 +301,9 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                     </div>
                                   </div>
                                 </div>
-                                <div className={cn("rounded-md border px-2 py-1.5 text-[10px]", getTimingStatusClasses(order.order_timing_status))}>
-                                  <div className="uppercase tracking-wide opacity-80">Status</div>
-                                  <div className="mt-0.5 text-xs font-semibold">
-                                    {order.order_timing_status || "Sin status"}
-                                  </div>
+                                <div className={cn("rounded-md border px-2 py-1.5 text-[10px] flex items-center gap-1.5", getTimingStatusClasses(order.order_timing_status))}>
+                                  <span className="uppercase tracking-wide opacity-80">Status:</span>
+                                  <span className="text-xs font-semibold">{translateTimingStatus(order.order_timing_status)}</span>
                                 </div>
                               </div>
                               {/* Mini progress bar */}

@@ -427,14 +427,10 @@ export function EditableOrderRow({
             {formatOrderMetaDate(order.order_due_date)}
           </div>
         </div>
-        <div className={cn("rounded-md border px-2.5 py-2", getTimingStatusClasses(order.order_timing_status))}>
-          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
-            <Clock className="h-3 w-3" />
-            Status
-          </div>
-          <div className="mt-1 text-xs font-semibold">
-            {order.order_timing_status || "Sin status"}
-          </div>
+        <div className={cn("rounded-md border px-2.5 py-2 flex items-center gap-1.5", getTimingStatusClasses(order.order_timing_status))}>
+          <Clock className="h-3 w-3" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide">Status:</span>
+          <span className="text-xs font-semibold">{translateTimingStatus(order.order_timing_status)}</span>
         </div>
       </div>
     </div>
