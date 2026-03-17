@@ -385,6 +385,9 @@ export function EditableOrderRow({
     if (normalized.includes("tiempo") || normalized.includes("time")) {
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
     }
+    if (normalized.includes("por vencer") || normalized.includes("almost")) {
+      return "border-yellow-300 bg-yellow-50 text-yellow-700";
+    }
     if (normalized.includes("venc") || normalized.includes("late") || normalized.includes("over")) {
       return "border-red-200 bg-red-50 text-red-700";
     }
@@ -392,6 +395,15 @@ export function EditableOrderRow({
       return "border-amber-200 bg-amber-50 text-amber-700";
     }
     return "border-sky-200 bg-sky-50 text-sky-700";
+  };
+
+  const translateTimingStatus = (status: string | null): string => {
+    if (!status) return "No status";
+    const normalized = status.trim().toLowerCase();
+    if (normalized.includes("a tiempo")) return "On Time";
+    if (normalized.includes("por vencer")) return "Almost Due";
+    if (normalized.includes("vencido") || normalized.includes("vencida")) return "Overdue";
+    return status;
   };
 
   const renderOrderMetaPanel = () => (
