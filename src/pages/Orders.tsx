@@ -771,8 +771,10 @@ export default function Orders() {
     };
 
     let result = orders.filter((order) => {
-      const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = order.po_number.toLowerCase().includes(q) ||
+                           (order.product_name?.toLowerCase().includes(q) ?? false) ||
+                           (order.sales_order_number?.toLowerCase().includes(q) ?? false);
       const matchesStatus = selectedStatus === "All" || 
                            getStatusFilter(order.status) === selectedStatus;
       const matchesProduct = productFilter.length === 0 || 
@@ -967,7 +969,7 @@ export default function Orders() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by PO number or product..."
+              placeholder="Search by PO number, product, or sales order..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
