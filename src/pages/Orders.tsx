@@ -647,6 +647,7 @@ export default function Orders() {
       const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
       const derivedProductItemType =
         order.products?.item_type ||
+        mapProductLineToItemType((order.products as any)?.product_line) ||
         mapProductLineToItemType(mapTipoEmpaqueToProductLine(productTipoEmpaque));
 
       return {
