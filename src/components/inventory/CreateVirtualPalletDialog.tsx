@@ -47,12 +47,44 @@ interface ActivePO {
     pieces_per_pallet: number | null;
     item_description: string | null;
   } | null;
+  sap_pt_code?: string | null;
+  sap_product_name?: string | null;
+  sap_item_description?: string | null;
 }
 
+interface CatOrdenOpenItem {
+  u_PO2?: string | null;
+  clave?: string | number | null;
+  producto?: string | number | null;
+  frgnName?: string | number | null;
+}
+
+const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+
+const toCleanString = (value: unknown) => {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+};
+
+const normalizePoKey = (value: string | null | undefined) => {
+  const cleaned = (value || "").trim().toUpperCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  return /^\d+$/.test(compact) ? String(Number(compact)) : compact;
+};
+
+const getPOCode = (po: ActivePO) =>
+  po.sap_pt_code || po.product?.pt_code || po.product?.codigo_producto || "";
+
+const getPODescription = (po: ActivePO) =>
+  po.sap_item_description || po.product?.item_description || po.product?.name || po.sap_product_name || "";
+
+const getPOName = (po: ActivePO) =>
+  po.sap_product_name || po.product?.name || po.sap_item_description || "";
+
 const getPOLabel = (po: ActivePO) => {
-  const product = po.product;
-  const code = product?.codigo_producto || product?.pt_code || "—";
-  const name = product?.name || "";
+  const code = getPOCode(po) || "—";
+  const name = getPOName(po);
   return `PO ${po.po_number} · ${code} · ${name}`;
 };
 
@@ -69,8 +101,8 @@ export function CreateVirtualPalletDialog({
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("MIL");
   const [traceability, setTraceability] = useState("");
-   const [netWeight, setNetWeight] = useState("");
-   const [saving, setSaving] = useState(false);
+  const [netWeight, setNetWeight] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
     () => activePOs.find((po) => po.id === selectedPOId) || null,
@@ -86,13 +118,9 @@ export function CreateVirtualPalletDialog({
     });
   }, [activePOs, poSearch]);
 
-  const ptCode = selectedPO?.product
-    ? selectedPO.product.codigo_producto || selectedPO.product.pt_code || ""
-    : "";
+  const ptCode = selectedPO ? getPOCode(selectedPO) : "";
 
-  const description = selectedPO?.product
-    ? selectedPO.product.item_description || selectedPO.product.name || ""
-    : "";
+  const description = selectedPO ? getPODescription(selectedPO) : "";
 
   useEffect(() => {
     if (open) {
@@ -113,16 +141,50 @@ export function CreateVirtualPalletDialog({
   const fetchActivePOs = async () => {
     setLoadingPOs(true);
     try {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(
-          "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
-        )
-        .eq("status", "accepted")
-        .order("po_number");
+      const [poResult, sapItems] = await Promise.all([
+        supabase
+          .from("purchase_orders")
+          .select(
+            "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
+          )
+          .eq("status", "accepted")
+          .order("po_number"),
+        fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+          method: "GET",
+          headers: { accept: "*/*" },
+        })
+          .then(async (response) => {
+            if (!response.ok) return [] as CatOrdenOpenItem[];
+            const payload = await response.json();
+            return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
+          })
+          .catch((error) => {
+            console.warn("Error fetching SAP PO data for virtual pallets:", error);
+            return [] as CatOrdenOpenItem[];
+          }),
+      ]);
 
-      if (error) throw error;
-      setActivePOs((data as unknown as ActivePO[]) || []);
+      if (poResult.error) throw poResult.error;
+
+      const sapByPo = sapItems.reduce<Record<string, Pick<ActivePO, "sap_pt_code" | "sap_product_name" | "sap_item_description">>>((acc, item) => {
+        const key = normalizePoKey(item.u_PO2);
+        if (!key || acc[key]) return acc;
+
+        acc[key] = {
+          sap_pt_code: toCleanString(item.clave) || null,
+          sap_product_name: toCleanString(item.producto) || toCleanString(item.frgnName) || null,
+          sap_item_description: toCleanString(item.frgnName) || toCleanString(item.producto) || null,
+        };
+
+        return acc;
+      }, {});
+
+      const mergedPOs = ((poResult.data as unknown as ActivePO[]) || []).map((po) => ({
+        ...po,
+        ...sapByPo[normalizePoKey(po.po_number)],
+      }));
+
+      setActivePOs(mergedPOs);
     } catch (err) {
       console.error("Error fetching active POs:", err);
     } finally {
