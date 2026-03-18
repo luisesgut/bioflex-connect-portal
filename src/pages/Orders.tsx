@@ -117,6 +117,14 @@ interface Order {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const SAP_ORDERS_SYNC_ENDPOINT = "http://172.16.10.31/api/Sync/orders";
+
+interface SyncOrdersResponse {
+  success?: boolean;
+  inserted?: number;
+  updated_po?: number;
+  synced_at?: string;
+}
 
 const parseApiNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
@@ -174,6 +182,7 @@ export default function Orders() {
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [syncingOrders, setSyncingOrders] = useState(false);
 
   // Column config
   const { getOrderedColumns, getColumnWidth, setColumnWidth, reorderColumns, resetColumns } = useColumnConfig();
@@ -735,6 +744,31 @@ export default function Orders() {
     setChangeRequestDialogOpen(true);
   };
 
+  const syncOrdersFromSap = async () => {
+    setSyncingOrders(true);
+    try {
+      const response = await fetch(SAP_ORDERS_SYNC_ENDPOINT, {
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Orders sync failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as SyncOrdersResponse;
+      await refetchOrders();
+
+      toast.success(
+        `Ordenes sincronizadas. Insertadas: ${payload.inserted ?? 0}, actualizadas: ${payload.updated_po ?? 0}`
+      );
+    } catch (error) {
+      console.error("Error syncing purchase orders:", error);
+      toast.error("No fue posible sincronizar las ordenes");
+    } finally {
+      setSyncingOrders(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "TBD";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -948,9 +982,15 @@ export default function Orders() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => refetchOrders()} disabled={isFetching} className="gap-1.5">
-              <RotateCcw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
-              Refresh
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={isAdmin ? syncOrdersFromSap : () => refetchOrders()}
+              disabled={isAdmin ? syncingOrders : isFetching}
+              className="gap-1.5"
+            >
+              <RotateCcw className={cn("h-3.5 w-3.5", (isAdmin ? syncingOrders : isFetching) && "animate-spin")} />
+              {isAdmin ? "Sincronizar ordenes" : "Refresh"}
             </Button>
             {isAdmin && <BulkOrdersManager onUpdated={refetchOrders} />}
             <Link to="/orders/new">

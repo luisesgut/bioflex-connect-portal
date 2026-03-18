@@ -63,6 +63,15 @@ const statusStyles: Record<string, string> = {
   shipped: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
 };
 
+const SAP_INVENTORY_SYNC_ENDPOINT = "http://172.16.10.31/api/Sync/inventory";
+
+interface SyncInventoryResponse {
+  success?: boolean;
+  inserted?: number;
+  deleted_inv?: number;
+  synced_at?: string;
+}
+
 export default function Inventory() {
   const { isAdmin } = useAdmin();
   const { t } = useLanguage();
@@ -150,11 +159,27 @@ export default function Inventory() {
     setSyncing(true);
 
     try {
+      const response = await fetch(SAP_INVENTORY_SYNC_ENDPOINT, {
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Inventory sync failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as SyncInventoryResponse;
       await loadFromDB();
-      toast.success("Inventario actualizado");
+
+      if (payload.synced_at) {
+        setLastSyncTime(payload.synced_at);
+      }
+
+      toast.success(
+        `Inventario sincronizado. Insertados: ${payload.inserted ?? 0}, eliminados: ${payload.deleted_inv ?? 0}`
+      );
     } catch (err) {
       console.error("Inventory refresh exception:", err);
-      toast.error("No fue posible actualizar el inventario");
+      toast.error("No fue posible sincronizar el inventario");
     } finally {
       setSyncing(false);
       setLoading(false);
