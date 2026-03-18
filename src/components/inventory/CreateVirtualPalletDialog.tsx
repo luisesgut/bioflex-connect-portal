@@ -137,11 +137,27 @@ export function CreateVirtualPalletDialog({
     setTraceability("");
     setNetWeight("");
     setPOSearch("");
+    setPopoverOpen(false);
   };
 
   const handleCreate = async () => {
-    if (!selectedPOId || !ptCode || !description || !stock) {
-      toast.error("Selecciona una PO y stock son requeridos");
+    if (!selectedPOId) {
+      toast.error("Selecciona una PO");
+      return;
+    }
+
+    if (!stock.trim()) {
+      toast.error("Ingresa el stock de la tarima virtual");
+      return;
+    }
+
+    if (!description) {
+      toast.error("La PO seleccionada no tiene descripción de producto");
+      return;
+    }
+
+    if (!ptCode) {
+      toast.error("La PO seleccionada no tiene PT Code o código de producto");
       return;
     }
 
