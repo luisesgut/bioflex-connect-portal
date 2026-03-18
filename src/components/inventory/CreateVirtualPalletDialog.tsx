@@ -328,10 +328,7 @@ export function CreateVirtualPalletDialog({
                               PO {po.po_number}
                             </span>
                             <span className="block break-words text-xs text-muted-foreground">
-                              {po.product?.codigo_producto ||
-                                po.product?.pt_code ||
-                                "—"}{" "}
-                              · {po.product?.name || "Sin producto"}
+                              {getPOCode(po) || "—"} · {getPOName(po) || "Sin producto"}
                             </span>
                           </div>
                         </CommandItem>
