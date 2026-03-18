@@ -26,7 +26,7 @@ import {
 import { Loader2, Ghost, ChevronsUpDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalizedNumber } from "@/lib/utils";
 
 interface CreateVirtualPalletDialogProps {
   open: boolean;
@@ -60,6 +60,8 @@ interface CatOrdenOpenItem {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const DEFAULT_UNIT = "PIEZAS";
+const DEFAULT_NET_WEIGHT = "700";
 
 const toCleanString = (value: unknown) => {
   if (value === null || value === undefined) return "";
@@ -99,9 +101,9 @@ export function CreateVirtualPalletDialog({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [poSearch, setPOSearch] = useState("");
   const [stock, setStock] = useState("");
-  const [unit, setUnit] = useState("MIL");
+  const [unit, setUnit] = useState(DEFAULT_UNIT);
   const [traceability, setTraceability] = useState("");
-  const [netWeight, setNetWeight] = useState("");
+  const [netWeight, setNetWeight] = useState(DEFAULT_NET_WEIGHT);
   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
@@ -195,9 +197,9 @@ export function CreateVirtualPalletDialog({
   const resetForm = () => {
     setSelectedPOId("");
     setStock("");
-    setUnit("MIL");
+    setUnit(DEFAULT_UNIT);
     setTraceability("");
-    setNetWeight("");
+    setNetWeight(DEFAULT_NET_WEIGHT);
     setPOSearch("");
     setPopoverOpen(false);
   };
@@ -208,8 +210,11 @@ export function CreateVirtualPalletDialog({
       return;
     }
 
-    if (!stock.trim()) {
-      toast.error("Ingresa el stock de la tarima virtual");
+    const parsedStock = parseLocalizedNumber(stock);
+    const parsedNetWeight = parseLocalizedNumber(netWeight);
+
+    if (!stock.trim() || parsedStock <= 0) {
+      toast.error("Ingresa el stock de la tarima virtual en piezas");
       return;
     }
 
@@ -228,14 +233,14 @@ export function CreateVirtualPalletDialog({
       const { error } = await supabase.from("inventory_pallets").insert({
         pt_code: ptCode,
         description,
-        stock: parseFloat(stock),
+        stock: parsedStock,
         unit,
         traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}`,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
         is_virtual: true,
-        net_weight: netWeight ? parseFloat(netWeight) : null,
+        net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
       });
 
       if (error) throw error;
@@ -364,8 +369,9 @@ export function CreateVirtualPalletDialog({
               <Label htmlFor="vp-stock">Stock (piezas) *</Label>
               <Input
                 id="vp-stock"
-                type="number"
-                placeholder="e.g. 1000"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 45000"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
               />
@@ -395,8 +401,9 @@ export function CreateVirtualPalletDialog({
               <Label htmlFor="vp-net-weight">Peso Neto (kg)</Label>
               <Input
                 id="vp-net-weight"
-                type="number"
-                placeholder="e.g. 850"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 700"
                 value={netWeight}
                 onChange={(e) => setNetWeight(e.target.value)}
               />
