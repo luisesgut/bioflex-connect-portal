@@ -214,7 +214,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `;
 
     let { data: ordersData, error: ordersError } = await supabase
@@ -647,6 +647,7 @@ export default function Orders() {
       const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
       const derivedProductItemType =
         order.products?.item_type ||
+        mapProductLineToItemType((order.products as any)?.product_line) ||
         mapProductLineToItemType(mapTipoEmpaqueToProductLine(productTipoEmpaque));
 
       return {
