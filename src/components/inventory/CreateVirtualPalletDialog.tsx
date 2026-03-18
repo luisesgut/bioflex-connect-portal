@@ -196,7 +196,7 @@ export function CreateVirtualPalletDialog({
       <DialogContent className="sm:max-w-lg overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Ghost className="h-5 w-5 text-purple-500" />
+            <Ghost className="h-5 w-5 text-accent" />
             Crear Tarima Virtual
           </DialogTitle>
           <DialogDescription>
@@ -205,9 +205,9 @@ export function CreateVirtualPalletDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-x-hidden">
           {/* PO Selector */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label>Purchase Order *</Label>
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
               <PopoverTrigger asChild>
@@ -215,19 +215,24 @@ export function CreateVirtualPalletDialog({
                   variant="outline"
                   role="combobox"
                   aria-expanded={popoverOpen}
-                  className="w-full justify-between font-normal h-auto min-h-10 py-2"
+                  className="w-full min-w-0 justify-between gap-2 overflow-hidden font-normal h-auto min-h-10 py-2"
                 >
                   {selectedPO ? (
-                    <span className="truncate text-left">{getPOLabel(selectedPO)}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{getPOLabel(selectedPO)}</span>
                   ) : (
-                    <span className="text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
                       {loadingPOs ? "Cargando POs..." : "Buscar PO activa..."}
                     </span>
                   )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom" sideOffset={4}>
+              <PopoverContent
+                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] max-w-[calc(100vw-2rem)] p-0"
+                align="start"
+                side="bottom"
+                sideOffset={4}
+              >
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Buscar por PO, PT Code o producto..."
@@ -241,6 +246,7 @@ export function CreateVirtualPalletDialog({
                         <CommandItem
                           key={po.id}
                           value={po.id}
+                          className="items-start gap-2"
                           onSelect={() => {
                             setSelectedPOId(po.id);
                             setPopoverOpen(false);
@@ -249,17 +255,17 @@ export function CreateVirtualPalletDialog({
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
+                              "mt-0.5 h-4 w-4 shrink-0",
                               selectedPOId === po.id
                                 ? "opacity-100"
                                 : "opacity-0"
                             )}
                           />
-                          <div className="flex flex-col">
-                            <span className="font-medium">
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">
                               PO {po.po_number}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="block break-words text-xs text-muted-foreground">
                               {po.product?.codigo_producto ||
                                 po.product?.pt_code ||
                                 "—"}{" "}
