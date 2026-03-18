@@ -385,6 +385,9 @@ export function EditableOrderRow({
     if (normalized.includes("tiempo") || normalized.includes("time")) {
       return "border-emerald-200 bg-emerald-50 text-emerald-700";
     }
+    if (normalized.includes("por vencer") || normalized.includes("almost")) {
+      return "border-yellow-300 bg-yellow-50 text-yellow-700";
+    }
     if (normalized.includes("venc") || normalized.includes("late") || normalized.includes("over")) {
       return "border-red-200 bg-red-50 text-red-700";
     }
@@ -392,6 +395,15 @@ export function EditableOrderRow({
       return "border-amber-200 bg-amber-50 text-amber-700";
     }
     return "border-sky-200 bg-sky-50 text-sky-700";
+  };
+
+  const translateTimingStatus = (status: string | null): string => {
+    if (!status) return "No status";
+    const normalized = status.trim().toLowerCase();
+    if (normalized.includes("a tiempo")) return "On Time";
+    if (normalized.includes("por vencer")) return "Almost Due";
+    if (normalized.includes("vencido") || normalized.includes("vencida")) return "Overdue";
+    return status;
   };
 
   const renderOrderMetaPanel = () => (
@@ -415,14 +427,10 @@ export function EditableOrderRow({
             {formatOrderMetaDate(order.order_due_date)}
           </div>
         </div>
-        <div className={cn("rounded-md border px-2.5 py-2", getTimingStatusClasses(order.order_timing_status))}>
-          <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide">
-            <Clock className="h-3 w-3" />
-            Status
-          </div>
-          <div className="mt-1 text-xs font-semibold">
-            {order.order_timing_status || "Sin status"}
-          </div>
+        <div className={cn("rounded-md border px-2.5 py-2 flex items-center gap-1.5", getTimingStatusClasses(order.order_timing_status))}>
+          <Clock className="h-3 w-3" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide">Status:</span>
+          <span className="text-xs font-semibold">{translateTimingStatus(order.order_timing_status)}</span>
         </div>
       </div>
     </div>

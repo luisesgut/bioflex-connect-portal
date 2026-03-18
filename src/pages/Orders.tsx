@@ -23,6 +23,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { useLanguage } from "@/hooks/useLanguage";
+import { mapProductLineToItemType, mapTipoEmpaqueToProductLine } from "@/utils/destinyProducts";
 import { useQuery } from "@tanstack/react-query";
 
 interface LoadDetail {
@@ -222,7 +223,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, customer, item_type, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `;
 
     let { data: ordersData, error: ordersError } = await supabase
@@ -652,6 +653,11 @@ export default function Orders() {
           : null;
       const excessStock = excessStockFromSap ?? excessStockFromInventory;
       const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
+      const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
+      const derivedProductItemType =
+        order.products?.item_type ||
+        mapProductLineToItemType((order.products as any)?.product_line) ||
+        mapProductLineToItemType(mapTipoEmpaqueToProductLine(productTipoEmpaque));
 
       return {
         id: order.id,
@@ -660,8 +666,9 @@ export default function Orders() {
         product_name: catOrdenItem?.producto || catOrdenItem?.frgnName || order.products?.name || null,
         product_pt_code: catOrdenItem?.clave || productPtCode,
         product_customer: catOrdenItem?.u_Cl1 || order.products?.customer || null,
-        product_item_type: order.products?.item_type || null,
-        product_tipo_empaque: catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null,
+        product_item_type: derivedProductItemType,
+        product_tipo_empaque: productTipoEmpaque,
+
         product_dp_sales_csr: order.products?.dp_sales_csr_names || null,
         product_customer_item: catOrdenItem?.u_ItemNo || order.products?.customer_item || null,
         product_item_description: catOrdenItem?.frgnName || order.products?.item_description || null,
@@ -710,7 +717,7 @@ export default function Orders() {
     staleTime: 5_000,
     gcTime: 10 * 60_000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
     retry: 1,
   });
 
@@ -805,8 +812,10 @@ export default function Orders() {
     };
 
     let result = orders.filter((order) => {
-      const matchesSearch = order.po_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = order.po_number.toLowerCase().includes(q) ||
+                           (order.product_name?.toLowerCase().includes(q) ?? false) ||
+                           (order.sales_order_number?.toLowerCase().includes(q) ?? false);
       const matchesStatus = selectedStatus === "All" || 
                            getStatusFilter(order.status) === selectedStatus;
       const matchesProduct = productFilter.length === 0 || 
@@ -1007,7 +1016,7 @@ export default function Orders() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by PO number or product..."
+              placeholder="Search by PO number, product, or sales order..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"

@@ -293,6 +293,7 @@ export default function LoadDetail() {
   const [bfxOrderToPOMap, setBfxOrderToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
+  const [poDocumentsMap, setPoDocumentsMap] = useState<Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
@@ -560,10 +561,11 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item)")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, print_card_url, bfx_spec_url)")
           .in("po_number", loadPONumbers);
         const priceMap = new Map<string, number>();
         const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
+        const documentsMap = new Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
@@ -572,9 +574,14 @@ export default function LoadDetail() {
             sales_order_number: po.sales_order_number || null,
             customer_item: po.product?.customer_item || null,
           });
+          documentsMap.set(po.po_number, {
+            print_card_url: po.product?.print_card_url || null,
+            bfx_spec_url: po.product?.bfx_spec_url || null,
+          });
         });
         setPoPriceMap(priceMap);
         setPoSalesOrderMap(salesMap);
+        setPoDocumentsMap(documentsMap);
 
         // Build PO totals map (total requested quantity)
         const totalsMap = new Map<string, { total_quantity: number; shipped_quantity: number }>();
@@ -3166,7 +3173,17 @@ export default function LoadDetail() {
         )}
 
         {pallets.length > 0 && (
-          <LoadPOSummary pallets={pallets} isAdmin={canEditShipping} ptCodeToPOMap={ptCodeToPOMap} bfxOrderToPOMap={bfxOrderToPOMap} poPriceMap={poPriceMap} loadStatus={load?.status} poTotalsMap={poTotalsMap} />
+          <LoadPOSummary
+            pallets={pallets}
+            isAdmin={canEditShipping}
+            ptCodeToPOMap={ptCodeToPOMap}
+            bfxOrderToPOMap={bfxOrderToPOMap}
+            poPriceMap={poPriceMap}
+            loadStatus={load?.status}
+            poTotalsMap={poTotalsMap}
+            poDocumentsMap={poDocumentsMap}
+            onOpenStorageFile={openStorageFile}
+          />
         )}
 
         {/* Release Phase - Split Pallet Views */}
@@ -3735,20 +3752,47 @@ export default function LoadDetail() {
                         {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
-                                onClick={() => {
-                                  setLinkVirtualPalletId(pallet.pallet_id);
-                                  setLinkVirtualPtCode(pallet.pallet.pt_code);
-                                  setLinkLoadPalletId(pallet.id);
-                                  setLinkVirtualOpen(true);
-                                }}
-                              >
-                                <Link2 className="h-3.5 w-3.5 mr-1" />
-                                Link
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-xs text-red-600 hover:text-red-800 dark:text-red-400"
+                                  onClick={() => {
+                                    setLinkVirtualPalletId(pallet.pallet_id);
+                                    setLinkVirtualPtCode(pallet.pallet.pt_code);
+                                    setLinkLoadPalletId(pallet.id);
+                                    setLinkVirtualOpen(true);
+                                  }}
+                                >
+                                  <Link2 className="h-3.5 w-3.5 mr-1" />
+                                  Link
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete virtual pallet"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                                    try {
+                                      await supabase.from("load_pallets").delete().eq("id", pallet.id);
+                                      await supabase.from("inventory_pallets").delete().eq("id", pallet.pallet_id);
+                                      toast.success("Tarima virtual eliminada");
+                                      setSelectedPalletsToDelete(prev => {
+                                        const next = new Set(prev);
+                                        next.delete(pallet.id);
+                                        return next;
+                                      });
+                                      fetchLoadData();
+                                    } catch {
+                                      toast.error("Error al eliminar tarima virtual");
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </TableCell>
                         )}
