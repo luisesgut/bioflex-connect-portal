@@ -10,6 +10,7 @@ interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 interface ProductSummary {
@@ -18,6 +19,7 @@ interface ProductSummary {
   salesOrder: string | null;
   poNumber: string | null;
   releaseNumber: string | null;
+  ptCode?: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
@@ -86,7 +88,8 @@ export function generateCustomsPDF(
     doc.setFillColor(0, 51, 102);
     doc.rect(MARGIN, y - 4, CONTENT_WIDTH, 7, "F");
     doc.setTextColor(255, 255, 255);
-    addText(p.description, MARGIN + 2, y, { bold: true, size: 10 });
+    const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
+    addText(titleText, MARGIN + 2, y, { bold: true, size: 10 });
     doc.setTextColor(0, 0, 0);
     y += 8;
 
@@ -111,13 +114,15 @@ export function generateCustomsPDF(
       checkPage(20);
       // Table header
       const colTarima = MARGIN + 2;
-      const colPiezas = MARGIN + 30;
-      const colBruto = MARGIN + 75;
-      const colNeto = MARGIN + 120;
+      const colTraza = MARGIN + 18;
+      const colPiezas = MARGIN + 65;
+      const colBruto = MARGIN + 100;
+      const colNeto = MARGIN + 140;
 
       doc.setFillColor(200, 200, 200);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText("Tarima", colTarima, y, { bold: true, size: 8 });
+      addText("Trazabilidad", colTraza, y, { bold: true, size: 8 });
       addText("Piezas", colPiezas, y, { bold: true, size: 8 });
       addText("Bruto", colBruto, y, { bold: true, size: 8 });
       addText("Neto", colNeto, y, { bold: true, size: 8 });
@@ -127,6 +132,7 @@ export function generateCustomsPDF(
       p.palletDetails.forEach((pd) => {
         checkPage(5);
         addText(String(pd.palletIndex), colTarima, y, { size: 8 });
+        addText(pd.traceability || "—", colTraza, y, { size: 7 });
         addRightText(fmt(pd.pieces, 0), colPiezas + 25, y, { size: 8 });
         addRightText(fmt(pd.grossWeight), colBruto + 25, y, { size: 8 });
         addRightText(fmt(pd.netWeight), colNeto + 25, y, { size: 8 });

@@ -26,6 +26,7 @@ export interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 export interface CustomsProductSummary {
@@ -35,6 +36,7 @@ export interface CustomsProductSummary {
   poNumber: string | null;
   releaseNumber: string | null;
   bfxSpecUrl: string | null;
+  ptCode: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
@@ -112,7 +114,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     .from("load_pallets")
     .select(`
       id, destination, quantity, release_number, is_on_hold,
-      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces)
+      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces, traceability)
     `)
     .eq("load_id", loadId)
     .eq("is_on_hold", false);
@@ -207,6 +209,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
         bfxSpecUrl: prodInfo?.bfx_spec_url || null,
+        ptCode: lp.pallet.pt_code || null,
         totalPallets: 0,
         totalUnits: 0,
         totalGrossWeight: 0,
@@ -244,6 +247,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
       pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
+      traceability: (lp.pallet as any).traceability || undefined,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
