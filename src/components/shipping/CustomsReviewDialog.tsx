@@ -209,6 +209,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
         bfxSpecUrl: prodInfo?.bfx_spec_url || null,
+        ptCode: lp.pallet.pt_code || null,
         totalPallets: 0,
         totalUnits: 0,
         totalGrossWeight: 0,
