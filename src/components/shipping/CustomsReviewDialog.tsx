@@ -267,6 +267,55 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
 
   return results;
 }
+/**
+ * Enrich stored validated_data with fresh traceability codes from load_pallets.
+ * Needed because older validated_data may lack the traceability field.
+ */
+export async function enrichWithTraceability(
+  loadId: string,
+  products: CustomsProductSummary[]
+): Promise<CustomsProductSummary[]> {
+  // Check if any palletDetails are missing traceability
+  const needsEnrichment = products.some(
+    p => p.palletDetails?.some(pd => !pd.traceability)
+  );
+  if (!needsEnrichment) return products;
+
+  try {
+    const { data } = await supabase
+      .from("load_pallets")
+      .select("pallet:inventory_pallets(pt_code, traceability, gross_weight, net_weight)")
+      .eq("load_id", loadId)
+      .eq("is_on_hold", false);
+
+    if (!data || data.length === 0) return products;
+
+    // Build a lookup: index pallets in order per pt_code
+    const palletsByPtCode: Record<string, string[]> = {};
+    (data as any[]).forEach(lp => {
+      const ptCode = lp.pallet?.pt_code;
+      const trace = lp.pallet?.traceability;
+      if (ptCode && trace) {
+        if (!palletsByPtCode[ptCode]) palletsByPtCode[ptCode] = [];
+        palletsByPtCode[ptCode].push(trace);
+      }
+    });
+
+    // Merge traceability into palletDetails
+    return products.map(p => {
+      if (!p.palletDetails) return p;
+      const ptTraces = palletsByPtCode[p.ptCode || ""] || [];
+      const enrichedDetails = p.palletDetails.map((pd, i) => ({
+        ...pd,
+        traceability: pd.traceability || ptTraces[i] || undefined,
+      }));
+      return { ...p, palletDetails: enrichedDetails };
+    });
+  } catch (err) {
+    console.warn("Failed to enrich traceability:", err);
+    return products;
+  }
+}
 
 export function CustomsReviewDialog({
   open,
@@ -293,7 +342,8 @@ export function CustomsReviewDialog({
     setEditingIndex(null);
 
     if (existingData && existingData.length > 0) {
-      setProducts(existingData);
+      // Enrich existing validated data with fresh traceability from DB
+      enrichWithTraceability(loadId, existingData).then(enriched => setProducts(enriched));
       return;
     }
 
