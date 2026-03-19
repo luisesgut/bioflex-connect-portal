@@ -293,7 +293,8 @@ export function CustomsReviewDialog({
     setEditingIndex(null);
 
     if (existingData && existingData.length > 0) {
-      setProducts(existingData);
+      // Enrich existing validated data with fresh traceability from DB
+      enrichWithTraceability(loadId, existingData).then(enriched => setProducts(enriched));
       return;
     }
 
