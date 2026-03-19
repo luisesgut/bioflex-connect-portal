@@ -2336,11 +2336,12 @@ export default function LoadDetail() {
               </Select>
             )}
             {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
-              <Button variant="outline" onClick={() => {
-                const totalPalletCount = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
+              <Button variant="outline" onClick={async () => {
+                const enriched = await enrichWithTraceability(id!, billingValidatedData);
+                const totalPalletCount = enriched.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
                   { loadNumber: load.load_number, shippingDate: load.shipping_date },
-                  billingValidatedData,
+                  enriched,
                   totalPalletCount,
                   5000
                 );
