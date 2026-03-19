@@ -132,6 +132,7 @@ export function generateCustomsPDF(
       p.palletDetails.forEach((pd) => {
         checkPage(5);
         addText(String(pd.palletIndex), colTarima, y, { size: 8 });
+        addText(pd.traceability || "—", colTraza, y, { size: 7 });
         addRightText(fmt(pd.pieces, 0), colPiezas + 25, y, { size: 8 });
         addRightText(fmt(pd.grossWeight), colBruto + 25, y, { size: 8 });
         addRightText(fmt(pd.netWeight), colNeto + 25, y, { size: 8 });
