@@ -247,6 +247,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
       pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
+      traceability: (lp.pallet as any).traceability || undefined,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
