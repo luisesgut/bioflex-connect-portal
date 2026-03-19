@@ -114,13 +114,15 @@ export function generateCustomsPDF(
       checkPage(20);
       // Table header
       const colTarima = MARGIN + 2;
-      const colPiezas = MARGIN + 30;
-      const colBruto = MARGIN + 75;
-      const colNeto = MARGIN + 120;
+      const colTraza = MARGIN + 18;
+      const colPiezas = MARGIN + 65;
+      const colBruto = MARGIN + 100;
+      const colNeto = MARGIN + 140;
 
       doc.setFillColor(200, 200, 200);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText("Tarima", colTarima, y, { bold: true, size: 8 });
+      addText("Trazabilidad", colTraza, y, { bold: true, size: 8 });
       addText("Piezas", colPiezas, y, { bold: true, size: 8 });
       addText("Bruto", colBruto, y, { bold: true, size: 8 });
       addText("Neto", colNeto, y, { bold: true, size: 8 });
