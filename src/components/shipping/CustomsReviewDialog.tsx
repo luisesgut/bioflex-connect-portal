@@ -26,6 +26,7 @@ export interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 export interface CustomsProductSummary {
