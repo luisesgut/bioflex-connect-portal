@@ -88,7 +88,8 @@ export function generateCustomsPDF(
     doc.setFillColor(0, 51, 102);
     doc.rect(MARGIN, y - 4, CONTENT_WIDTH, 7, "F");
     doc.setTextColor(255, 255, 255);
-    addText(p.description, MARGIN + 2, y, { bold: true, size: 10 });
+    const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
+    addText(titleText, MARGIN + 2, y, { bold: true, size: 10 });
     doc.setTextColor(0, 0, 0);
     y += 8;
 
