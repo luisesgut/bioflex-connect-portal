@@ -36,6 +36,7 @@ export interface CustomsProductSummary {
   poNumber: string | null;
   releaseNumber: string | null;
   bfxSpecUrl: string | null;
+  ptCode: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
