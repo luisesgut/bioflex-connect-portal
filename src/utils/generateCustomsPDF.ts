@@ -93,7 +93,7 @@ export function generateCustomsPDF(
     doc.setTextColor(0, 0, 0);
     y += 8;
 
-    // Metadata rows
+    // Metadata rows — two columns
     const meta: [string, string][] = [
       ["Destino", p.destination],
       ["Sales Order", p.salesOrder || "-"],
@@ -101,11 +101,18 @@ export function generateCustomsPDF(
       ["Release", p.releaseNumber || "-"],
     ];
 
-    meta.forEach(([label, value]) => {
-      addText(label, MARGIN + 2, y, { bold: true });
-      addText(value, MARGIN + 50, y);
+    const col2X = MARGIN + CONTENT_WIDTH / 2;
+    for (let i = 0; i < meta.length; i += 2) {
+      const [lbl1, val1] = meta[i];
+      addText(lbl1, MARGIN + 2, y, { bold: true });
+      addText(val1, MARGIN + 30, y);
+      if (i + 1 < meta.length) {
+        const [lbl2, val2] = meta[i + 1];
+        addText(lbl2, col2X, y, { bold: true });
+        addText(val2, col2X + 28, y);
+      }
       y += 4;
-    });
+    }
 
     y += 2;
 
@@ -153,7 +160,7 @@ export function generateCustomsPDF(
 
     y += 2;
 
-    // Summary fields for this product
+    // Summary fields — two columns
     const rows: [string, string][] = [
       ["Total Tarimas", String(p.totalPallets)],
       ["Total Unidades", p.totalUnits.toLocaleString()],
@@ -166,12 +173,18 @@ export function generateCustomsPDF(
       ["Valor Aduanal", `$${fmt(p.customsValue)}`],
     ];
 
-    rows.forEach(([label, value]) => {
+    for (let i = 0; i < rows.length; i += 2) {
       checkPage();
-      addText(label, MARGIN + 2, y, { bold: true });
-      addText(value, MARGIN + 50, y);
+      const [lbl1, val1] = rows[i];
+      addText(lbl1, MARGIN + 2, y, { bold: true });
+      addText(val1, MARGIN + 30, y);
+      if (i + 1 < rows.length) {
+        const [lbl2, val2] = rows[i + 1];
+        addText(lbl2, col2X, y, { bold: true });
+        addText(val2, col2X + 28, y);
+      }
       y += 4;
-    });
+    }
 
     y += 4;
     doc.setDrawColor(200);
