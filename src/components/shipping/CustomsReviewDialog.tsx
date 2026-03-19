@@ -114,7 +114,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     .from("load_pallets")
     .select(`
       id, destination, quantity, release_number, is_on_hold,
-      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces)
+      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces, traceability)
     `)
     .eq("load_id", loadId)
     .eq("is_on_hold", false);

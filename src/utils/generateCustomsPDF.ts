@@ -19,6 +19,7 @@ interface ProductSummary {
   salesOrder: string | null;
   poNumber: string | null;
   releaseNumber: string | null;
+  ptCode?: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
