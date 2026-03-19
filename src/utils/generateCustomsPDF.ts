@@ -10,6 +10,7 @@ interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 interface ProductSummary {
