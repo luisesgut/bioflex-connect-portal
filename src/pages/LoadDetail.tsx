@@ -92,6 +92,7 @@ import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
 import { enrichWithTraceability } from "@/components/shipping/CustomsReviewDialog";
 import { generatePackingList } from "@/utils/generatePackingList";
+import { generatePackingListExcel } from "@/utils/generatePackingListExcel";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
@@ -885,7 +886,7 @@ export default function LoadDetail() {
     }
   };
 
-  const handleDownloadPackingList = async (destinationCode: string) => {
+  const buildPackingListParams = (destinationCode: string) => {
     if (!load) return;
     const destPallets = pallets.filter((p) => p.destination === destinationCode);
     if (destPallets.length === 0) {
@@ -904,7 +905,7 @@ export default function LoadDetail() {
     poSalesOrderMap.forEach((info, poNumber) => {
       poInfoMap.set(poNumber, info);
     });
-    await generatePackingList({
+    return {
       loadNumber: load.load_number,
       shippingDate: load.shipping_date,
       invoiceNumber: load.invoice_number || "",
@@ -922,7 +923,7 @@ export default function LoadDetail() {
         unit: p.pallet.unit,
       })),
       poInfoMap,
-      resolveCustomerPO: (pallet) => {
+      resolveCustomerPO: (pallet: { customer_lot: string | null; bfx_order: string | null; pt_code: string }) => {
         if (pallet.customer_lot) return pallet.customer_lot;
         if (pallet.bfx_order) {
           const poFromBfx = bfxOrderToPOMap.get(pallet.bfx_order);
@@ -930,7 +931,19 @@ export default function LoadDetail() {
         }
         return ptCodeToPOMap.get(pallet.pt_code) || "-";
       },
-    });
+    };
+  };
+
+  const handleDownloadPackingList = async (destinationCode: string) => {
+    const params = buildPackingListParams(destinationCode);
+    if (!params) return;
+    await generatePackingList(params);
+  };
+
+  const handleDownloadPackingListExcel = (destinationCode: string) => {
+    const params = buildPackingListParams(destinationCode);
+    if (!params) return;
+    generatePackingListExcel(params);
   };
 
   // Sort pallets by Customer PO (grouped), then by quantity descending within each group
@@ -2760,15 +2773,26 @@ export default function LoadDetail() {
                                   {step.label}
                                 </p>
                                 {step.type === "destination" && load.invoice_number && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-xs gap-1"
-                                    onClick={() => handleDownloadPackingList(step.destinationKey!)}
-                                  >
-                                    <FileDown className="h-3 w-3" />
-                                    PL
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs gap-1"
+                                      onClick={() => handleDownloadPackingList(step.destinationKey!)}
+                                    >
+                                      <FileDown className="h-3 w-3" />
+                                      PL
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs gap-1"
+                                      onClick={() => handleDownloadPackingListExcel(step.destinationKey!)}
+                                    >
+                                      <FileDown className="h-3 w-3" />
+                                      PL (Excel)
+                                    </Button>
+                                  </>
                                 )}
                               </div>
                               {step.type === "departed" && step.date && (
