@@ -173,6 +173,26 @@ export async function generatePackingList({
   doc.setFontSize(9);
   doc.text(`Ship Date: ${formattedDate}`, pageWidth - margin, plY, { align: "right" });
 
+  const rightLabelX = pageWidth - margin - 40;
+  const rightValueX = pageWidth - margin;
+  const rightBlockWidth = rightValueX - rightLabelX - 2;
+
+  const drawRightAlignedField = (
+    label: string,
+    value: string,
+    startY: number,
+  ): number => {
+    doc.setFont("helvetica", "normal");
+    doc.text(label, rightLabelX, startY);
+
+    const safeValue = value || "-";
+    const lines = doc.splitTextToSize(safeValue, rightBlockWidth) as string[];
+    doc.setFont("helvetica", "bold");
+    doc.text(lines, rightValueX, startY, { align: "right" });
+
+    return startY + Math.max(lines.length, 1) * 4.2;
+  };
+
   // === Client / Sales (left) ===
   let leftY = plY + 8;
   doc.setFont("helvetica", "bold");
@@ -186,28 +206,15 @@ export async function generatePackingList({
 
   // === Load # / Invoice (right) ===
   let rightY = plY + 8;
-  doc.setFont("helvetica", "normal");
-  doc.text("Load #:", pageWidth - margin - 40, rightY);
-  doc.setFont("helvetica", "bold");
-  doc.text(loadNumber, pageWidth - margin, rightY, { align: "right" });
-  rightY += 5;
-
-  doc.setFont("helvetica", "normal");
-  doc.text("Product Invoice", pageWidth - margin - 40, rightY);
-  doc.setFont("helvetica", "bold");
-  doc.text(invoiceNumber || "-", pageWidth - margin, rightY, { align: "right" });
-  rightY += 5;
+  rightY = drawRightAlignedField("Load #:", loadNumber, rightY);
+  rightY = drawRightAlignedField("Product Invoice", invoiceNumber || "-", rightY + 1);
 
   if (releaseNumbers.length > 0) {
-    doc.setFont("helvetica", "normal");
-    doc.text("Release #", pageWidth - margin - 40, rightY);
-    doc.setFont("helvetica", "bold");
-    doc.text(releaseNumbers.join(", "), pageWidth - margin, rightY, { align: "right" });
-    rightY += 5;
+    rightY = drawRightAlignedField("Release #", releaseNumbers.join(", "), rightY + 1);
   }
 
   // === TABLE (drawn manually) ===
-  const tableTop = Math.max(leftY, rightY) + 6;
+  const tableTop = Math.max(leftY, shipY, rightY) + 6;
   const colWidths = [24, 22, 42, 90, 28, 18, 22]; // PO, RELEASE, ITEM, DESC, QTY, UNITS, PALLETS
   const headers = ["PO #", "RELEASE #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
   const baseRowHeight = 6;
