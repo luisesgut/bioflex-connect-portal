@@ -1780,14 +1780,6 @@ export default function LoadDetail() {
 
     const palletsOnHold = pallets.filter((p) => p.is_on_hold);
     const palletsWithoutDestination = pallets.filter((p) => !p.is_on_hold && (!p.destination || p.destination === "tbd"));
-    const virtualPalletsUnlinked = pallets.filter((p) => p.pallet.is_virtual);
-
-    if (virtualPalletsUnlinked.length > 0) {
-      return {
-        valid: false,
-        message: `Cannot transition to In Transit: ${virtualPalletsUnlinked.length} tarima(s) virtual(es) sin ligar a tarima real.`
-      };
-    }
 
     if (palletsOnHold.length > 0) {
       return { 
