@@ -75,6 +75,7 @@ export function LoadPOSummary({
   poTotalsMap,
   poDocumentsMap,
   onOpenStorageFile,
+  loadNumber,
 }: LoadPOSummaryProps) {
   const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
   const showPoTotals = isAdmin && poTotalsMap && poTotalsMap.size > 0;
