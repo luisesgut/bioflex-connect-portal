@@ -43,6 +43,7 @@ interface POSummary {
   pending_count: number;
   on_hold_count: number;
   subtotal: number | null;
+  release_numbers: Set<string>;
 }
 
 interface PODocuments {
@@ -105,7 +106,10 @@ export function LoadPOSummary({
         if (existing.subtotal !== null) {
           existing.subtotal += palletSubtotal;
         }
+        if (pallet.release_number) existing.release_numbers.add(pallet.release_number);
       } else {
+        const releaseSet = new Set<string>();
+        if (pallet.release_number) releaseSet.add(pallet.release_number);
         poMap.set(key, {
           customer_lot: key,
           pt_code: pallet.pallet.pt_code,
@@ -116,6 +120,7 @@ export function LoadPOSummary({
           pending_count: isPending ? 1 : 0,
           on_hold_count: isOnHold ? 1 : 0,
           subtotal: price ? palletSubtotal : null,
+          release_numbers: releaseSet,
         });
       }
     });
@@ -138,6 +143,7 @@ export function LoadPOSummary({
       "Product": po.description,
       "Pallets": po.pallet_count,
       "Volume": po.total_quantity,
+      "Release #": po.release_numbers.size > 0 ? Array.from(po.release_numbers).join(", ") : "",
       "Released": po.released_count,
       "Pending": po.pending_count,
       "On Hold": po.on_hold_count,
@@ -150,6 +156,7 @@ export function LoadPOSummary({
       { wch: 40 },
       { wch: 10 },
       { wch: 14 },
+      { wch: 18 },
       { wch: 10 },
       { wch: 10 },
       { wch: 10 },
