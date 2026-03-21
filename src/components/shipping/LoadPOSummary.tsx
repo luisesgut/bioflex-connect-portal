@@ -106,7 +106,10 @@ export function LoadPOSummary({
         if (existing.subtotal !== null) {
           existing.subtotal += palletSubtotal;
         }
+        if (pallet.release_number) existing.release_numbers.add(pallet.release_number);
       } else {
+        const releaseSet = new Set<string>();
+        if (pallet.release_number) releaseSet.add(pallet.release_number);
         poMap.set(key, {
           customer_lot: key,
           pt_code: pallet.pallet.pt_code,
@@ -117,6 +120,7 @@ export function LoadPOSummary({
           pending_count: isPending ? 1 : 0,
           on_hold_count: isOnHold ? 1 : 0,
           subtotal: price ? palletSubtotal : null,
+          release_numbers: releaseSet,
         });
       }
     });
