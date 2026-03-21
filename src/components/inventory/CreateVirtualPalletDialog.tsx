@@ -235,7 +235,9 @@ export function CreateVirtualPalletDialog({
         ? `VIRTUAL-${traceability.trim()}`
         : `VIRTUAL-${selectedPO?.po_number || "N/A"}`;
 
-      const buildPayload = (traceabilityValue: string) => ({
+      const buildPayload = (
+        traceabilityValue: string,
+      ): Database["public"]["Tables"]["inventory_pallets"]["Insert"] => ({
         pt_code: ptCode,
         description,
         stock: parsedStock,
