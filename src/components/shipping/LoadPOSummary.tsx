@@ -43,6 +43,7 @@ interface POSummary {
   pending_count: number;
   on_hold_count: number;
   subtotal: number | null;
+  release_numbers: Set<string>;
 }
 
 interface PODocuments {
