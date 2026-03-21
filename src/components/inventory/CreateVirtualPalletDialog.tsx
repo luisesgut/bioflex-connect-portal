@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/popover";
 import { Loader2, Ghost, ChevronsUpDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { cn, parseLocalizedNumber } from "@/lib/utils";
 
@@ -230,18 +231,35 @@ export function CreateVirtualPalletDialog({
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("inventory_pallets").insert({
+      const baseTraceability = traceability.trim()
+        ? `VIRTUAL-${traceability.trim()}`
+        : `VIRTUAL-${selectedPO?.po_number || "N/A"}`;
+
+      const buildPayload = (
+        traceabilityValue: string,
+      ): Database["public"]["Tables"]["inventory_pallets"]["Insert"] => ({
         pt_code: ptCode,
         description,
         stock: parsedStock,
         unit,
-        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}-${Date.now()}`,
+        traceability: traceabilityValue,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
         is_virtual: true,
         net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
       });
+
+      let { error } = await supabase
+        .from("inventory_pallets")
+        .insert(buildPayload(`${baseTraceability}-${Date.now()}`));
+
+      if (error?.message?.includes("inventory_pallets_traceability_unique")) {
+        const fallbackTraceability = `${baseTraceability}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+        ({ error } = await supabase
+          .from("inventory_pallets")
+          .insert(buildPayload(fallbackTraceability)));
+      }
 
       if (error) throw error;
 
