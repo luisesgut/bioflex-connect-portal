@@ -132,12 +132,48 @@ export function LoadPOSummary({
 
   const formatCurrency = (val: number) => "$" + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const handleExportExcel = () => {
+    const rows = poSummary.map((po) => ({
+      "Customer PO": po.customer_lot,
+      "Product": po.description,
+      "Pallets": po.pallet_count,
+      "Volume": po.total_quantity,
+      "Released": po.released_count,
+      "Pending": po.pending_count,
+      "On Hold": po.on_hold_count,
+      ...(showSubtotals ? { "Subtotal": po.subtotal ?? "" } : {}),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 14 },
+      { wch: 40 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      ...(showSubtotals ? [{ wch: 14 }] : []),
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "POs in Load");
+    XLSX.writeFile(wb, `POs_Load_${loadNumber || "export"}.xlsx`);
+  };
+
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Info className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Info className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">{title}</CardTitle>
+          </div>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <Download className="mr-1.5 h-4 w-4" />
+              Excel
+            </Button>
+          )}
         </div>
         <CardDescription>
           Summary of Customer POs included in this load
