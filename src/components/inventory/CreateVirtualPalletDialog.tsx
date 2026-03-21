@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/popover";
 import { Loader2, Ghost, ChevronsUpDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { cn, parseLocalizedNumber } from "@/lib/utils";
 
