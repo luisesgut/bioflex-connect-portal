@@ -3201,6 +3201,7 @@ export default function LoadDetail() {
             poTotalsMap={poTotalsMap}
             poDocumentsMap={poDocumentsMap}
             onOpenStorageFile={openStorageFile}
+            loadNumber={load?.load_number}
           />
         )}
 
