@@ -235,7 +235,7 @@ export function CreateVirtualPalletDialog({
         description,
         stock: parsedStock,
         unit,
-        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}`,
+        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}-${Date.now()}`,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
