@@ -11,7 +11,8 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Info, DollarSign, FileText } from "lucide-react";
+import { Info, DollarSign, FileText, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface LoadPallet {
   id: string;
