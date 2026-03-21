@@ -61,6 +61,7 @@ interface LoadPOSummaryProps {
   poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
   poDocumentsMap?: Map<string, PODocuments>;
   onOpenStorageFile?: (storedValue: string | null | undefined, defaultBucket?: string) => void;
+  loadNumber?: string;
 }
 
 export function LoadPOSummary({
