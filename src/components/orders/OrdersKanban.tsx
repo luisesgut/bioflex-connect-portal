@@ -140,7 +140,14 @@ export function OrdersKanban({ orders, isAdmin }: OrdersKanbanProps) {
                               </span>
                               <div className="flex items-center gap-1">
                                 {order.is_hot_order && (
-                                  <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
+                                  <>
+                                    {order.hot_order_priority && (
+                                      <Badge variant="destructive" className="text-[10px] px-1 py-0 min-w-[18px] justify-center">
+                                        {order.hot_order_priority}
+                                      </Badge>
+                                    )}
+                                    <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
+                                  </>
                                 )}
                                 {order.do_not_delay && (
                                   <ShieldAlert className="h-3.5 w-3.5 text-warning" />
