@@ -781,7 +781,9 @@ export function EditableOrderRow({
         {order.is_hot_order && (
           <div className="flex items-center gap-1">
             <Flame className="h-4 w-4 text-accent animate-pulse" />
-            <span className="text-sm font-semibold text-accent">Hot</span>
+            <span className="text-sm font-semibold text-accent">
+              Hot{order.hot_order_priority ? ` #${order.hot_order_priority}` : ""}
+            </span>
           </div>
         )}
         {order.do_not_delay && (

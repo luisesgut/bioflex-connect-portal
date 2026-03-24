@@ -259,7 +259,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                     {order.is_hot_order && (
                                       <Badge variant="destructive" className="gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wide">
                                         <Flame className="h-3 w-3" />
-                                        Hot Order
+                                        Hot{order.hot_order_priority ? ` #${order.hot_order_priority}` : ""}
                                       </Badge>
                                     )}
                                   </div>
