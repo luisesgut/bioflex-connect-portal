@@ -274,6 +274,7 @@ export function EditableOrderRow({
         total_price: editedOrder.total_price,
         status: effectiveStatus,
         is_hot_order: editedOrder.is_hot_order,
+        ...(!editedOrder.is_hot_order ? { hot_order_priority: null } : {}),
         do_not_delay: editedOrder.do_not_delay,
         requested_delivery_date: editedOrder.requested_delivery_date || null,
         estimated_delivery_date: editedOrder.estimated_delivery_date || null,
