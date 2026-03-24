@@ -157,6 +157,7 @@ interface LoadPallet {
     net_weight: number | null;
     pieces: number | null;
     is_virtual: boolean;
+    location: string | null;
   };
 }
 
