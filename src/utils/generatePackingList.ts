@@ -30,6 +30,7 @@ interface PackingListParams {
   loadNumber: string;
   shippingDate: string;
   invoiceNumber: string;
+  freightInvoiceNumber?: string;
   destination: DestinationInfo;
   pallets: PackingListPallet[];
   poInfoMap: Map<string, POInfo>;
