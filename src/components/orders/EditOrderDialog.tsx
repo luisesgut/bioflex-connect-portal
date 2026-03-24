@@ -45,14 +45,7 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
-  const [quantity, setQuantity] = useState(order.quantity);
-  const [pricePerThousand, setPricePerThousand] = useState(order.price_per_thousand ?? 0);
-  const [totalPrice, setTotalPrice] = useState(order.total_price ?? 0);
-  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(order.requested_delivery_date || "");
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(order.estimated_delivery_date || "");
-  const [printingDate, setPrintingDate] = useState(order.printing_date || "");
-  const [conversionDate, setConversionDate] = useState(order.conversion_date || "");
-  const [salesOrderNumber, setSalesOrderNumber] = useState(order.sales_order_number || "");
   const [notes, setNotes] = useState(order.notes || "");
   const [isHotOrder, setIsHotOrder] = useState(order.is_hot_order);
   const [doNotDelay, setDoNotDelay] = useState(order.do_not_delay);
