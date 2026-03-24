@@ -2233,7 +2233,51 @@ export default function LoadDetail() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{load.load_number}</h1>
+              {canEditShipping && editingLoadName ? (
+                <form
+                  className="flex items-center gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!editLoadNameValue.trim() || editLoadNameValue.trim() === load.load_number) {
+                      setEditingLoadName(false);
+                      return;
+                    }
+                    const { error } = await supabase
+                      .from("shipping_loads")
+                      .update({ load_number: editLoadNameValue.trim() })
+                      .eq("id", id);
+                    if (error) {
+                      toast.error("Failed to update load name");
+                    } else {
+                      toast.success("Load name updated");
+                      fetchLoad();
+                    }
+                    setEditingLoadName(false);
+                  }}
+                >
+                  <Input
+                    value={editLoadNameValue}
+                    onChange={(e) => setEditLoadNameValue(e.target.value)}
+                    className="h-9 w-48 text-xl font-bold"
+                    autoFocus
+                    onBlur={() => setEditingLoadName(false)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setEditingLoadName(false); }}
+                  />
+                </form>
+              ) : (
+                <h1
+                  className={cn("text-2xl font-bold tracking-tight", canEditShipping && "cursor-pointer hover:text-primary group flex items-center gap-1.5")}
+                  onClick={() => {
+                    if (canEditShipping) {
+                      setEditLoadNameValue(load.load_number);
+                      setEditingLoadName(true);
+                    }
+                  }}
+                >
+                  {load.load_number}
+                  {canEditShipping && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </h1>
+              )}
               <Badge className={statusStyles[load.status]} variant="secondary">
                 {statusLabels[load.status] || load.status.replace("_", " ")}
               </Badge>
