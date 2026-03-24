@@ -565,8 +565,20 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, print_card_url, bfx_spec_url)")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, codigo_producto, print_card_url, bfx_spec_url)")
           .in("po_number", loadPONumbers);
+
+        // Also fetch item_number from sap_orders for fallback
+        const { data: sapOrdersData } = await supabase
+          .from("sap_orders")
+          .select("po_number, item_number")
+          .in("po_number", loadPONumbers);
+        const sapItemMap = new Map<string, string>();
+        (sapOrdersData || []).forEach((so: any) => {
+          if (so.item_number && so.po_number && !sapItemMap.has(so.po_number)) {
+            sapItemMap.set(so.po_number, so.item_number);
+          }
+        });
         const priceMap = new Map<string, number>();
         const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
         const documentsMap = new Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>();
@@ -576,7 +588,7 @@ export default function LoadDetail() {
           }
           salesMap.set(po.po_number, {
             sales_order_number: po.sales_order_number || null,
-            customer_item: po.product?.customer_item || null,
+            customer_item: po.product?.customer_item || po.product?.codigo_producto || sapItemMap.get(po.po_number) || null,
           });
           documentsMap.set(po.po_number, {
             print_card_url: po.product?.print_card_url || null,
