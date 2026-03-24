@@ -157,6 +157,7 @@ interface LoadPallet {
     net_weight: number | null;
     pieces: number | null;
     is_virtual: boolean;
+    location: string | null;
   };
 }
 
@@ -212,6 +213,7 @@ interface AvailablePallet {
   unit: string;
   pieces_per_pallet?: number | null;
   is_virtual?: boolean;
+  location?: string | null;
 }
 
 interface ActivePOWithInventory {
@@ -394,7 +396,7 @@ export default function LoadDetail() {
           is_on_hold,
           actioned_by,
           actioned_at,
-          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces, is_virtual)
+          pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, release_date, unit, traceability, fecha, gross_weight, net_weight, pieces, is_virtual, location)
         `)
         .eq("load_id", id);
 
@@ -437,7 +439,7 @@ export default function LoadDetail() {
       // Fetch available pallets excluding those already in any load
       const { data: availableData } = await supabase
         .from("inventory_pallets")
-        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit, is_virtual")
+        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit, is_virtual, location")
         .eq("status", "available");
 
       // Filter out pallets already assigned to any load
@@ -1240,7 +1242,8 @@ export default function LoadDetail() {
           p.pt_code.toLowerCase().includes(search) ||
           p.description.toLowerCase().includes(search) ||
           p.traceability.toLowerCase().includes(search) ||
-          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search)) ||
+          (p.location && p.location.toLowerCase().includes(search))
       );
     }
 
@@ -1713,7 +1716,8 @@ export default function LoadDetail() {
           p.pt_code.toLowerCase().includes(search) ||
           p.description.toLowerCase().includes(search) ||
           p.traceability.toLowerCase().includes(search) ||
-          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search)) ||
+          (p.location && p.location.toLowerCase().includes(search))
       );
     }
     return result;
@@ -3794,6 +3798,7 @@ export default function LoadDetail() {
                       <TableHead>Description</TableHead>
                       <TableHead>Customer PO</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
+                      {canEditShipping && <TableHead>Location</TableHead>}
                       {canEditShipping && <TableHead className="w-[80px]"></TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -3827,6 +3832,9 @@ export default function LoadDetail() {
                         <TableCell className="max-w-[200px] truncate">{pallet.pallet.description}</TableCell>
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{(pallet.pallet.unit === "MIL" ? pallet.quantity * 1000 : pallet.quantity).toLocaleString()}</TableCell>
+                        {canEditShipping && (
+                          <TableCell className="text-sm text-muted-foreground">{pallet.pallet.location || "-"}</TableCell>
+                        )}
                         {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
@@ -4078,6 +4086,7 @@ export default function LoadDetail() {
                           <TableHead className="text-center">Vol. OK</TableHead>
                           <ColumnFilterHeader label="Sales Order" filterKey="bfx_order" options={uniqueBfxOrders} />
                           <ColumnFilterHeader label="Unit" filterKey="unit" options={uniqueUnits} />
+                          <TableHead>Location</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -4134,6 +4143,7 @@ export default function LoadDetail() {
                             </TableCell>
                             <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{pallet.location || "-"}</TableCell>
                             <TableCell>
                               {pallet.is_virtual && (
                                 <Button
@@ -4258,12 +4268,13 @@ export default function LoadDetail() {
                           <TableHead className="text-right">Stock</TableHead>
                           <TableHead>Sales Order</TableHead>
                           <TableHead>Unit</TableHead>
+                          <TableHead>Location</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {replaceFilteredPallets.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                               No available pallets found
                             </TableCell>
                           </TableRow>
@@ -4295,6 +4306,7 @@ export default function LoadDetail() {
                               <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
                               <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                               <TableCell className="text-sm">{pallet.unit}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{pallet.location || "-"}</TableCell>
                             </TableRow>
                           ))
                         )}
