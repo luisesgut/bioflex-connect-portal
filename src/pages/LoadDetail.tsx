@@ -343,6 +343,8 @@ export default function LoadDetail() {
   const [activePOPtCodeFilter, setActivePOPtCodeFilter] = useState<string | null>(null);
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
+  const [editingLoadName, setEditingLoadName] = useState(false);
+  const [editLoadNameValue, setEditLoadNameValue] = useState("");
   const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
   const [isBillingTeam, setIsBillingTeam] = useState(false);
   const [billingValidationStatus, setBillingValidationStatus] = useState<string | null>(null);
