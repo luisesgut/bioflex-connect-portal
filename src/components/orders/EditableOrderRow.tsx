@@ -908,29 +908,44 @@ export function EditableOrderRow({
   // If columnOrder is provided, render cells in that order
   if (columnOrder) {
     return (
-      <tr 
-        className={cn(
-          "transition-colors cursor-pointer",
-          isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
-        )}
-        onClick={isAdmin && isEditing ? undefined : handleRowClick}
-        onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
-      >
-        {columnOrder.map((colId) => (
-          <td
-            key={colId}
-            className={cn(
-              "px-6 py-4 text-sm overflow-hidden text-ellipsis",
-              colId === "po_number" && "whitespace-normal",
-              rightAlignedColumns.has(colId) && "text-right",
-              isEditing && "py-2",
-            )}
-            style={columnWidths?.[colId] ? { width: `${columnWidths[colId]}px` } : undefined}
-          >
-            {cellMap[colId] ?? null}
-          </td>
-        ))}
-      </tr>
+      <>
+        <tr 
+          className={cn(
+            "transition-colors cursor-pointer",
+            isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
+          )}
+          onClick={isAdmin && isEditing ? undefined : handleRowClick}
+          onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
+        >
+          {columnOrder.map((colId) => (
+            <td
+              key={colId}
+              className={cn(
+                "px-6 py-4 text-sm overflow-hidden text-ellipsis",
+                colId === "po_number" && "whitespace-normal",
+                rightAlignedColumns.has(colId) && "text-right",
+                isEditing && "py-2",
+              )}
+              style={columnWidths?.[colId] ? { width: `${columnWidths[colId]}px` } : undefined}
+            >
+              {cellMap[colId] ?? null}
+            </td>
+          ))}
+        </tr>
+        <HotOrderPriorityDialog
+          open={hotOrderPriorityOpen}
+          onOpenChange={setHotOrderPriorityOpen}
+          orderId={order.id}
+          orderPoNumber={order.po_number}
+          orderProductName={order.product_name}
+          orderQuantity={order.quantity}
+          productItemType={order.product_item_type}
+          onSaved={() => {
+            setEditedOrder({ ...editedOrder, is_hot_order: true });
+            onUpdated();
+          }}
+        />
+      </>
     );
   }
 
