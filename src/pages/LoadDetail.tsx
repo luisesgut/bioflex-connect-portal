@@ -4141,6 +4141,7 @@ export default function LoadDetail() {
                             </TableCell>
                             <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                             <TableCell className="text-sm">{pallet.unit}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{pallet.location || "-"}</TableCell>
                             <TableCell>
                               {pallet.is_virtual && (
                                 <Button
