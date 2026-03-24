@@ -68,37 +68,9 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
       const changes: string[] = [];
       const updates: Record<string, unknown> = {};
 
-      if (quantity !== order.quantity) {
-        changes.push(`Quantity: ${order.quantity.toLocaleString()} → ${quantity.toLocaleString()}`);
-        updates.quantity = quantity;
-      }
-      if (pricePerThousand !== (order.price_per_thousand ?? 0)) {
-        changes.push(`Price/1000: $${(order.price_per_thousand ?? 0).toFixed(2)} → $${pricePerThousand.toFixed(2)}`);
-        updates.price_per_thousand = pricePerThousand || null;
-      }
-      if (totalPrice !== (order.total_price ?? 0)) {
-        changes.push(`Total Price: $${(order.total_price ?? 0).toFixed(2)} → $${totalPrice.toFixed(2)}`);
-        updates.total_price = totalPrice || null;
-      }
-      if (requestedDeliveryDate !== (order.requested_delivery_date || "")) {
-        changes.push(`Customer Delivery: ${order.requested_delivery_date || "TBD"} → ${requestedDeliveryDate || "TBD"}`);
-        updates.requested_delivery_date = requestedDeliveryDate || null;
-      }
       if (estimatedDeliveryDate !== (order.estimated_delivery_date || "")) {
         changes.push(`Bioflex Delivery: ${order.estimated_delivery_date || "TBD"} → ${estimatedDeliveryDate || "TBD"}`);
         updates.estimated_delivery_date = estimatedDeliveryDate || null;
-      }
-      if (printingDate !== (order.printing_date || "")) {
-        changes.push(`Printing Date: ${order.printing_date || "TBD"} → ${printingDate || "TBD"}`);
-        updates.printing_date = printingDate || null;
-      }
-      if (conversionDate !== (order.conversion_date || "")) {
-        changes.push(`Conversion Date: ${order.conversion_date || "TBD"} → ${conversionDate || "TBD"}`);
-        updates.conversion_date = conversionDate || null;
-      }
-      if (salesOrderNumber !== (order.sales_order_number || "")) {
-        changes.push(`Sales Order #: ${order.sales_order_number || "—"} → ${salesOrderNumber || "—"}`);
-        updates.sales_order_number = salesOrderNumber || null;
       }
       if (notes !== (order.notes || "")) {
         changes.push("Notes updated");
