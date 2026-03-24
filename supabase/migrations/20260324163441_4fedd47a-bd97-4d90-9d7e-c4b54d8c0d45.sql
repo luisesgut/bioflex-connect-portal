@@ -1,0 +1,1 @@
+ALTER TABLE public.purchase_orders ADD COLUMN hot_order_priority integer DEFAULT NULL;

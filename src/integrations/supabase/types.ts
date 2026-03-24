@@ -1348,6 +1348,7 @@ export type Database = {
           created_at: string
           do_not_delay: boolean
           estimated_delivery_date: string | null
+          hot_order_priority: number | null
           id: string
           is_hot_order: boolean
           notes: string | null
@@ -1373,6 +1374,7 @@ export type Database = {
           created_at?: string
           do_not_delay?: boolean
           estimated_delivery_date?: string | null
+          hot_order_priority?: number | null
           id?: string
           is_hot_order?: boolean
           notes?: string | null
@@ -1398,6 +1400,7 @@ export type Database = {
           created_at?: string
           do_not_delay?: boolean
           estimated_delivery_date?: string | null
+          hot_order_priority?: number | null
           id?: string
           is_hot_order?: boolean
           notes?: string | null
