@@ -30,6 +30,7 @@ interface PackingListParams {
   loadNumber: string;
   shippingDate: string;
   invoiceNumber: string;
+  freightInvoiceNumber?: string;
   destination: DestinationInfo;
   pallets: PackingListPallet[];
   poInfoMap: Map<string, POInfo>;
@@ -53,6 +54,7 @@ export async function generatePackingList({
   loadNumber,
   shippingDate,
   invoiceNumber,
+  freightInvoiceNumber = "",
   destination,
   pallets,
   poInfoMap,
@@ -207,7 +209,7 @@ export async function generatePackingList({
   let rightY = plY + 8;
   rightY = drawRightAlignedField("Load #:", loadNumber, rightY);
   rightY = drawRightAlignedField("Product Invoice", invoiceNumber || "-", rightY + 1);
-  rightY = drawRightAlignedField("Load Invoice", invoiceNumber || "-", rightY + 1);
+  rightY = drawRightAlignedField("Load Invoice", freightInvoiceNumber || "-", rightY + 1);
 
   // === TABLE (drawn manually) ===
   const tableTop = Math.max(leftY, shipY, rightY) + 6;
