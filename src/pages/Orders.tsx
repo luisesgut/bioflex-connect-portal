@@ -206,6 +206,7 @@ export default function Orders() {
         total_price,
         status,
         is_hot_order,
+        hot_order_priority,
         do_not_delay,
         requested_delivery_date,
         estimated_delivery_date,
