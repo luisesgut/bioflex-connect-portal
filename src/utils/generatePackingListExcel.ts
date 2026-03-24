@@ -95,7 +95,7 @@ export function generatePackingListExcel({
 
   const dateParts = shippingDate.split("T")[0].split("-");
   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-  const releaseNumbers = [...new Set(pallets.map((p) => p.release_number).filter(Boolean))];
+  // Release numbers no longer displayed in header
   const cityLine = [destination.city, destination.state].filter(Boolean).join(" ") + (destination.zip_code ? ` ${destination.zip_code}` : "");
 
   const data: (string | number | null)[][] = [];
