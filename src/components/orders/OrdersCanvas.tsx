@@ -121,6 +121,12 @@ function sortOrders(orders: CanvasOrder[]): CanvasOrder[] {
     // Hot orders first
     if (a.is_hot_order && !b.is_hot_order) return -1;
     if (!a.is_hot_order && b.is_hot_order) return 1;
+    // Among hot orders, sort by priority (lower = higher priority)
+    if (a.is_hot_order && b.is_hot_order) {
+      const pa = a.hot_order_priority ?? 999;
+      const pb = b.hot_order_priority ?? 999;
+      if (pa !== pb) return pa - pb;
+    }
     // DND next
     if (a.do_not_delay && !b.do_not_delay) return -1;
     if (!a.do_not_delay && b.do_not_delay) return 1;
