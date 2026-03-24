@@ -17,6 +17,7 @@ interface CanvasOrder {
   total_price: number | null;
   status: string;
   is_hot_order: boolean;
+  hot_order_priority: number | null;
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
@@ -120,6 +121,12 @@ function sortOrders(orders: CanvasOrder[]): CanvasOrder[] {
     // Hot orders first
     if (a.is_hot_order && !b.is_hot_order) return -1;
     if (!a.is_hot_order && b.is_hot_order) return 1;
+    // Among hot orders, sort by priority (lower = higher priority)
+    if (a.is_hot_order && b.is_hot_order) {
+      const pa = a.hot_order_priority ?? 999;
+      const pb = b.hot_order_priority ?? 999;
+      if (pa !== pb) return pa - pb;
+    }
     // DND next
     if (a.do_not_delay && !b.do_not_delay) return -1;
     if (!a.do_not_delay && b.do_not_delay) return 1;
@@ -252,7 +259,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
                                     {order.is_hot_order && (
                                       <Badge variant="destructive" className="gap-1 px-2 py-0.5 text-[10px] uppercase tracking-wide">
                                         <Flame className="h-3 w-3" />
-                                        Hot Order
+                                        Hot{order.hot_order_priority ? ` #${order.hot_order_priority}` : ""}
                                       </Badge>
                                     )}
                                   </div>

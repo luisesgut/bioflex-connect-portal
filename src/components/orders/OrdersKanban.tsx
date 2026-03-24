@@ -14,6 +14,7 @@ interface Order {
   quantity: number;
   status: string;
   is_hot_order: boolean;
+  hot_order_priority: number | null;
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
@@ -68,7 +69,23 @@ export function OrdersKanban({ orders, isAdmin }: OrdersKanbanProps) {
   });
 
   const getOrdersByFamily = (family: string) =>
-    orders.filter((o) => (o.product_item_type || "Unassigned") === family);
+    orders
+      .filter((o) => (o.product_item_type || "Unassigned") === family)
+      .sort((a, b) => {
+        // Hot orders first
+        if (a.is_hot_order && !b.is_hot_order) return -1;
+        if (!a.is_hot_order && b.is_hot_order) return 1;
+        // Among hot orders, sort by priority
+        if (a.is_hot_order && b.is_hot_order) {
+          const pa = a.hot_order_priority ?? 999;
+          const pb = b.hot_order_priority ?? 999;
+          if (pa !== pb) return pa - pb;
+        }
+        // DND next
+        if (a.do_not_delay && !b.do_not_delay) return -1;
+        if (!a.do_not_delay && b.do_not_delay) return 1;
+        return 0;
+      });
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -123,7 +140,14 @@ export function OrdersKanban({ orders, isAdmin }: OrdersKanbanProps) {
                               </span>
                               <div className="flex items-center gap-1">
                                 {order.is_hot_order && (
-                                  <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
+                                  <>
+                                    {order.hot_order_priority && (
+                                      <Badge variant="destructive" className="text-[10px] px-1 py-0 min-w-[18px] justify-center">
+                                        {order.hot_order_priority}
+                                      </Badge>
+                                    )}
+                                    <Flame className="h-3.5 w-3.5 text-accent animate-pulse" />
+                                  </>
                                 )}
                                 {order.do_not_delay && (
                                   <ShieldAlert className="h-3.5 w-3.5 text-warning" />
