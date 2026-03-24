@@ -89,9 +89,20 @@ export function ReviewChangeRequestDialog({
 
           if (poError) throw poError;
         } else if (request.request_type === "hot_order") {
+          // Get max priority of existing hot orders
+          const { data: maxData } = await supabase
+            .from("purchase_orders")
+            .select("hot_order_priority")
+            .eq("is_hot_order", true)
+            .order("hot_order_priority", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+          
+          const nextPriority = (maxData?.hot_order_priority ?? 0) + 1;
+
           const { error: poError } = await supabase
             .from("purchase_orders")
-            .update({ is_hot_order: true })
+            .update({ is_hot_order: true, hot_order_priority: nextPriority })
             .eq("id", request.purchase_order_id);
 
           if (poError) throw poError;
