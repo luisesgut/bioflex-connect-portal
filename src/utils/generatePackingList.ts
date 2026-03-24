@@ -54,6 +54,7 @@ export async function generatePackingList({
   loadNumber,
   shippingDate,
   invoiceNumber,
+  freightInvoiceNumber = "",
   destination,
   pallets,
   poInfoMap,
