@@ -52,14 +52,7 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
 
   useEffect(() => {
     if (open) {
-      setQuantity(order.quantity);
-      setPricePerThousand(order.price_per_thousand ?? 0);
-      setTotalPrice(order.total_price ?? 0);
-      setRequestedDeliveryDate(order.requested_delivery_date || "");
       setEstimatedDeliveryDate(order.estimated_delivery_date || "");
-      setPrintingDate(order.printing_date || "");
-      setConversionDate(order.conversion_date || "");
-      setSalesOrderNumber(order.sales_order_number || "");
       setNotes(order.notes || "");
       setIsHotOrder(order.is_hot_order);
       setDoNotDelay(order.do_not_delay);
