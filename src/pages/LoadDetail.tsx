@@ -923,6 +923,7 @@ export default function LoadDetail() {
       loadNumber: load.load_number,
       shippingDate: load.shipping_date,
       invoiceNumber: load.invoice_number || "",
+      freightInvoiceNumber: load.freight_invoice_number || "",
       destination: destInfo,
       pallets: destPallets.map((p) => ({
         description: p.pallet.description,
