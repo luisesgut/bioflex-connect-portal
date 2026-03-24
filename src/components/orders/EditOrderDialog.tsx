@@ -45,28 +45,14 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
-  const [quantity, setQuantity] = useState(order.quantity);
-  const [pricePerThousand, setPricePerThousand] = useState(order.price_per_thousand ?? 0);
-  const [totalPrice, setTotalPrice] = useState(order.total_price ?? 0);
-  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState(order.requested_delivery_date || "");
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(order.estimated_delivery_date || "");
-  const [printingDate, setPrintingDate] = useState(order.printing_date || "");
-  const [conversionDate, setConversionDate] = useState(order.conversion_date || "");
-  const [salesOrderNumber, setSalesOrderNumber] = useState(order.sales_order_number || "");
   const [notes, setNotes] = useState(order.notes || "");
   const [isHotOrder, setIsHotOrder] = useState(order.is_hot_order);
   const [doNotDelay, setDoNotDelay] = useState(order.do_not_delay);
 
   useEffect(() => {
     if (open) {
-      setQuantity(order.quantity);
-      setPricePerThousand(order.price_per_thousand ?? 0);
-      setTotalPrice(order.total_price ?? 0);
-      setRequestedDeliveryDate(order.requested_delivery_date || "");
       setEstimatedDeliveryDate(order.estimated_delivery_date || "");
-      setPrintingDate(order.printing_date || "");
-      setConversionDate(order.conversion_date || "");
-      setSalesOrderNumber(order.sales_order_number || "");
       setNotes(order.notes || "");
       setIsHotOrder(order.is_hot_order);
       setDoNotDelay(order.do_not_delay);
@@ -82,37 +68,9 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
       const changes: string[] = [];
       const updates: Record<string, unknown> = {};
 
-      if (quantity !== order.quantity) {
-        changes.push(`Quantity: ${order.quantity.toLocaleString()} → ${quantity.toLocaleString()}`);
-        updates.quantity = quantity;
-      }
-      if (pricePerThousand !== (order.price_per_thousand ?? 0)) {
-        changes.push(`Price/1000: $${(order.price_per_thousand ?? 0).toFixed(2)} → $${pricePerThousand.toFixed(2)}`);
-        updates.price_per_thousand = pricePerThousand || null;
-      }
-      if (totalPrice !== (order.total_price ?? 0)) {
-        changes.push(`Total Price: $${(order.total_price ?? 0).toFixed(2)} → $${totalPrice.toFixed(2)}`);
-        updates.total_price = totalPrice || null;
-      }
-      if (requestedDeliveryDate !== (order.requested_delivery_date || "")) {
-        changes.push(`Customer Delivery: ${order.requested_delivery_date || "TBD"} → ${requestedDeliveryDate || "TBD"}`);
-        updates.requested_delivery_date = requestedDeliveryDate || null;
-      }
       if (estimatedDeliveryDate !== (order.estimated_delivery_date || "")) {
         changes.push(`Bioflex Delivery: ${order.estimated_delivery_date || "TBD"} → ${estimatedDeliveryDate || "TBD"}`);
         updates.estimated_delivery_date = estimatedDeliveryDate || null;
-      }
-      if (printingDate !== (order.printing_date || "")) {
-        changes.push(`Printing Date: ${order.printing_date || "TBD"} → ${printingDate || "TBD"}`);
-        updates.printing_date = printingDate || null;
-      }
-      if (conversionDate !== (order.conversion_date || "")) {
-        changes.push(`Conversion Date: ${order.conversion_date || "TBD"} → ${conversionDate || "TBD"}`);
-        updates.conversion_date = conversionDate || null;
-      }
-      if (salesOrderNumber !== (order.sales_order_number || "")) {
-        changes.push(`Sales Order #: ${order.sales_order_number || "—"} → ${salesOrderNumber || "—"}`);
-        updates.sales_order_number = salesOrderNumber || null;
       }
       if (notes !== (order.notes || "")) {
         changes.push("Notes updated");
@@ -182,88 +140,15 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Quantity & Pricing */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-quantity">Quantity</Label>
-              <Input
-                id="edit-quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-price-thousand">Price / 1000</Label>
-              <Input
-                id="edit-price-thousand"
-                type="number"
-                step="0.01"
-                value={pricePerThousand}
-                onChange={(e) => setPricePerThousand(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-total-price">Total Price</Label>
-              <Input
-                id="edit-total-price"
-                type="number"
-                step="0.01"
-                value={totalPrice}
-                onChange={(e) => setTotalPrice(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Sales Order */}
+          {/* Bioflex Delivery */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-sales-order">Sales Order #</Label>
+            <Label htmlFor="edit-estimated-delivery">Bioflex Delivery</Label>
             <Input
-              id="edit-sales-order"
-              value={salesOrderNumber}
-              onChange={(e) => setSalesOrderNumber(e.target.value)}
-              placeholder="e.g. SO-12345"
+              id="edit-estimated-delivery"
+              type="date"
+              value={estimatedDeliveryDate}
+              onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
             />
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-requested-delivery">Customer Delivery</Label>
-              <Input
-                id="edit-requested-delivery"
-                type="date"
-                value={requestedDeliveryDate}
-                onChange={(e) => setRequestedDeliveryDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-estimated-delivery">Bioflex Delivery</Label>
-              <Input
-                id="edit-estimated-delivery"
-                type="date"
-                value={estimatedDeliveryDate}
-                onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-printing-date">Printing Date</Label>
-              <Input
-                id="edit-printing-date"
-                type="date"
-                value={printingDate}
-                onChange={(e) => setPrintingDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-conversion-date">Conversion Date</Label>
-              <Input
-                id="edit-conversion-date"
-                type="date"
-                value={conversionDate}
-                onChange={(e) => setConversionDate(e.target.value)}
-              />
-            </div>
           </div>
 
           {/* Flags */}
