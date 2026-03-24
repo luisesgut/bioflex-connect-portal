@@ -14,6 +14,7 @@ interface Order {
   quantity: number;
   status: string;
   is_hot_order: boolean;
+  hot_order_priority: number | null;
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
