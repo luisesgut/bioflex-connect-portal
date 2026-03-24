@@ -437,7 +437,7 @@ export default function LoadDetail() {
       // Fetch available pallets excluding those already in any load
       const { data: availableData } = await supabase
         .from("inventory_pallets")
-        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit, is_virtual")
+        .select("id, pt_code, description, stock, traceability, fecha, bfx_order, unit, is_virtual, location")
         .eq("status", "available");
 
       // Filter out pallets already assigned to any load

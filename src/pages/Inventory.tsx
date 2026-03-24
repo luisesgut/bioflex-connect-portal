@@ -667,6 +667,7 @@ export default function Inventory() {
                      <TableCell className="text-right">{item.pieces || "-"}</TableCell>
                      <TableCell className="text-right">{item.gross_weight?.toLocaleString() || "-"}</TableCell>
                      <TableCell className="text-right">{item.net_weight?.toLocaleString() || "-"}</TableCell>
+                    <TableCell className="text-sm">{item.location || "-"}</TableCell>
                     <TableCell>
                       <Badge className={statusStyles[item.status] || ""} variant="secondary">
                         {item.status}
