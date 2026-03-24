@@ -668,6 +668,7 @@ export default function Orders() {
         total_price: totalPriceFromApi ?? order.total_price,
         status: order.status,
         is_hot_order: order.is_hot_order,
+        hot_order_priority: order.hot_order_priority ?? null,
         do_not_delay: order.do_not_delay ?? false,
         requested_delivery_date: order.requested_delivery_date,
         estimated_delivery_date: order.estimated_delivery_date,
