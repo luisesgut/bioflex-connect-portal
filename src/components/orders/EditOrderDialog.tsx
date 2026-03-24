@@ -182,88 +182,15 @@ export function EditOrderDialog({ open, onOpenChange, order, onSaved }: EditOrde
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Quantity & Pricing */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-quantity">Quantity</Label>
-              <Input
-                id="edit-quantity"
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-price-thousand">Price / 1000</Label>
-              <Input
-                id="edit-price-thousand"
-                type="number"
-                step="0.01"
-                value={pricePerThousand}
-                onChange={(e) => setPricePerThousand(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-total-price">Total Price</Label>
-              <Input
-                id="edit-total-price"
-                type="number"
-                step="0.01"
-                value={totalPrice}
-                onChange={(e) => setTotalPrice(Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Sales Order */}
+          {/* Bioflex Delivery */}
           <div className="space-y-1.5">
-            <Label htmlFor="edit-sales-order">Sales Order #</Label>
+            <Label htmlFor="edit-estimated-delivery">Bioflex Delivery</Label>
             <Input
-              id="edit-sales-order"
-              value={salesOrderNumber}
-              onChange={(e) => setSalesOrderNumber(e.target.value)}
-              placeholder="e.g. SO-12345"
+              id="edit-estimated-delivery"
+              type="date"
+              value={estimatedDeliveryDate}
+              onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
             />
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-requested-delivery">Customer Delivery</Label>
-              <Input
-                id="edit-requested-delivery"
-                type="date"
-                value={requestedDeliveryDate}
-                onChange={(e) => setRequestedDeliveryDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-estimated-delivery">Bioflex Delivery</Label>
-              <Input
-                id="edit-estimated-delivery"
-                type="date"
-                value={estimatedDeliveryDate}
-                onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-printing-date">Printing Date</Label>
-              <Input
-                id="edit-printing-date"
-                type="date"
-                value={printingDate}
-                onChange={(e) => setPrintingDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-conversion-date">Conversion Date</Label>
-              <Input
-                id="edit-conversion-date"
-                type="date"
-                value={conversionDate}
-                onChange={(e) => setConversionDate(e.target.value)}
-              />
-            </div>
           </div>
 
           {/* Flags */}
