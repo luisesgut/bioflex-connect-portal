@@ -690,7 +690,13 @@ export function EditableOrderRow({
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
           <Switch checked={editedOrder.is_hot_order}
-            onCheckedChange={(checked) => setEditedOrder({ ...editedOrder, is_hot_order: checked })} />
+            onCheckedChange={(checked) => {
+              if (checked && !order.is_hot_order) {
+                setHotOrderPriorityOpen(true);
+              } else {
+                setEditedOrder({ ...editedOrder, is_hot_order: checked, });
+              }
+            }} />
           {editedOrder.is_hot_order && <Flame className="h-4 w-4 text-accent" />}
         </div>
         <div className="flex items-center gap-1">
