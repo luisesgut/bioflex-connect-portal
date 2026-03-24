@@ -4266,6 +4266,7 @@ export default function LoadDetail() {
                           <TableHead className="text-right">Stock</TableHead>
                           <TableHead>Sales Order</TableHead>
                           <TableHead>Unit</TableHead>
+                          <TableHead>Location</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
