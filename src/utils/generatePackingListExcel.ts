@@ -116,7 +116,7 @@ export function generatePackingListExcel({
   // Row 8-10: Client, Sales, Release / Load, Invoice, Release
   data.push([`Client: ${clientCode} – ${clientName}`, "", "", "", "", "Load #:", loadNumber]);
   data.push([salesPerson ? `Sales: ${salesPerson}` : "", "", "", "", "", "Product Invoice", invoiceNumber || "-"]);
-  data.push(["", "", "", "", "", "Load Invoice", invoiceNumber || "-"]);
+  data.push(["", "", "", "", "", "Load Invoice", freightInvoiceNumber || "-"]);
   // Row 11: blank
   data.push([]);
   // Row 12: Table headers
