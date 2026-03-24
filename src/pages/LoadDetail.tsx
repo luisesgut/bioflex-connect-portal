@@ -4304,6 +4304,7 @@ export default function LoadDetail() {
                               <TableCell className="text-right font-medium">{pallet.stock.toLocaleString()}</TableCell>
                               <TableCell className="text-sm">{pallet.bfx_order || "-"}</TableCell>
                               <TableCell className="text-sm">{pallet.unit}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{pallet.location || "-"}</TableCell>
                             </TableRow>
                           ))
                         )}
