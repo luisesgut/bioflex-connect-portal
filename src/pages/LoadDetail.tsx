@@ -2252,7 +2252,7 @@ export default function LoadDetail() {
                       toast.error("Failed to update load name");
                     } else {
                       toast.success("Load name updated");
-                      fetchLoad();
+                      fetchLoadData();
                     }
                     setEditingLoadName(false);
                   }}
