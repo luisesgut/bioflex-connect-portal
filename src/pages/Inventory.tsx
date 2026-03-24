@@ -634,6 +634,7 @@ export default function Inventory() {
                    <TableHead className="text-right">Boxes</TableHead>
                    <TableHead className="text-right">Gross</TableHead>
                    <TableHead className="text-right">Net</TableHead>
+                   <TableHead>Location</TableHead>
                    <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
