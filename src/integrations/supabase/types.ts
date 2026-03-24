@@ -269,6 +269,7 @@ export type Database = {
           id: string
           is_virtual: boolean
           linked_real_pallet_id: string | null
+          location: string | null
           net_weight: number | null
           pallet_type: string | null
           pieces: number | null
@@ -290,6 +291,7 @@ export type Database = {
           id?: string
           is_virtual?: boolean
           linked_real_pallet_id?: string | null
+          location?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
@@ -311,6 +313,7 @@ export type Database = {
           id?: string
           is_virtual?: boolean
           linked_real_pallet_id?: string | null
+          location?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
@@ -1809,6 +1812,7 @@ export type Database = {
           fecha: string | null
           gross_weight: number | null
           id: string
+          location: string | null
           net_weight: number | null
           pallet_type: string | null
           pieces: number | null
@@ -1826,6 +1830,7 @@ export type Database = {
           fecha?: string | null
           gross_weight?: number | null
           id?: string
+          location?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
@@ -1843,6 +1848,7 @@ export type Database = {
           fecha?: string | null
           gross_weight?: number | null
           id?: string
+          location?: string | null
           net_weight?: number | null
           pallet_type?: string | null
           pieces?: number | null
