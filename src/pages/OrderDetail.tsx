@@ -20,6 +20,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -31,9 +32,13 @@ import { AcceptOrderDialog } from "@/components/orders/AcceptOrderDialog";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-
-
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface OrderDetails {
   id: string;
@@ -121,6 +126,8 @@ interface StockVerificationItem {
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const PRINT_CARD_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard";
+const BFX_SPEC_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard/ficha";
 
 
 const parseApiNumber = (value: unknown): number | null => {
@@ -189,6 +196,10 @@ export default function OrderDetail() {
   const [newDeliveryDate, setNewDeliveryDate] = useState<Date | undefined>(undefined);
   const [pendingHotRequest, setPendingHotRequest] = useState<{ id: string; reason: string; created_at: string } | null>(null);
   const [reviewingHot, setReviewingHot] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -547,6 +558,13 @@ export default function OrderDetail() {
     }).format(value);
   };
 
+  const openPreview = (title: string, url: string) => {
+    setPreviewTitle(title);
+    setPreviewUrl(url);
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -586,6 +604,12 @@ export default function OrderDetail() {
   const displayTipoEmpaque = sapOrderData?.tipoEmpaque || order.product?.tipo_empaque || "—";
   const displayPtCode = sapOrderData?.clave || order.product?.codigo_producto || order.product?.pt_code || "—";
   const displayProductName = sapOrderData?.producto || sapOrderData?.frgnName || order.product?.name || "—";
+  const pcNumber = order.product?.pc_number?.trim() || "";
+  const printCardPreviewUrl = pcNumber ? `${PRINT_CARD_PREVIEW_BASE_URL}/${encodeURIComponent(pcNumber)}` : "";
+  const bfxSpecPreviewUrl = pcNumber ? `${BFX_SPEC_PREVIEW_BASE_URL}/${encodeURIComponent(pcNumber)}` : "";
+  const isSapDetailsLoading = stockLoading && !sapOrderData;
+  const renderSapAwareValue = (value: string, loading = isSapDetailsLoading) =>
+    loading ? <Skeleton className="mt-1 h-5 w-40" /> : <p className="font-medium">{value || "—"}</p>;
 
   return (
     <MainLayout>
@@ -682,19 +706,19 @@ export default function OrderDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-muted-foreground">Product Name</label>
-                    <p className="font-medium">{displayProductName}</p>
+                    {renderSapAwareValue(displayProductName)}
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Item Code</label>
-                    <p className="font-medium">{displayItemCode}</p>
+                    {renderSapAwareValue(displayItemCode)}
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Item Description</label>
-                    <p className="font-medium">{displayItemDescription}</p>
+                    {renderSapAwareValue(displayItemDescription)}
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Final Customer</label>
-                    <p className="font-medium">{displayFinalCustomer}</p>
+                    {renderSapAwareValue(displayFinalCustomer)}
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground">Item Type</label>
@@ -703,19 +727,19 @@ export default function OrderDetail() {
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">Tipo Empaque</label>
-                      <p className="font-medium">{displayTipoEmpaque}</p>
+                      {renderSapAwareValue(displayTipoEmpaque)}
                     </div>
                   )}
                   {isAdmin && (
                     <div>
                       <label className="text-sm text-muted-foreground">PT Code</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{displayPtCode}</p>
-                        {order.product?.bfx_spec_url && (
+                        {renderSapAwareValue(displayPtCode)}
+                        {bfxSpecPreviewUrl && !isSapDetailsLoading && (
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
+                            onClick={() => openPreview(`BFX Spec · ${pcNumber}`, bfxSpecPreviewUrl)}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
                             BFX Spec
@@ -732,58 +756,58 @@ export default function OrderDetail() {
                     <div>
                       <label className="text-sm text-muted-foreground">PC Number</label>
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{order.product?.pc_number || "—"}</p>
-                        {order.product?.print_card_url && (
+                        <p className="font-medium">{pcNumber || "—"}</p>
+                        {printCardPreviewUrl && (
                           <Button
                             variant="link"
                             className="p-0 h-auto text-xs"
-                            onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
+                            onClick={() => openPreview(`PC Preview · ${pcNumber}`, printCardPreviewUrl)}
                           >
                             <FileText className="h-3.5 w-3.5 mr-0.5 inline" />
-                            PC PDF
+                            Preview PC
                           </Button>
                         )}
                       </div>
                     </div>
                   )}
                   <div>
-                    <label className="text-sm text-muted-foreground">Customer Spec Sheet</label>
-                    {order.product?.customer_tech_spec_url ? (
+                    <label className="text-sm text-muted-foreground">BFX Spec</label>
+                    {bfxSpecPreviewUrl ? (
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => openStorageFile(order.product!.customer_tech_spec_url!, 'print-cards')}
+                        onClick={() => openPreview(`BFX Spec · ${pcNumber}`, bfxSpecPreviewUrl)}
                       >
-                        <ExternalLink className="h-4 w-4 mr-1 inline" />
-                        View Spec Sheet
+                        <FileText className="h-4 w-4 mr-1 inline" />
+                        Preview BFX Spec
                       </Button>
                     ) : (
                       <p className="font-medium">—</p>
                     )}
                   </div>
-                  {!isAdmin && order.product?.print_card_url && (
+                  {!isAdmin && printCardPreviewUrl && (
                     <div>
                       <label className="text-sm text-muted-foreground">Print Card (PC)</label>
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => openStorageFile(order.product!.print_card_url!, 'print-cards')}
+                        onClick={() => openPreview(`PC Preview · ${pcNumber}`, printCardPreviewUrl)}
                       >
                         <FileText className="h-4 w-4 mr-1 inline" />
-                        View PC
+                        Preview PC
                       </Button>
                     </div>
                   )}
-                  {!isAdmin && order.product?.bfx_spec_url && (
+                  {!isAdmin && bfxSpecPreviewUrl && (
                     <div>
                       <label className="text-sm text-muted-foreground">BFX Spec Sheet</label>
                       <Button
                         variant="link"
                         className="p-0 h-auto block"
-                        onClick={() => openStorageFile(order.product!.bfx_spec_url!, 'print-cards')}
+                        onClick={() => openPreview(`BFX Spec · ${pcNumber}`, bfxSpecPreviewUrl)}
                       >
                         <FileText className="h-4 w-4 mr-1 inline" />
-                        View BFX Spec
+                        Preview BFX Spec
                       </Button>
                     </div>
                   )}
@@ -1293,6 +1317,49 @@ export default function OrderDetail() {
             onAccepted={fetchOrderDetails}
           />
         )}
+        <Dialog
+          open={previewOpen}
+          onOpenChange={(open) => {
+            setPreviewOpen(open);
+            if (!open) {
+              setPreviewUrl("");
+              setPreviewTitle("");
+              setPreviewLoading(false);
+            }
+          }}
+        >
+          <DialogContent className="max-w-6xl h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>{previewTitle || "Document Preview"}</DialogTitle>
+              <DialogDescription>
+                Vista previa dentro del detalle de la purchase order.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="relative flex-1 overflow-hidden rounded-md border bg-muted/20">
+              {previewLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Cargando preview...
+                  </div>
+                </div>
+              )}
+              {previewUrl ? (
+                <iframe
+                  key={previewUrl}
+                  src={previewUrl}
+                  title={previewTitle || "Document Preview"}
+                  className="h-full w-full"
+                  onLoad={() => setPreviewLoading(false)}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No preview available.
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
