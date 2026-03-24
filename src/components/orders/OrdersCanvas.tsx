@@ -25,6 +25,8 @@ interface CanvasOrder {
   order_due_date: string | null;
   order_timing_status: string | null;
   accepted_at: string | null;
+  closed_source?: "supabase" | "sap";
+  closed_sap_payload?: unknown;
   inventoryStats: {
     inFloor: number;
     shipped: number;
@@ -37,6 +39,8 @@ interface CanvasOrder {
 interface OrdersCanvasProps {
   orders: CanvasOrder[];
   groupBy?: "product_item_type" | "product_tipo_empaque";
+  onClosedSapOrderClick?: (order: CanvasOrder["closed_sap_payload"]) => void;
+  closedFirst?: boolean;
 }
 
 const columnColors: string[] = [
@@ -137,13 +141,21 @@ function sortOrders(orders: CanvasOrder[]): CanvasOrder[] {
   });
 }
 
-export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCanvasProps) {
+export function OrdersCanvas({
+  orders,
+  groupBy = "product_item_type",
+  onClosedSapOrderClick,
+  closedFirst = false,
+}: OrdersCanvasProps) {
   const navigate = useNavigate();
 
-  // Only accepted (active) orders, exclude closed
+  // Active orders (exclude closed and delivered)
   const activeOrders = orders.filter(
     (o) => o.status !== "closed" && o.status !== "delivered"
   );
+
+  // Closed orders for dedicated column
+  const closedOrders = orders.filter((o) => o.status === "closed");
 
   const normalizeGroupValue = (value: string | null | undefined) => {
     const raw = (value || "").trim();
@@ -170,9 +182,53 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
   const getOrdersByFamily = (family: string) =>
     sortOrders(activeOrders.filter((o) => getGroupValue(o) === family));
 
+  const closedColumn = closedOrders.length > 0 && (
+    <div className="flex-shrink-0 w-80">
+      <div className="rounded-lg border-2 bg-muted/30 border-muted h-full flex flex-col">
+        <div className="p-3 border-b border-border/50">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-sm text-muted-foreground">Closed POs</h3>
+            <Badge variant="secondary" className="text-xs ml-2">{closedOrders.length}</Badge>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            {closedOrders.reduce((s, o) => s + o.quantity, 0).toLocaleString()} units total
+          </div>
+        </div>
+        <ScrollArea className="h-[calc(100vh-380px)] flex-1">
+          <div className="p-2 space-y-2">
+            {sortOrders(closedOrders).map((order) => (
+              <Card
+                key={order.id}
+                className="cursor-pointer hover:shadow-md transition-shadow bg-card opacity-70"
+                onClick={() => {
+                  if (order.closed_source === "sap" && order.closed_sap_payload && onClosedSapOrderClick) {
+                    onClosedSapOrderClick(order.closed_sap_payload);
+                    return;
+                  }
+                  navigate(`/orders/${order.id}`);
+                }}
+              >
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between mb-1 gap-2">
+                    <span className="font-mono text-xs font-medium text-card-foreground">{order.po_number}</span>
+                    <Badge variant="secondary" className="text-[10px] shrink-0 bg-muted text-muted-foreground">Closed</Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate">{order.product_name || "—"}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{order.product_customer || "—"}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1 font-medium">{order.quantity.toLocaleString()} units</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+
   return (
     <ScrollArea className="w-full">
       <div className="flex gap-4 pb-4 min-w-max">
+        {closedFirst && closedColumn}
         {families.map((family, idx) => {
           const familyOrders = getOrdersByFamily(family);
 
@@ -395,6 +451,7 @@ export function OrdersCanvas({ orders, groupBy = "product_item_type" }: OrdersCa
             </div>
           );
         })}
+        {!closedFirst && closedColumn}
       </div>
       <ScrollBar orientation="horizontal" />
     </ScrollArea>

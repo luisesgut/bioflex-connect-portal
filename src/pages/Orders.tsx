@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid, RotateCcw } from "lucide-react";
+import { Search, Plus, FileText, Loader2, Package, PackageCheck, List, CalendarDays, LayoutGrid, RotateCcw, X, User, Tag, Box, DollarSign, Calendar, Truck } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import { useColumnConfig } from "@/hooks/useColumnConfig";
 import { useLanguage } from "@/hooks/useLanguage";
 import { mapProductLineToItemType, mapTipoEmpaqueToProductLine } from "@/utils/destinyProducts";
 import { useQuery } from "@tanstack/react-query";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 
 interface LoadDetail {
   load_number: string;
@@ -86,6 +88,36 @@ interface CatOrdenOpenItem {
   detallesAlmacenTotal?: StockVerificationWarehouseDetail[] | null;
 }
 
+interface CatOrdenClosedItem {
+  pedido?: number | string | null;
+  cliente?: string | null;
+  u_PO2?: string | null;
+  u_Cl1?: string | null;
+  clave?: string | null;
+  producto?: string | null;
+  frgnName?: string | null;
+  u_ItemNo?: string | null;
+  u_ImpRl?: string | null;
+  unidad?: string | null;
+  claveUnidad?: string | null;
+  tipoEmpaque?: string | null;
+  validado?: string | null;
+  costo?: string | null;
+  cantidad?: number | string | null;
+  precio?: number | null;
+  value?: number | null;
+  entregado?: number | string | null;
+  cantidadSolicitada?: number | string | null;
+  cantidadEnviada?: number | string | null;
+  fechaDocumento?: string | null;
+  fechaVencimiento?: string | null;
+  estadoTiempo?: string | null;
+  diasRestantes?: number | null;
+  vendedor?: string | null;
+  detallesAlmacen?: Array<Record<string, unknown>>;
+  detallesAlmacenTotal?: Array<Record<string, unknown>>;
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -116,9 +148,12 @@ interface Order {
   sales_order_number: string | null;
   accepted_at: string | null;
   inventoryStats: InventoryStats;
+  closed_source?: "supabase" | "sap";
+  closed_sap_payload?: CatOrdenClosedItem | null;
 }
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const CAT_ORDEN_CLOSED_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/closed-with-orden";
 const SAP_ORDERS_SYNC_ENDPOINT = "http://172.16.10.31/api/Sync/orders";
 
 interface SyncOrdersResponse {
@@ -185,6 +220,7 @@ export default function Orders() {
   const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [syncingOrders, setSyncingOrders] = useState(false);
+  const [showRecentClosedSap, setShowRecentClosedSap] = useState(false);
 
   // Column config
   const { getOrderedColumns, getColumnWidth, setColumnWidth, reorderColumns, resetColumns } = useColumnConfig();
@@ -728,6 +764,45 @@ export default function Orders() {
     console.error("Error fetching orders:", ordersError);
   }
 
+  const {
+    data: recentClosedSapOrders = [] as CatOrdenClosedItem[],
+    isFetching: fetchingRecentClosedSap,
+  } = useQuery<CatOrdenClosedItem[]>({
+    queryKey: ["purchase-orders-closed-last-15-days"],
+    enabled: showRecentClosedSap && !!user,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const response = await fetch(CAT_ORDEN_CLOSED_WITH_ORDEN_ENDPOINT, {
+        method: "GET",
+        headers: { accept: "*/*" },
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Closed orders fetch failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const list: CatOrdenClosedItem[] = Array.isArray(payload) ? payload : [];
+      const now = Date.now();
+      const fifteenDaysAgo = now - (15 * 24 * 60 * 60 * 1000);
+
+      return list
+        .filter((item) => {
+          if (!item.fechaDocumento) return false;
+          const ts = new Date(item.fechaDocumento).getTime();
+          return Number.isFinite(ts) && ts >= fifteenDaysAgo && ts <= now;
+        })
+        .sort((a, b) => {
+          const dateA = a.fechaDocumento ? new Date(a.fechaDocumento).getTime() : 0;
+          const dateB = b.fechaDocumento ? new Date(b.fechaDocumento).getTime() : 0;
+          return dateB - dateA;
+        });
+    },
+  });
+
   const getStatusFilter = (status: string): string => {
     if (status === "pending" || status === "submitted") return "Submitted";
     if (status === "accepted") return "Accepted";
@@ -877,8 +952,116 @@ export default function Orders() {
     filteredAndSortedOrders.filter(order => order.status === "closed"), 
     [filteredAndSortedOrders]
   );
+  
+  const orderIdByPoNumber = useMemo(() => {
+    const map = new Map<string, string>();
+    orders.forEach((order) => {
+      const key = normalizePoKey(order.po_number);
+      if (key) {
+        map.set(key, order.id);
+      }
+    });
+    return map;
+  }, [orders]);
+
+  const combinedClosedOrders = useMemo(() => {
+    const rows: Array<
+      | { kind: "supabase"; key: string; poKey: string; order: Order }
+      | { kind: "sap"; key: string; poKey: string; order: CatOrdenClosedItem }
+    > = [];
+    const seen = new Set<string>();
+
+    closedOrders.forEach((order) => {
+      const poKey = normalizePoKey(order.po_number);
+      const key = poKey || order.id;
+      seen.add(key);
+      rows.push({ kind: "supabase", key, poKey, order });
+    });
+
+    if (showRecentClosedSap) {
+      recentClosedSapOrders.forEach((order, index) => {
+        const poKey = normalizePoKey(order.u_PO2);
+        const key = poKey || `sap-closed-${index}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        rows.push({ kind: "sap", key, poKey, order });
+      });
+    }
+
+    return rows.sort((a, b) => {
+      const dateA =
+        a.kind === "supabase"
+          ? new Date(a.order.created_at).getTime()
+          : (a.order.fechaDocumento ? new Date(a.order.fechaDocumento).getTime() : 0);
+      const dateB =
+        b.kind === "supabase"
+          ? new Date(b.order.created_at).getTime()
+          : (b.order.fechaDocumento ? new Date(b.order.fechaDocumento).getTime() : 0);
+      return dateB - dateA;
+    });
+  }, [closedOrders, recentClosedSapOrders, showRecentClosedSap]);
+
+  const boardOrders = useMemo(() => {
+    const mappedClosedOrders: Order[] = combinedClosedOrders.map((row) => {
+      if (row.kind === "supabase") {
+        return row.order;
+      }
+
+      const order = row.order;
+      const quantity = parseApiNumber(order.cantidadSolicitada) ?? ((parseApiNumber(order.cantidad) ?? 0) * 1000);
+      const salesOrderNumber =
+        order.pedido !== null && order.pedido !== undefined ? String(order.pedido) : null;
+
+      return {
+        id: `sap-closed-${row.poKey || salesOrderNumber || order.u_ItemNo || "order"}`,
+        po_number: order.u_PO2 || "—",
+        product_id: null,
+        product_name: order.frgnName || order.producto || null,
+        product_pt_code: order.clave || null,
+        product_customer: order.u_Cl1 || null,
+        product_item_type: null,
+        product_tipo_empaque: order.tipoEmpaque || null,
+        product_dp_sales_csr: null,
+        product_customer_item: order.u_ItemNo || null,
+        product_item_description: order.frgnName || order.producto || null,
+        quantity,
+        total_price: order.value ?? null,
+        status: "closed",
+        is_hot_order: false,
+        hot_order_priority: null,
+        do_not_delay: false,
+        requested_delivery_date: order.fechaVencimiento || null,
+        estimated_delivery_date: null,
+        printing_date: null,
+        conversion_date: null,
+        order_document_date: order.fechaDocumento || null,
+        order_due_date: order.fechaVencimiento || null,
+        order_timing_status: order.estadoTiempo || null,
+        created_at: order.fechaDocumento || new Date().toISOString(),
+        pdf_url: null,
+        sales_order_number: salesOrderNumber,
+        accepted_at: null,
+        closed_source: "sap",
+        closed_sap_payload: order,
+        inventoryStats: {
+          inFloor: 0,
+          shipped: parseApiNumber(order.cantidadEnviada) ?? 0,
+          pending: 0,
+          percentProduced: 100,
+          loadDetails: [],
+          shippedLoadDetails: [],
+          excessStock: null,
+          sapStockAvailable: null,
+          sapVerificationLoading: false,
+        },
+      };
+    });
+
+    return [...activeOrders, ...mappedClosedOrders];
+  }, [activeOrders, combinedClosedOrders]);
 
   const [reactivatingId, setReactivatingId] = useState<string | null>(null);
+  const [selectedClosedSapOrder, setSelectedClosedSapOrder] = useState<CatOrdenClosedItem | null>(null);
 
   const handleReactivateOrder = async (orderId: string) => {
     setReactivatingId(orderId);
@@ -1027,6 +1210,15 @@ export default function Orders() {
           </div>
           
           <div className="flex items-center gap-2">
+            <Button
+              variant={showRecentClosedSap ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowRecentClosedSap((prev) => !prev)}
+              className="gap-1.5"
+            >
+              <PackageCheck className="h-3.5 w-3.5" />
+              Closed POs · Last 2 Weeks
+            </Button>
             {viewMode === "list" && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1092,7 +1284,12 @@ export default function Orders() {
 
         {/* Board View - grouped by tipo_empaque */}
         {!loading && viewMode === "board" && (
-          <OrdersCanvas orders={activeOrders} groupBy="product_tipo_empaque" />
+          <OrdersCanvas
+            orders={boardOrders}
+            groupBy="product_tipo_empaque"
+            onClosedSapOrderClick={(order) => setSelectedClosedSapOrder(order)}
+            closedFirst={showRecentClosedSap}
+          />
         )}
 
         {/* Canvas View - grouped by item_type */}
@@ -1100,8 +1297,12 @@ export default function Orders() {
           <OrdersCanvas orders={activeOrders} groupBy="product_item_type" />
         )}
 
-        {/* Active Orders Table */}
+        {/* Active & Closed Orders Tables (order swaps when showRecentClosedSap is on) */}
         {!loading && viewMode === "list" && (
+          <div className="flex flex-col gap-8">
+
+        {/* Active Orders Table */}
+        <div style={{ order: showRecentClosedSap ? 2 : 1 }}>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
@@ -1159,85 +1360,176 @@ export default function Orders() {
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Closed Orders Table */}
-        {!loading && viewMode === "list" && closedOrders.length > 0 && (
+        {(closedOrders.length > 0 || showRecentClosedSap) && (
+          <div style={{ order: showRecentClosedSap ? 1 : 2 }}>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <PackageCheck className="h-5 w-5 text-success" />
               <h2 className="text-lg font-semibold">Closed POs</h2>
-              <span className="text-sm text-muted-foreground">({closedOrders.length})</span>
+              {!fetchingRecentClosedSap && (
+                <span className="text-sm text-muted-foreground">({combinedClosedOrders.length})</span>
+              )}
             </div>
-            
-            <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.3s" }}>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/30">
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">PO Number</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Product</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Quantity</th>
-                      <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer Delivery</th>
-                      {isAdmin && (
-                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {closedOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="whitespace-nowrap px-6 py-4">
-                          <Link 
-                            to={`/orders/${order.id}`}
-                            className="font-mono text-sm font-medium text-primary hover:underline"
-                          >
-                            {order.po_number}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-muted-foreground">
-                            {[order.product_customer_item, order.product_item_description].filter(Boolean).join(' - ') || order.product_name || "—"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-muted-foreground">
-                            {order.product_customer || "—"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                          {order.quantity.toLocaleString()} units
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                          {formatDate(order.requested_delivery_date)}
-                        </td>
+
+            {fetchingRecentClosedSap ? (
+              <div className="flex items-center justify-center rounded-xl border bg-card py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : combinedClosedOrders.length > 0 ? (
+              <div className="rounded-xl border bg-card shadow-card overflow-hidden animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">PO Number</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Sales Order</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Item Code</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Product</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Customer</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Quantity</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Document Date</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Timing</th>
                         {isAdmin && (
-                          <td className="whitespace-nowrap px-6 py-4 text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1"
-                              onClick={() => handleReactivateOrder(order.id)}
-                              disabled={reactivatingId === order.id}
-                            >
-                              {reactivatingId === order.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <RotateCcw className="h-4 w-4" />
-                                  Reactivate
-                                </>
-                              )}
-                            </Button>
-                          </td>
+                          <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                         )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y">
+                      {combinedClosedOrders.map((row) => {
+                        if (row.kind === "supabase") {
+                          const order = row.order;
+                          return (
+                            <tr key={row.key} className="hover:bg-muted/20 transition-colors">
+                              <td className="whitespace-nowrap px-6 py-4">
+                                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground border-muted">
+                                  Closed
+                                </span>
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4">
+                                <Link
+                                  to={`/orders/${order.id}`}
+                                  className="font-mono text-sm font-medium text-primary hover:underline"
+                                >
+                                  {order.po_number}
+                                </Link>
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                                {order.sales_order_number || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                                {order.product_customer_item || "—"}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-muted-foreground">
+                                {[order.product_customer_item, order.product_item_description].filter(Boolean).join(" - ") || order.product_name || "—"}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-muted-foreground">
+                                {order.product_customer || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                                {order.quantity.toLocaleString()} units
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                                {formatDate(order.order_document_date || order.requested_delivery_date)}
+                              </td>
+                              <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                                {order.order_timing_status || "—"}
+                              </td>
+                              {isAdmin && (
+                                <td className="whitespace-nowrap px-6 py-4 text-right">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1"
+                                    onClick={() => handleReactivateOrder(order.id)}
+                                    disabled={reactivatingId === order.id}
+                                  >
+                                    {reactivatingId === order.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <RotateCcw className="h-4 w-4" />
+                                        Reactivate
+                                      </>
+                                    )}
+                                  </Button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        }
+
+                        const order = row.order;
+                        const existingOrderId = row.poKey ? orderIdByPoNumber.get(row.poKey) : undefined;
+                        const quantity = parseApiNumber(order.cantidadSolicitada) ?? ((parseApiNumber(order.cantidad) ?? 0) * 1000);
+
+                        return (
+                          <tr
+                            key={row.key}
+                            className="hover:bg-muted/20 transition-colors cursor-pointer"
+                            onClick={() => setSelectedClosedSapOrder(order)}
+                          >
+                            <td className="whitespace-nowrap px-6 py-4">
+                              <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground border-muted">
+                                Closed
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                              {existingOrderId ? (
+                                <Link
+                                  to={`/orders/${existingOrderId}`}
+                                  className="font-mono text-sm font-medium text-primary hover:underline"
+                                >
+                                  {order.u_PO2 || "—"}
+                                </Link>
+                              ) : (
+                                <span className="font-mono text-sm font-medium">{order.u_PO2 || "—"}</span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                              {order.pedido !== null && order.pedido !== undefined ? String(order.pedido) : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                              {order.u_ItemNo || "—"}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-muted-foreground">
+                              {order.frgnName || order.producto || "—"}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-muted-foreground">
+                              {order.u_Cl1 || "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                              {quantity ? quantity.toLocaleString() : "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                              {formatDate(order.fechaDocumento || null)}
+                            </td>
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                              {order.estadoTiempo || "—"}
+                            </td>
+                            {isAdmin && <td className="whitespace-nowrap px-6 py-4 text-right" />}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/30 py-10">
+                <PackageCheck className="h-10 w-10 text-muted-foreground/50" />
+                <h3 className="mt-3 text-base font-semibold text-foreground">No hay ordenes cerradas</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No se encontraron ordenes cerradas para mostrar.
+                </p>
+              </div>
+            )}
+          </div>
+          </div>
+        )}
           </div>
         )}
 
@@ -1258,6 +1550,201 @@ export default function Orders() {
             />
           </>
         )}
+
+        {/* Closed SAP Order Detail Sheet */}
+        <Sheet open={!!selectedClosedSapOrder} onOpenChange={(open) => { if (!open) setSelectedClosedSapOrder(null); }}>
+          <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            {selectedClosedSapOrder && (
+              <>
+                <SheetHeader className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground border-muted">
+                      Closed
+                    </span>
+                    {selectedClosedSapOrder.estadoTiempo && (
+                      <span className={cn(
+                        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                        selectedClosedSapOrder.estadoTiempo === "A Tiempo"
+                          ? "bg-success/10 text-success border-success/20"
+                          : "bg-destructive/10 text-destructive border-destructive/20"
+                      )}>
+                        {selectedClosedSapOrder.estadoTiempo}
+                      </span>
+                    )}
+                  </div>
+                  <SheetTitle className="text-xl mt-1">
+                    PO {selectedClosedSapOrder.u_PO2 || "—"}
+                  </SheetTitle>
+                  <p className="text-sm text-muted-foreground">Sales Order #{selectedClosedSapOrder.pedido ?? "—"}</p>
+                </SheetHeader>
+
+                <div className="space-y-6">
+                  {/* Customer & Vendor */}
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2"><User className="h-4 w-4" /> Customer</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Company</p>
+                        <p className="font-medium">{selectedClosedSapOrder.cliente || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Customer</p>
+                        <p className="font-medium">{selectedClosedSapOrder.u_Cl1 || "—"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Sales Rep</p>
+                        <p className="font-medium">{selectedClosedSapOrder.vendedor || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Product */}
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2"><Tag className="h-4 w-4" /> Product</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Item No.</p>
+                        <p className="font-medium font-mono">{selectedClosedSapOrder.u_ItemNo || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Clave</p>
+                        <p className="font-medium font-mono">{selectedClosedSapOrder.clave || "—"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Product (SAP)</p>
+                        <p className="font-medium">{selectedClosedSapOrder.producto || "—"}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Foreign Name</p>
+                        <p className="font-medium">{selectedClosedSapOrder.frgnName || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Packaging</p>
+                        <p className="font-medium">{selectedClosedSapOrder.tipoEmpaque || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Unit</p>
+                        <p className="font-medium">{selectedClosedSapOrder.unidad || selectedClosedSapOrder.claveUnidad || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quantities & Pricing */}
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2"><Box className="h-4 w-4" /> Quantities & Pricing</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Qty Requested</p>
+                        <p className="font-medium">{parseApiNumber(selectedClosedSapOrder.cantidadSolicitada)?.toLocaleString() ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Qty Sent</p>
+                        <p className="font-medium">{parseApiNumber(selectedClosedSapOrder.cantidadEnviada)?.toLocaleString() ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Delivered</p>
+                        <p className="font-medium">{parseApiNumber(selectedClosedSapOrder.entregado)?.toLocaleString() ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Cantidad</p>
+                        <p className="font-medium">{parseApiNumber(selectedClosedSapOrder.cantidad)?.toLocaleString() ?? "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Price / unit</p>
+                        <p className="font-medium">{selectedClosedSapOrder.precio != null ? `$${selectedClosedSapOrder.precio}` : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Value</p>
+                        <p className="font-medium">{selectedClosedSapOrder.value != null ? `$${selectedClosedSapOrder.value.toLocaleString()}` : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Costo</p>
+                        <p className="font-medium">{selectedClosedSapOrder.costo || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Imp. RL</p>
+                        <p className="font-medium">{selectedClosedSapOrder.u_ImpRl || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dates */}
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2"><Calendar className="h-4 w-4" /> Dates</h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Document Date</p>
+                        <p className="font-medium">{formatDate(selectedClosedSapOrder.fechaDocumento || null)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Due Date</p>
+                        <p className="font-medium">{formatDate(selectedClosedSapOrder.fechaVencimiento || null)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Days Remaining</p>
+                        <p className="font-medium">{selectedClosedSapOrder.diasRestantes ?? "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Warehouse Details */}
+                  {selectedClosedSapOrder.detallesAlmacen && selectedClosedSapOrder.detallesAlmacen.length > 0 && (
+                    <div className="rounded-lg border bg-card p-4 space-y-3">
+                      <h3 className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Warehouse Details</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b">
+                              {Object.keys(selectedClosedSapOrder.detallesAlmacen[0]).map((key) => (
+                                <th key={key} className="px-2 py-1.5 text-left text-muted-foreground font-medium capitalize">{key}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {selectedClosedSapOrder.detallesAlmacen.map((row, i) => (
+                              <tr key={i} className="hover:bg-muted/20">
+                                {Object.values(row).map((val, j) => (
+                                  <td key={j} className="px-2 py-1.5 text-muted-foreground">{val != null ? String(val) : "—"}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warehouse Totals */}
+                  {selectedClosedSapOrder.detallesAlmacenTotal && selectedClosedSapOrder.detallesAlmacenTotal.length > 0 && (
+                    <div className="rounded-lg border bg-card p-4 space-y-3">
+                      <h3 className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4" /> Warehouse Totals</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b">
+                              {Object.keys(selectedClosedSapOrder.detallesAlmacenTotal[0]).map((key) => (
+                                <th key={key} className="px-2 py-1.5 text-left text-muted-foreground font-medium capitalize">{key}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {selectedClosedSapOrder.detallesAlmacenTotal.map((row, i) => (
+                              <tr key={i} className="hover:bg-muted/20">
+                                {Object.values(row).map((val, j) => (
+                                  <td key={j} className="px-2 py-1.5 text-muted-foreground">{val != null ? String(val) : "—"}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </SheetContent>
+        </Sheet>
       </div>
     </MainLayout>
   );
