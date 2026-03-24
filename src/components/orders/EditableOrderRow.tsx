@@ -3,6 +3,7 @@ import { openStorageFile } from "@/hooks/useOpenStorageFile";
 import { Link, useNavigate } from "react-router-dom";
 import { Flame, MoreVertical, Download, Eye, CheckCircle2, FileEdit, Check, X, Loader2, Clock, Truck, PackageCheck, Calendar, Boxes, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
 import { POActivityTimeline } from "./POActivityTimeline";
+import { HotOrderPriorityDialog } from "./HotOrderPriorityDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +89,7 @@ interface Order {
   total_price: number | null;
   status: string;
   is_hot_order: boolean;
+  hot_order_priority: number | null;
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
@@ -144,6 +146,7 @@ export function EditableOrderRow({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [hotOrderPriorityOpen, setHotOrderPriorityOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [itemTypeOptions, setItemTypeOptions] = useState<string[]>([]);
   const [dpSalesOptions, setDpSalesOptions] = useState<string[]>([]);
@@ -271,6 +274,7 @@ export function EditableOrderRow({
         total_price: editedOrder.total_price,
         status: effectiveStatus,
         is_hot_order: editedOrder.is_hot_order,
+        ...(!editedOrder.is_hot_order ? { hot_order_priority: null } : {}),
         do_not_delay: editedOrder.do_not_delay,
         requested_delivery_date: editedOrder.requested_delivery_date || null,
         estimated_delivery_date: editedOrder.estimated_delivery_date || null,
@@ -688,7 +692,13 @@ export function EditableOrderRow({
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
           <Switch checked={editedOrder.is_hot_order}
-            onCheckedChange={(checked) => setEditedOrder({ ...editedOrder, is_hot_order: checked })} />
+            onCheckedChange={(checked) => {
+              if (checked && !order.is_hot_order) {
+                setHotOrderPriorityOpen(true);
+              } else {
+                setEditedOrder({ ...editedOrder, is_hot_order: checked, });
+              }
+            }} />
           {editedOrder.is_hot_order && <Flame className="h-4 w-4 text-accent" />}
         </div>
         <div className="flex items-center gap-1">
@@ -773,7 +783,9 @@ export function EditableOrderRow({
         {order.is_hot_order && (
           <div className="flex items-center gap-1">
             <Flame className="h-4 w-4 text-accent animate-pulse" />
-            <span className="text-sm font-semibold text-accent">Hot</span>
+            <span className="text-sm font-semibold text-accent">
+              Hot{order.hot_order_priority ? ` #${order.hot_order_priority}` : ""}
+            </span>
           </div>
         )}
         {order.do_not_delay && (
@@ -900,29 +912,44 @@ export function EditableOrderRow({
   // If columnOrder is provided, render cells in that order
   if (columnOrder) {
     return (
-      <tr 
-        className={cn(
-          "transition-colors cursor-pointer",
-          isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
-        )}
-        onClick={isAdmin && isEditing ? undefined : handleRowClick}
-        onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
-      >
-        {columnOrder.map((colId) => (
-          <td
-            key={colId}
-            className={cn(
-              "px-6 py-4 text-sm overflow-hidden text-ellipsis",
-              colId === "po_number" && "whitespace-normal",
-              rightAlignedColumns.has(colId) && "text-right",
-              isEditing && "py-2",
-            )}
-            style={columnWidths?.[colId] ? { width: `${columnWidths[colId]}px` } : undefined}
-          >
-            {cellMap[colId] ?? null}
-          </td>
-        ))}
-      </tr>
+      <>
+        <tr 
+          className={cn(
+            "transition-colors cursor-pointer",
+            isAdmin && isEditing ? "bg-accent/5" : "hover:bg-muted/20"
+          )}
+          onClick={isAdmin && isEditing ? undefined : handleRowClick}
+          onDoubleClick={isAdmin && !isEditing ? () => setIsEditing(true) : undefined}
+        >
+          {columnOrder.map((colId) => (
+            <td
+              key={colId}
+              className={cn(
+                "px-6 py-4 text-sm overflow-hidden text-ellipsis",
+                colId === "po_number" && "whitespace-normal",
+                rightAlignedColumns.has(colId) && "text-right",
+                isEditing && "py-2",
+              )}
+              style={columnWidths?.[colId] ? { width: `${columnWidths[colId]}px` } : undefined}
+            >
+              {cellMap[colId] ?? null}
+            </td>
+          ))}
+        </tr>
+        <HotOrderPriorityDialog
+          open={hotOrderPriorityOpen}
+          onOpenChange={setHotOrderPriorityOpen}
+          orderId={order.id}
+          orderPoNumber={order.po_number}
+          orderProductName={order.product_name}
+          orderQuantity={order.quantity}
+          productItemType={order.product_item_type}
+          onSaved={() => {
+            setEditedOrder({ ...editedOrder, is_hot_order: true });
+            onUpdated();
+          }}
+        />
+      </>
     );
   }
 

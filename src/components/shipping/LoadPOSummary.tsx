@@ -11,7 +11,8 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Info, DollarSign, FileText } from "lucide-react";
+import { Info, DollarSign, FileText, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface LoadPallet {
   id: string;
@@ -42,6 +43,7 @@ interface POSummary {
   pending_count: number;
   on_hold_count: number;
   subtotal: number | null;
+  release_numbers: Set<string>;
 }
 
 interface PODocuments {
@@ -60,6 +62,7 @@ interface LoadPOSummaryProps {
   poTotalsMap?: Map<string, { total_quantity: number; shipped_quantity: number }>;
   poDocumentsMap?: Map<string, PODocuments>;
   onOpenStorageFile?: (storedValue: string | null | undefined, defaultBucket?: string) => void;
+  loadNumber?: string;
 }
 
 export function LoadPOSummary({
@@ -73,6 +76,7 @@ export function LoadPOSummary({
   poTotalsMap,
   poDocumentsMap,
   onOpenStorageFile,
+  loadNumber,
 }: LoadPOSummaryProps) {
   const showSubtotals = isAdmin && poPriceMap && poPriceMap.size > 0;
   const showPoTotals = isAdmin && poTotalsMap && poTotalsMap.size > 0;
@@ -102,7 +106,10 @@ export function LoadPOSummary({
         if (existing.subtotal !== null) {
           existing.subtotal += palletSubtotal;
         }
+        if (pallet.release_number) existing.release_numbers.add(pallet.release_number);
       } else {
+        const releaseSet = new Set<string>();
+        if (pallet.release_number) releaseSet.add(pallet.release_number);
         poMap.set(key, {
           customer_lot: key,
           pt_code: pallet.pallet.pt_code,
@@ -113,6 +120,7 @@ export function LoadPOSummary({
           pending_count: isPending ? 1 : 0,
           on_hold_count: isOnHold ? 1 : 0,
           subtotal: price ? palletSubtotal : null,
+          release_numbers: releaseSet,
         });
       }
     });
@@ -129,12 +137,50 @@ export function LoadPOSummary({
 
   const formatCurrency = (val: number) => "$" + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const handleExportExcel = () => {
+    const rows = poSummary.map((po) => ({
+      "Customer PO": po.customer_lot,
+      "Product": po.description,
+      "Pallets": po.pallet_count,
+      "Volume": po.total_quantity,
+      "Release #": po.release_numbers.size > 0 ? Array.from(po.release_numbers).join(", ") : "",
+      "Released": po.released_count,
+      "Pending": po.pending_count,
+      "On Hold": po.on_hold_count,
+      ...(showSubtotals ? { "Subtotal": po.subtotal ?? "" } : {}),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 14 },
+      { wch: 40 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      ...(showSubtotals ? [{ wch: 14 }] : []),
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "POs in Load");
+    XLSX.writeFile(wb, `POs_Load_${loadNumber || "export"}.xlsx`);
+  };
+
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Info className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Info className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">{title}</CardTitle>
+          </div>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <Download className="mr-1.5 h-4 w-4" />
+              Excel
+            </Button>
+          )}
         </div>
         <CardDescription>
           Summary of Customer POs included in this load

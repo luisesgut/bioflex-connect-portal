@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/popover";
 import { Loader2, Ghost, ChevronsUpDown, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalizedNumber } from "@/lib/utils";
 
 interface CreateVirtualPalletDialogProps {
   open: boolean;
@@ -47,12 +48,46 @@ interface ActivePO {
     pieces_per_pallet: number | null;
     item_description: string | null;
   } | null;
+  sap_pt_code?: string | null;
+  sap_product_name?: string | null;
+  sap_item_description?: string | null;
 }
 
+interface CatOrdenOpenItem {
+  u_PO2?: string | null;
+  clave?: string | number | null;
+  producto?: string | number | null;
+  frgnName?: string | number | null;
+}
+
+const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const DEFAULT_UNIT = "PIEZAS";
+const DEFAULT_NET_WEIGHT = "700";
+
+const toCleanString = (value: unknown) => {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+};
+
+const normalizePoKey = (value: string | null | undefined) => {
+  const cleaned = (value || "").trim().toUpperCase();
+  if (!cleaned) return "";
+  const compact = cleaned.replace(/\s+/g, "");
+  return /^\d+$/.test(compact) ? String(Number(compact)) : compact;
+};
+
+const getPOCode = (po: ActivePO) =>
+  po.sap_pt_code || po.product?.pt_code || po.product?.codigo_producto || "";
+
+const getPODescription = (po: ActivePO) =>
+  po.sap_item_description || po.product?.item_description || po.product?.name || po.sap_product_name || "";
+
+const getPOName = (po: ActivePO) =>
+  po.sap_product_name || po.product?.name || po.sap_item_description || "";
+
 const getPOLabel = (po: ActivePO) => {
-  const product = po.product;
-  const code = product?.codigo_producto || product?.pt_code || "—";
-  const name = product?.name || "";
+  const code = getPOCode(po) || "—";
+  const name = getPOName(po);
   return `PO ${po.po_number} · ${code} · ${name}`;
 };
 
@@ -67,10 +102,10 @@ export function CreateVirtualPalletDialog({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [poSearch, setPOSearch] = useState("");
   const [stock, setStock] = useState("");
-  const [unit, setUnit] = useState("MIL");
+  const [unit, setUnit] = useState(DEFAULT_UNIT);
   const [traceability, setTraceability] = useState("");
-   const [netWeight, setNetWeight] = useState("");
-   const [saving, setSaving] = useState(false);
+  const [netWeight, setNetWeight] = useState(DEFAULT_NET_WEIGHT);
+  const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
     () => activePOs.find((po) => po.id === selectedPOId) || null,
@@ -86,13 +121,9 @@ export function CreateVirtualPalletDialog({
     });
   }, [activePOs, poSearch]);
 
-  const ptCode = selectedPO?.product
-    ? selectedPO.product.codigo_producto || selectedPO.product.pt_code || ""
-    : "";
+  const ptCode = selectedPO ? getPOCode(selectedPO) : "";
 
-  const description = selectedPO?.product
-    ? selectedPO.product.item_description || selectedPO.product.name || ""
-    : "";
+  const description = selectedPO ? getPODescription(selectedPO) : "";
 
   useEffect(() => {
     if (open) {
@@ -113,16 +144,50 @@ export function CreateVirtualPalletDialog({
   const fetchActivePOs = async () => {
     setLoadingPOs(true);
     try {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(
-          "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
-        )
-        .eq("status", "accepted")
-        .order("po_number");
+      const [poResult, sapItems] = await Promise.all([
+        supabase
+          .from("purchase_orders")
+          .select(
+            "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
+          )
+          .eq("status", "accepted")
+          .order("po_number"),
+        fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+          method: "GET",
+          headers: { accept: "*/*" },
+        })
+          .then(async (response) => {
+            if (!response.ok) return [] as CatOrdenOpenItem[];
+            const payload = await response.json();
+            return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
+          })
+          .catch((error) => {
+            console.warn("Error fetching SAP PO data for virtual pallets:", error);
+            return [] as CatOrdenOpenItem[];
+          }),
+      ]);
 
-      if (error) throw error;
-      setActivePOs((data as unknown as ActivePO[]) || []);
+      if (poResult.error) throw poResult.error;
+
+      const sapByPo = sapItems.reduce<Record<string, Pick<ActivePO, "sap_pt_code" | "sap_product_name" | "sap_item_description">>>((acc, item) => {
+        const key = normalizePoKey(item.u_PO2);
+        if (!key || acc[key]) return acc;
+
+        acc[key] = {
+          sap_pt_code: toCleanString(item.clave) || null,
+          sap_product_name: toCleanString(item.producto) || toCleanString(item.frgnName) || null,
+          sap_item_description: toCleanString(item.frgnName) || toCleanString(item.producto) || null,
+        };
+
+        return acc;
+      }, {});
+
+      const mergedPOs = ((poResult.data as unknown as ActivePO[]) || []).map((po) => ({
+        ...po,
+        ...sapByPo[normalizePoKey(po.po_number)],
+      }));
+
+      setActivePOs(mergedPOs);
     } catch (err) {
       console.error("Error fetching active POs:", err);
     } finally {
@@ -133,32 +198,68 @@ export function CreateVirtualPalletDialog({
   const resetForm = () => {
     setSelectedPOId("");
     setStock("");
-    setUnit("MIL");
+    setUnit(DEFAULT_UNIT);
     setTraceability("");
-    setNetWeight("");
+    setNetWeight(DEFAULT_NET_WEIGHT);
     setPOSearch("");
+    setPopoverOpen(false);
   };
 
   const handleCreate = async () => {
-    if (!selectedPOId || !ptCode || !description || !stock) {
-      toast.error("Selecciona una PO y stock son requeridos");
+    if (!selectedPOId) {
+      toast.error("Selecciona una PO");
+      return;
+    }
+
+    const parsedStock = parseLocalizedNumber(stock);
+    const parsedNetWeight = parseLocalizedNumber(netWeight);
+
+    if (!stock.trim() || parsedStock <= 0) {
+      toast.error("Ingresa el stock de la tarima virtual en piezas");
+      return;
+    }
+
+    if (!description) {
+      toast.error("La PO seleccionada no tiene descripción de producto");
+      return;
+    }
+
+    if (!ptCode) {
+      toast.error("La PO seleccionada no tiene PT Code o código de producto");
       return;
     }
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("inventory_pallets").insert({
+      const baseTraceability = traceability.trim()
+        ? `VIRTUAL-${traceability.trim()}`
+        : `VIRTUAL-${selectedPO?.po_number || "N/A"}`;
+
+      const buildPayload = (
+        traceabilityValue: string,
+      ): Database["public"]["Tables"]["inventory_pallets"]["Insert"] => ({
         pt_code: ptCode,
         description,
-        stock: parseFloat(stock),
+        stock: parsedStock,
         unit,
-        traceability: traceability.trim() ? `VIRTUAL-${traceability.trim()}` : `VIRTUAL-${selectedPO?.po_number || "N/A"}`,
+        traceability: traceabilityValue,
         bfx_order: selectedPO?.sales_order_number || selectedPO?.po_number || null,
         fecha: new Date().toISOString().split("T")[0],
         status: "available",
         is_virtual: true,
-        net_weight: netWeight ? parseFloat(netWeight) : null,
+        net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
       });
+
+      let { error } = await supabase
+        .from("inventory_pallets")
+        .insert(buildPayload(`${baseTraceability}-${Date.now()}`));
+
+      if (error?.message?.includes("inventory_pallets_traceability_unique")) {
+        const fallbackTraceability = `${baseTraceability}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+        ({ error } = await supabase
+          .from("inventory_pallets")
+          .insert(buildPayload(fallbackTraceability)));
+      }
 
       if (error) throw error;
 
@@ -180,7 +281,7 @@ export function CreateVirtualPalletDialog({
       <DialogContent className="sm:max-w-lg overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Ghost className="h-5 w-5 text-purple-500" />
+            <Ghost className="h-5 w-5 text-accent" />
             Crear Tarima Virtual
           </DialogTitle>
           <DialogDescription>
@@ -189,9 +290,9 @@ export function CreateVirtualPalletDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-x-hidden">
           {/* PO Selector */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <Label>Purchase Order *</Label>
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={true}>
               <PopoverTrigger asChild>
@@ -199,19 +300,24 @@ export function CreateVirtualPalletDialog({
                   variant="outline"
                   role="combobox"
                   aria-expanded={popoverOpen}
-                  className="w-full justify-between font-normal h-auto min-h-10 py-2"
+                  className="w-full min-w-0 justify-between gap-2 overflow-hidden font-normal h-auto min-h-10 py-2"
                 >
                   {selectedPO ? (
-                    <span className="truncate text-left">{getPOLabel(selectedPO)}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">{getPOLabel(selectedPO)}</span>
                   ) : (
-                    <span className="text-muted-foreground">
+                    <span className="min-w-0 flex-1 truncate text-left text-muted-foreground">
                       {loadingPOs ? "Cargando POs..." : "Buscar PO activa..."}
                     </span>
                   )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom" sideOffset={4}>
+              <PopoverContent
+                className="w-[min(var(--radix-popover-trigger-width),calc(100vw-2rem))] max-w-[calc(100vw-2rem)] p-0"
+                align="start"
+                side="bottom"
+                sideOffset={4}
+              >
                 <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Buscar por PO, PT Code o producto..."
@@ -225,6 +331,7 @@ export function CreateVirtualPalletDialog({
                         <CommandItem
                           key={po.id}
                           value={po.id}
+                          className="items-start gap-2"
                           onSelect={() => {
                             setSelectedPOId(po.id);
                             setPopoverOpen(false);
@@ -233,21 +340,18 @@ export function CreateVirtualPalletDialog({
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
+                              "mt-0.5 h-4 w-4 shrink-0",
                               selectedPOId === po.id
                                 ? "opacity-100"
                                 : "opacity-0"
                             )}
                           />
-                          <div className="flex flex-col">
-                            <span className="font-medium">
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">
                               PO {po.po_number}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {po.product?.codigo_producto ||
-                                po.product?.pt_code ||
-                                "—"}{" "}
-                              · {po.product?.name || "Sin producto"}
+                            <span className="block break-words text-xs text-muted-foreground">
+                              {getPOCode(po) || "—"} · {getPOName(po) || "Sin producto"}
                             </span>
                           </div>
                         </CommandItem>
@@ -283,8 +387,9 @@ export function CreateVirtualPalletDialog({
               <Label htmlFor="vp-stock">Stock (piezas) *</Label>
               <Input
                 id="vp-stock"
-                type="number"
-                placeholder="e.g. 1000"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 45000"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
               />
@@ -314,8 +419,9 @@ export function CreateVirtualPalletDialog({
               <Label htmlFor="vp-net-weight">Peso Neto (kg)</Label>
               <Input
                 id="vp-net-weight"
-                type="number"
-                placeholder="e.g. 850"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 700"
                 value={netWeight}
                 onChange={(e) => setNetWeight(e.target.value)}
               />

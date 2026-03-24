@@ -102,6 +102,7 @@ interface Order {
   total_price: number | null;
   status: string;
   is_hot_order: boolean;
+  hot_order_priority: number | null;
   do_not_delay: boolean;
   requested_delivery_date: string | null;
   estimated_delivery_date: string | null;
@@ -214,6 +215,7 @@ export default function Orders() {
         total_price,
         status,
         is_hot_order,
+        hot_order_priority,
         do_not_delay,
         requested_delivery_date,
         estimated_delivery_date,
@@ -676,6 +678,7 @@ export default function Orders() {
         total_price: totalPriceFromApi ?? order.total_price,
         status: order.status,
         is_hot_order: order.is_hot_order,
+        hot_order_priority: order.hot_order_priority ?? null,
         do_not_delay: order.do_not_delay ?? false,
         requested_delivery_date: order.requested_delivery_date,
         estimated_delivery_date: order.estimated_delivery_date,

@@ -90,7 +90,9 @@ import { format, differenceInDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
+import { enrichWithTraceability } from "@/components/shipping/CustomsReviewDialog";
 import { generatePackingList } from "@/utils/generatePackingList";
+import { generatePackingListExcel } from "@/utils/generatePackingListExcel";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
 import { LoadComments } from "@/components/shipping/LoadComments";
 import { ReleaseValidationDialog } from "@/components/shipping/ReleaseValidationDialog";
@@ -341,6 +343,8 @@ export default function LoadDetail() {
   const [activePOPtCodeFilter, setActivePOPtCodeFilter] = useState<string | null>(null);
   const [linkVirtualPtCode, setLinkVirtualPtCode] = useState("");
   const [linkLoadPalletId, setLinkLoadPalletId] = useState<string | undefined>(undefined);
+  const [editingLoadName, setEditingLoadName] = useState(false);
+  const [editLoadNameValue, setEditLoadNameValue] = useState("");
   const [poTotalsMap, setPoTotalsMap] = useState<Map<string, { total_quantity: number; shipped_quantity: number }>>(new Map());
   const [isBillingTeam, setIsBillingTeam] = useState(false);
   const [billingValidationStatus, setBillingValidationStatus] = useState<string | null>(null);
@@ -884,7 +888,7 @@ export default function LoadDetail() {
     }
   };
 
-  const handleDownloadPackingList = async (destinationCode: string) => {
+  const buildPackingListParams = (destinationCode: string) => {
     if (!load) return;
     const destPallets = pallets.filter((p) => p.destination === destinationCode);
     if (destPallets.length === 0) {
@@ -903,7 +907,7 @@ export default function LoadDetail() {
     poSalesOrderMap.forEach((info, poNumber) => {
       poInfoMap.set(poNumber, info);
     });
-    await generatePackingList({
+    return {
       loadNumber: load.load_number,
       shippingDate: load.shipping_date,
       invoiceNumber: load.invoice_number || "",
@@ -921,7 +925,7 @@ export default function LoadDetail() {
         unit: p.pallet.unit,
       })),
       poInfoMap,
-      resolveCustomerPO: (pallet) => {
+      resolveCustomerPO: (pallet: { customer_lot: string | null; bfx_order: string | null; pt_code: string }) => {
         if (pallet.customer_lot) return pallet.customer_lot;
         if (pallet.bfx_order) {
           const poFromBfx = bfxOrderToPOMap.get(pallet.bfx_order);
@@ -929,7 +933,19 @@ export default function LoadDetail() {
         }
         return ptCodeToPOMap.get(pallet.pt_code) || "-";
       },
-    });
+    };
+  };
+
+  const handleDownloadPackingList = async (destinationCode: string) => {
+    const params = buildPackingListParams(destinationCode);
+    if (!params) return;
+    await generatePackingList(params);
+  };
+
+  const handleDownloadPackingListExcel = (destinationCode: string) => {
+    const params = buildPackingListParams(destinationCode);
+    if (!params) return;
+    generatePackingListExcel(params);
   };
 
   // Sort pallets by Customer PO (grouped), then by quantity descending within each group
@@ -1779,14 +1795,6 @@ export default function LoadDetail() {
 
     const palletsOnHold = pallets.filter((p) => p.is_on_hold);
     const palletsWithoutDestination = pallets.filter((p) => !p.is_on_hold && (!p.destination || p.destination === "tbd"));
-    const virtualPalletsUnlinked = pallets.filter((p) => p.pallet.is_virtual);
-
-    if (virtualPalletsUnlinked.length > 0) {
-      return {
-        valid: false,
-        message: `Cannot transition to In Transit: ${virtualPalletsUnlinked.length} tarima(s) virtual(es) sin ligar a tarima real.`
-      };
-    }
 
     if (palletsOnHold.length > 0) {
       return { 
@@ -2227,7 +2235,51 @@ export default function LoadDetail() {
           </Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{load.load_number}</h1>
+              {canEditShipping && editingLoadName ? (
+                <form
+                  className="flex items-center gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!editLoadNameValue.trim() || editLoadNameValue.trim() === load.load_number) {
+                      setEditingLoadName(false);
+                      return;
+                    }
+                    const { error } = await supabase
+                      .from("shipping_loads")
+                      .update({ load_number: editLoadNameValue.trim() })
+                      .eq("id", id);
+                    if (error) {
+                      toast.error("Failed to update load name");
+                    } else {
+                      toast.success("Load name updated");
+                      fetchLoadData();
+                    }
+                    setEditingLoadName(false);
+                  }}
+                >
+                  <Input
+                    value={editLoadNameValue}
+                    onChange={(e) => setEditLoadNameValue(e.target.value)}
+                    className="h-9 w-48 text-xl font-bold"
+                    autoFocus
+                    onBlur={() => setEditingLoadName(false)}
+                    onKeyDown={(e) => { if (e.key === "Escape") setEditingLoadName(false); }}
+                  />
+                </form>
+              ) : (
+                <h1
+                  className={cn("text-2xl font-bold tracking-tight", canEditShipping && "cursor-pointer hover:text-primary group flex items-center gap-1.5")}
+                  onClick={() => {
+                    if (canEditShipping) {
+                      setEditLoadNameValue(load.load_number);
+                      setEditingLoadName(true);
+                    }
+                  }}
+                >
+                  {load.load_number}
+                  {canEditShipping && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </h1>
+              )}
               <Badge className={statusStyles[load.status]} variant="secondary">
                 {statusLabels[load.status] || load.status.replace("_", " ")}
               </Badge>
@@ -2335,11 +2387,12 @@ export default function LoadDetail() {
               </Select>
             )}
             {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
-              <Button variant="outline" onClick={() => {
-                const totalPalletCount = billingValidatedData.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
+              <Button variant="outline" onClick={async () => {
+                const enriched = await enrichWithTraceability(id!, billingValidatedData);
+                const totalPalletCount = enriched.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
                   { loadNumber: load.load_number, shippingDate: load.shipping_date },
-                  billingValidatedData,
+                  enriched,
                   totalPalletCount,
                   5000
                 );
@@ -2766,15 +2819,26 @@ export default function LoadDetail() {
                                   {step.label}
                                 </p>
                                 {step.type === "destination" && load.invoice_number && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-xs gap-1"
-                                    onClick={() => handleDownloadPackingList(step.destinationKey!)}
-                                  >
-                                    <FileDown className="h-3 w-3" />
-                                    PL
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs gap-1"
+                                      onClick={() => handleDownloadPackingList(step.destinationKey!)}
+                                    >
+                                      <FileDown className="h-3 w-3" />
+                                      PL
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs gap-1"
+                                      onClick={() => handleDownloadPackingListExcel(step.destinationKey!)}
+                                    >
+                                      <FileDown className="h-3 w-3" />
+                                      PL (Excel)
+                                    </Button>
+                                  </>
                                 )}
                               </div>
                               {step.type === "departed" && step.date && (
@@ -3183,6 +3247,7 @@ export default function LoadDetail() {
             poTotalsMap={poTotalsMap}
             poDocumentsMap={poDocumentsMap}
             onOpenStorageFile={openStorageFile}
+            loadNumber={load?.load_number}
           />
         )}
 

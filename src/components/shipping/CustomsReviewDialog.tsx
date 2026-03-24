@@ -26,6 +26,7 @@ export interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 export interface CustomsProductSummary {
@@ -35,6 +36,7 @@ export interface CustomsProductSummary {
   poNumber: string | null;
   releaseNumber: string | null;
   bfxSpecUrl: string | null;
+  ptCode: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
@@ -112,7 +114,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
     .from("load_pallets")
     .select(`
       id, destination, quantity, release_number, is_on_hold,
-      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces)
+      pallet:inventory_pallets(pt_code, description, customer_lot, bfx_order, unit, gross_weight, net_weight, pieces, traceability)
     `)
     .eq("load_id", loadId)
     .eq("is_on_hold", false);
@@ -207,6 +209,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
         poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
         bfxSpecUrl: prodInfo?.bfx_spec_url || null,
+        ptCode: lp.pallet.pt_code || null,
         totalPallets: 0,
         totalUnits: 0,
         totalGrossWeight: 0,
@@ -244,6 +247,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
       pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
+      traceability: (lp.pallet as any).traceability || undefined,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
@@ -262,6 +266,55 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
   });
 
   return results;
+}
+/**
+ * Enrich stored validated_data with fresh traceability codes from load_pallets.
+ * Needed because older validated_data may lack the traceability field.
+ */
+export async function enrichWithTraceability(
+  loadId: string,
+  products: CustomsProductSummary[]
+): Promise<CustomsProductSummary[]> {
+  // Check if any palletDetails are missing traceability
+  const needsEnrichment = products.some(
+    p => p.palletDetails?.some(pd => !pd.traceability)
+  );
+  if (!needsEnrichment) return products;
+
+  try {
+    const { data } = await supabase
+      .from("load_pallets")
+      .select("pallet:inventory_pallets(pt_code, traceability, gross_weight, net_weight)")
+      .eq("load_id", loadId)
+      .eq("is_on_hold", false);
+
+    if (!data || data.length === 0) return products;
+
+    // Build a lookup: index pallets in order per pt_code
+    const palletsByPtCode: Record<string, string[]> = {};
+    (data as any[]).forEach(lp => {
+      const ptCode = lp.pallet?.pt_code;
+      const trace = lp.pallet?.traceability;
+      if (ptCode && trace) {
+        if (!palletsByPtCode[ptCode]) palletsByPtCode[ptCode] = [];
+        palletsByPtCode[ptCode].push(trace);
+      }
+    });
+
+    // Merge traceability into palletDetails
+    return products.map(p => {
+      if (!p.palletDetails) return p;
+      const ptTraces = palletsByPtCode[p.ptCode || ""] || [];
+      const enrichedDetails = p.palletDetails.map((pd, i) => ({
+        ...pd,
+        traceability: pd.traceability || ptTraces[i] || undefined,
+      }));
+      return { ...p, palletDetails: enrichedDetails };
+    });
+  } catch (err) {
+    console.warn("Failed to enrich traceability:", err);
+    return products;
+  }
 }
 
 export function CustomsReviewDialog({
@@ -289,7 +342,8 @@ export function CustomsReviewDialog({
     setEditingIndex(null);
 
     if (existingData && existingData.length > 0) {
-      setProducts(existingData);
+      // Enrich existing validated data with fresh traceability from DB
+      enrichWithTraceability(loadId, existingData).then(enriched => setProducts(enriched));
       return;
     }
 

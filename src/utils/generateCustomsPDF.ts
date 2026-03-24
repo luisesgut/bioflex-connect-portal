@@ -10,6 +10,7 @@ interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  traceability?: string;
 }
 
 interface ProductSummary {
@@ -18,6 +19,7 @@ interface ProductSummary {
   salesOrder: string | null;
   poNumber: string | null;
   releaseNumber: string | null;
+  ptCode?: string | null;
   totalPallets: number;
   totalUnits: number;
   totalGrossWeight: number;
@@ -86,11 +88,12 @@ export function generateCustomsPDF(
     doc.setFillColor(0, 51, 102);
     doc.rect(MARGIN, y - 4, CONTENT_WIDTH, 7, "F");
     doc.setTextColor(255, 255, 255);
-    addText(p.description, MARGIN + 2, y, { bold: true, size: 10 });
+    const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
+    addText(titleText, MARGIN + 2, y, { bold: true, size: 10 });
     doc.setTextColor(0, 0, 0);
     y += 8;
 
-    // Metadata rows
+    // Metadata rows — two columns
     const meta: [string, string][] = [
       ["Destino", p.destination],
       ["Sales Order", p.salesOrder || "-"],
@@ -98,11 +101,18 @@ export function generateCustomsPDF(
       ["Release", p.releaseNumber || "-"],
     ];
 
-    meta.forEach(([label, value]) => {
-      addText(label, MARGIN + 2, y, { bold: true });
-      addText(value, MARGIN + 50, y);
+    const col2X = MARGIN + CONTENT_WIDTH / 2;
+    for (let i = 0; i < meta.length; i += 2) {
+      const [lbl1, val1] = meta[i];
+      addText(lbl1, MARGIN + 2, y, { bold: true });
+      addText(val1, MARGIN + 30, y);
+      if (i + 1 < meta.length) {
+        const [lbl2, val2] = meta[i + 1];
+        addText(lbl2, col2X, y, { bold: true });
+        addText(val2, col2X + 28, y);
+      }
       y += 4;
-    });
+    }
 
     y += 2;
 
@@ -111,13 +121,15 @@ export function generateCustomsPDF(
       checkPage(20);
       // Table header
       const colTarima = MARGIN + 2;
-      const colPiezas = MARGIN + 30;
-      const colBruto = MARGIN + 75;
-      const colNeto = MARGIN + 120;
+      const colTraza = MARGIN + 18;
+      const colPiezas = MARGIN + 65;
+      const colBruto = MARGIN + 100;
+      const colNeto = MARGIN + 140;
 
       doc.setFillColor(200, 200, 200);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText("Tarima", colTarima, y, { bold: true, size: 8 });
+      addText("Trazabilidad", colTraza, y, { bold: true, size: 8 });
       addText("Piezas", colPiezas, y, { bold: true, size: 8 });
       addText("Bruto", colBruto, y, { bold: true, size: 8 });
       addText("Neto", colNeto, y, { bold: true, size: 8 });
@@ -127,6 +139,7 @@ export function generateCustomsPDF(
       p.palletDetails.forEach((pd) => {
         checkPage(5);
         addText(String(pd.palletIndex), colTarima, y, { size: 8 });
+        addText(pd.traceability || "—", colTraza, y, { size: 7 });
         addRightText(fmt(pd.pieces, 0), colPiezas + 25, y, { size: 8 });
         addRightText(fmt(pd.grossWeight), colBruto + 25, y, { size: 8 });
         addRightText(fmt(pd.netWeight), colNeto + 25, y, { size: 8 });
@@ -147,7 +160,7 @@ export function generateCustomsPDF(
 
     y += 2;
 
-    // Summary fields for this product
+    // Summary fields — two columns
     const rows: [string, string][] = [
       ["Total Tarimas", String(p.totalPallets)],
       ["Total Unidades", p.totalUnits.toLocaleString()],
@@ -160,12 +173,18 @@ export function generateCustomsPDF(
       ["Valor Aduanal", `$${fmt(p.customsValue)}`],
     ];
 
-    rows.forEach(([label, value]) => {
+    for (let i = 0; i < rows.length; i += 2) {
       checkPage();
-      addText(label, MARGIN + 2, y, { bold: true });
-      addText(value, MARGIN + 50, y);
+      const [lbl1, val1] = rows[i];
+      addText(lbl1, MARGIN + 2, y, { bold: true });
+      addText(val1, MARGIN + 30, y);
+      if (i + 1 < rows.length) {
+        const [lbl2, val2] = rows[i + 1];
+        addText(lbl2, col2X, y, { bold: true });
+        addText(val2, col2X + 28, y);
+      }
       y += 4;
-    });
+    }
 
     y += 4;
     doc.setDrawColor(200);

@@ -173,6 +173,26 @@ export async function generatePackingList({
   doc.setFontSize(9);
   doc.text(`Ship Date: ${formattedDate}`, pageWidth - margin, plY, { align: "right" });
 
+  const rightLabelX = pageWidth - margin - 40;
+  const rightValueX = pageWidth - margin;
+  const rightBlockWidth = rightValueX - rightLabelX - 2;
+
+  const drawRightAlignedField = (
+    label: string,
+    value: string,
+    startY: number,
+  ): number => {
+    doc.setFont("helvetica", "normal");
+    doc.text(label, rightLabelX, startY);
+
+    const safeValue = value || "-";
+    const lines = doc.splitTextToSize(safeValue, rightBlockWidth) as string[];
+    doc.setFont("helvetica", "bold");
+    doc.text(lines, rightValueX, startY, { align: "right" });
+
+    return startY + Math.max(lines.length, 1) * 4.2;
+  };
+
   // === Client / Sales (left) ===
   let leftY = plY + 8;
   doc.setFont("helvetica", "bold");
@@ -186,35 +206,22 @@ export async function generatePackingList({
 
   // === Load # / Invoice (right) ===
   let rightY = plY + 8;
-  doc.setFont("helvetica", "normal");
-  doc.text("Load #:", pageWidth - margin - 40, rightY);
-  doc.setFont("helvetica", "bold");
-  doc.text(loadNumber, pageWidth - margin, rightY, { align: "right" });
-  rightY += 5;
-
-  doc.setFont("helvetica", "normal");
-  doc.text("Product Invoice", pageWidth - margin - 40, rightY);
-  doc.setFont("helvetica", "bold");
-  doc.text(invoiceNumber || "-", pageWidth - margin, rightY, { align: "right" });
-  rightY += 5;
+  rightY = drawRightAlignedField("Load #:", loadNumber, rightY);
+  rightY = drawRightAlignedField("Product Invoice", invoiceNumber || "-", rightY + 1);
 
   if (releaseNumbers.length > 0) {
-    doc.setFont("helvetica", "normal");
-    doc.text("Release #", pageWidth - margin - 40, rightY);
-    doc.setFont("helvetica", "bold");
-    doc.text(releaseNumbers.join(", "), pageWidth - margin, rightY, { align: "right" });
-    rightY += 5;
+    rightY = drawRightAlignedField("Release #", releaseNumbers.join(", "), rightY + 1);
   }
 
   // === TABLE (drawn manually) ===
-  const tableTop = Math.max(leftY, rightY) + 6;
-  const colWidths = [28, 22, 38, 80, 30, 20, 22]; // PO, LOT, ITEM, DESC, QTY, UNITS, PALLETS
+  const tableTop = Math.max(leftY, shipY, rightY) + 6;
+  const colWidths = [24, 22, 42, 90, 28, 18, 22]; // PO, RELEASE, ITEM, DESC, QTY, UNITS, PALLETS
   const headers = ["PO #", "RELEASE #", "ITEM #", "DESCRIPTION", "QUANTITY", "UNITS", "PALLETS"];
-  const rowHeight = 8;
+  const baseRowHeight = 6;
   const tableLeft = margin;
 
   // Header row
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 80, 130);
   doc.setDrawColor(0, 80, 130);
@@ -231,12 +238,26 @@ export async function generatePackingList({
     xPos += colWidths[i];
   });
 
+  // Helper: calculate how many lines a text will occupy in a given width
+  const getTextLines = (text: string, maxWidth: number): string[] => {
+    return doc.splitTextToSize(text, maxWidth) as string[];
+  };
+
   // Data rows
   doc.setFont("helvetica", "normal");
   doc.setTextColor(50, 50, 50);
-  let currentY = tableTop + rowHeight;
+  doc.setFontSize(8);
+  let currentY = tableTop + baseRowHeight + 2;
 
   products.forEach((product) => {
+    // Pre-calculate row height based on longest wrapped text
+    const itemMaxW = colWidths[2] - 2;
+    const descMaxW = colWidths[3] - 2;
+    const itemLines = getTextLines(product.itemNumber, itemMaxW);
+    const descLines = getTextLines(product.description, descMaxW);
+    const maxLines = Math.max(itemLines.length, descLines.length, 1);
+    const rowHeight = Math.max(baseRowHeight, maxLines * 4 + 2);
+
     xPos = tableLeft;
     const vals = [
       product.poNumber,
@@ -249,8 +270,8 @@ export async function generatePackingList({
     ];
     vals.forEach((val, i) => {
       const cellCenter = xPos + colWidths[i] / 2;
-      if (i === 3) {
-        // Description left-aligned, truncated
+      if (i === 2 || i === 3) {
+        // ITEM # and DESCRIPTION: left-aligned with wrapping
         const maxW = colWidths[i] - 2;
         doc.text(val, xPos + 1, currentY, { maxWidth: maxW });
       } else {
