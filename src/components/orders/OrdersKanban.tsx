@@ -69,7 +69,23 @@ export function OrdersKanban({ orders, isAdmin }: OrdersKanbanProps) {
   });
 
   const getOrdersByFamily = (family: string) =>
-    orders.filter((o) => (o.product_item_type || "Unassigned") === family);
+    orders
+      .filter((o) => (o.product_item_type || "Unassigned") === family)
+      .sort((a, b) => {
+        // Hot orders first
+        if (a.is_hot_order && !b.is_hot_order) return -1;
+        if (!a.is_hot_order && b.is_hot_order) return 1;
+        // Among hot orders, sort by priority
+        if (a.is_hot_order && b.is_hot_order) {
+          const pa = a.hot_order_priority ?? 999;
+          const pb = b.hot_order_priority ?? 999;
+          if (pa !== pb) return pa - pb;
+        }
+        // DND next
+        if (a.do_not_delay && !b.do_not_delay) return -1;
+        if (!a.do_not_delay && b.do_not_delay) return 1;
+        return 0;
+      });
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
