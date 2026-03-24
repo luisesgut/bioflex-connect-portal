@@ -99,8 +99,7 @@ export async function generatePackingList({
   const dateParts = shippingDate.split("T")[0].split("-");
   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
-  // Get unique release numbers
-  const releaseNumbers = [...new Set(pallets.map((p) => p.release_number).filter(Boolean))];
+  // Release numbers no longer displayed in header
 
   // Create PDF (landscape letter)
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
