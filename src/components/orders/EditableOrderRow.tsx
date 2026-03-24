@@ -144,6 +144,7 @@ export function EditableOrderRow({
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [hotOrderPriorityOpen, setHotOrderPriorityOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [itemTypeOptions, setItemTypeOptions] = useState<string[]>([]);
   const [dpSalesOptions, setDpSalesOptions] = useState<string[]>([]);
