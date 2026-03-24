@@ -588,7 +588,7 @@ export default function LoadDetail() {
           }
           salesMap.set(po.po_number, {
             sales_order_number: po.sales_order_number || null,
-            customer_item: po.product?.customer_item || null,
+            customer_item: po.product?.customer_item || po.product?.codigo_producto || sapItemMap.get(po.po_number) || null,
           });
           documentsMap.set(po.po_number, {
             print_card_url: po.product?.print_card_url || null,

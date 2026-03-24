@@ -207,10 +207,7 @@ export async function generatePackingList({
   let rightY = plY + 8;
   rightY = drawRightAlignedField("Load #:", loadNumber, rightY);
   rightY = drawRightAlignedField("Product Invoice", invoiceNumber || "-", rightY + 1);
-
-  if (releaseNumbers.length > 0) {
-    rightY = drawRightAlignedField("Release #", releaseNumbers.join(", "), rightY + 1);
-  }
+  rightY = drawRightAlignedField("Load Invoice", invoiceNumber || "-", rightY + 1);
 
   // === TABLE (drawn manually) ===
   const tableTop = Math.max(leftY, shipY, rightY) + 6;
