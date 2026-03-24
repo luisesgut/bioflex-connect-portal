@@ -1242,7 +1242,8 @@ export default function LoadDetail() {
           p.pt_code.toLowerCase().includes(search) ||
           p.description.toLowerCase().includes(search) ||
           p.traceability.toLowerCase().includes(search) ||
-          (p.bfx_order && p.bfx_order.toLowerCase().includes(search))
+          (p.bfx_order && p.bfx_order.toLowerCase().includes(search)) ||
+          (p.location && p.location.toLowerCase().includes(search))
       );
     }
 
