@@ -45,6 +45,7 @@ interface SAPInventoryItem {
   status: string;
   synced_at: string;
   is_virtual?: boolean;
+  location: string | null;
 }
 
 interface InventoryFilters {
@@ -132,6 +133,7 @@ export default function Inventory() {
           status: realStatus,
           synced_at: d.updated_at || d.created_at,
           is_virtual: d.is_virtual || false,
+          location: d.location || null,
         };
       });
 
@@ -659,6 +661,7 @@ export default function Inventory() {
                    <TableHead className="text-right">Boxes</TableHead>
                    <TableHead className="text-right">Gross</TableHead>
                    <TableHead className="text-right">Net</TableHead>
+                   <TableHead>Location</TableHead>
                    <ColumnFilterHeader label="Status" filterKey="status" options={uniqueStatuses} />
                   {isAdmin && <TableHead className="w-10"></TableHead>}
                 </TableRow>
@@ -691,6 +694,7 @@ export default function Inventory() {
                      <TableCell className="text-right">{item.pieces || "-"}</TableCell>
                      <TableCell className="text-right">{item.gross_weight?.toLocaleString() || "-"}</TableCell>
                      <TableCell className="text-right">{item.net_weight?.toLocaleString() || "-"}</TableCell>
+                    <TableCell className="text-sm">{item.location || "-"}</TableCell>
                     <TableCell>
                       <Badge className={statusStyles[item.status] || ""} variant="secondary">
                         {item.status}

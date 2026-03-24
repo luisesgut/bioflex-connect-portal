@@ -30,6 +30,7 @@ interface PackingListExcelParams {
   loadNumber: string;
   shippingDate: string;
   invoiceNumber: string;
+  freightInvoiceNumber?: string;
   destination: DestinationInfo;
   pallets: PackingListPallet[];
   poInfoMap: Map<string, POInfo>;
@@ -53,6 +54,7 @@ export function generatePackingListExcel({
   loadNumber,
   shippingDate,
   invoiceNumber,
+  freightInvoiceNumber = "",
   destination,
   pallets,
   poInfoMap,
@@ -95,7 +97,7 @@ export function generatePackingListExcel({
 
   const dateParts = shippingDate.split("T")[0].split("-");
   const formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-  const releaseNumbers = [...new Set(pallets.map((p) => p.release_number).filter(Boolean))];
+  // Release numbers no longer displayed in header
   const cityLine = [destination.city, destination.state].filter(Boolean).join(" ") + (destination.zip_code ? ` ${destination.zip_code}` : "");
 
   const data: (string | number | null)[][] = [];
@@ -114,7 +116,7 @@ export function generatePackingListExcel({
   // Row 8-10: Client, Sales, Release / Load, Invoice, Release
   data.push([`Client: ${clientCode} – ${clientName}`, "", "", "", "", "Load #:", loadNumber]);
   data.push([salesPerson ? `Sales: ${salesPerson}` : "", "", "", "", "", "Product Invoice", invoiceNumber || "-"]);
-  data.push(["", "", "", "", "", releaseNumbers.length > 0 ? "Release #" : "", releaseNumbers.length > 0 ? releaseNumbers.join(", ") : ""]);
+  data.push(["", "", "", "", "", "Load Invoice", freightInvoiceNumber || "-"]);
   // Row 11: blank
   data.push([]);
   // Row 12: Table headers
