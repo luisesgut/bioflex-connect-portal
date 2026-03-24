@@ -124,6 +124,7 @@ export default function Inventory() {
           status: realStatus,
           synced_at: d.updated_at || d.created_at,
           is_virtual: d.is_virtual || false,
+          location: d.location || null,
         };
       });
 
