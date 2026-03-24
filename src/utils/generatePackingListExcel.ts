@@ -54,6 +54,7 @@ export function generatePackingListExcel({
   loadNumber,
   shippingDate,
   invoiceNumber,
+  freightInvoiceNumber = "",
   destination,
   pallets,
   poInfoMap,
