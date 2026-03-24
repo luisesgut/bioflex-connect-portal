@@ -160,6 +160,7 @@ export default function Inventory() {
 
     try {
       const response = await fetch(SAP_INVENTORY_SYNC_ENDPOINT, {
+        method: "POST",
         signal: AbortSignal.timeout(30000),
       });
 
