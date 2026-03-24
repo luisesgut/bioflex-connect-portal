@@ -213,6 +213,7 @@ interface AvailablePallet {
   unit: string;
   pieces_per_pallet?: number | null;
   is_virtual?: boolean;
+  location?: string | null;
 }
 
 interface ActivePOWithInventory {
