@@ -3831,6 +3831,9 @@ export default function LoadDetail() {
                         <TableCell className="font-mono text-xs">{resolveCustomerPO(pallet)}</TableCell>
                         <TableCell className="text-right">{(pallet.pallet.unit === "MIL" ? pallet.quantity * 1000 : pallet.quantity).toLocaleString()}</TableCell>
                         {canEditShipping && (
+                          <TableCell className="text-sm text-muted-foreground">{pallet.pallet.location || "-"}</TableCell>
+                        )}
+                        {canEditShipping && (
                           <TableCell>
                             {pallet.pallet.is_virtual && (
                               <div className="flex items-center gap-1">
