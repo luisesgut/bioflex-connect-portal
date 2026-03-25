@@ -1199,7 +1199,7 @@ export default function Orders() {
 
         {/* Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-slide-up" style={{ animationDelay: "0.1s" }}>
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-2xl">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by PO number, product, or sales order..."
