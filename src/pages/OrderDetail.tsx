@@ -128,6 +128,7 @@ interface StockVerificationItem {
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
 const PRINT_CARD_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard";
 const BFX_SPEC_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard/ficha";
+const PURCHASE_ORDER_PREVIEW_BASE_URL = "http://172.16.10.31/api/PurchaseOrder";
 
 
 const parseApiNumber = (value: unknown): number | null => {
@@ -605,8 +606,10 @@ export default function OrderDetail() {
   const displayPtCode = sapOrderData?.clave || order.product?.codigo_producto || order.product?.pt_code || "—";
   const displayProductName = sapOrderData?.producto || sapOrderData?.frgnName || order.product?.name || "—";
   const pcNumber = order.product?.pc_number?.trim() || "";
+  const poNumber = order.po_number?.trim() || "";
   const printCardPreviewUrl = pcNumber ? `${PRINT_CARD_PREVIEW_BASE_URL}/${encodeURIComponent(pcNumber)}` : "";
   const bfxSpecPreviewUrl = pcNumber ? `${BFX_SPEC_PREVIEW_BASE_URL}/${encodeURIComponent(pcNumber)}` : "";
+  const purchaseOrderPreviewUrl = poNumber ? `${PURCHASE_ORDER_PREVIEW_BASE_URL}/${encodeURIComponent(poNumber)}` : "";
   const isSapDetailsLoading = stockLoading && !sapOrderData;
   const renderSapAwareValue = (value: string, loading = isSapDetailsLoading) =>
     loading ? <Skeleton className="mt-1 h-5 w-40" /> : <p className="font-medium">{value || "—"}</p>;
@@ -785,6 +788,21 @@ export default function OrderDetail() {
                       <p className="font-medium">—</p>
                     )}
                   </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">PO Document</label>
+                    {purchaseOrderPreviewUrl ? (
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto block"
+                        onClick={() => openPreview(`PO Document · ${poNumber}`, purchaseOrderPreviewUrl)}
+                      >
+                        <FileText className="h-4 w-4 mr-1 inline" />
+                        Preview PO Document
+                      </Button>
+                    ) : (
+                      <p className="font-medium">—</p>
+                    )}
+                  </div>
                   {!isAdmin && printCardPreviewUrl && (
                     <div>
                       <label className="text-sm text-muted-foreground">Print Card (PC)</label>
@@ -898,14 +916,14 @@ export default function OrderDetail() {
                   )}
                   {order.pdf_url && (
                     <div className="md:col-span-2">
-                      <label className="text-sm text-muted-foreground">PO Document</label>
+                      <label className="text-sm text-muted-foreground">Attached PO PDF</label>
                       <Button
                         variant="link"
                         className="p-0 h-auto"
-                        onClick={() => openStorageFile(order.pdf_url!, 'ncr-attachments')}
+                        onClick={() => openStorageFile(order.pdf_url!, "ncr-attachments")}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
-                        View PDF
+                        Open attached PDF
                       </Button>
                     </div>
                   )}
