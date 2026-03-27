@@ -104,7 +104,7 @@ export default function Inventory() {
           .order("pt_code", { ascending: true }),
         supabase
           .from("load_pallets")
-          .select("pallet_id, load_id, shipping_loads!load_pallets_load_id_fkey(load_name)")
+          .select("pallet_id, load_id, shipping_loads!load_pallets_load_id_fkey(load_number)")
       ]);
 
       if (palletsResult.error) throw palletsResult.error;
