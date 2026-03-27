@@ -277,44 +277,51 @@ export async function enrichWithTraceability(
   loadId: string,
   products: CustomsProductSummary[]
 ): Promise<CustomsProductSummary[]> {
-  // Check if any palletDetails are missing traceability
-  const needsEnrichment = products.some(
-    p => p.palletDetails?.some(pd => !pd.traceability)
-  );
-  if (!needsEnrichment) return products;
-
   try {
     const { data } = await supabase
       .from("load_pallets")
-      .select("pallet:inventory_pallets(pt_code, traceability, gross_weight, net_weight)")
+      .select("destination, release_number, pallet:inventory_pallets(pt_code, traceability, gross_weight, net_weight)")
       .eq("load_id", loadId)
       .eq("is_on_hold", false);
 
     if (!data || data.length === 0) return products;
 
-    // Build a lookup: index pallets in order per pt_code
-    const palletsByPtCode: Record<string, string[]> = {};
+    // Build lookups per pt_code
+    const palletsByPtCode: Record<string, { traceability: string; destination: string | null; releaseNumber: string | null }[]> = {};
     (data as any[]).forEach(lp => {
       const ptCode = lp.pallet?.pt_code;
-      const trace = lp.pallet?.traceability;
-      if (ptCode && trace) {
+      if (ptCode) {
         if (!palletsByPtCode[ptCode]) palletsByPtCode[ptCode] = [];
-        palletsByPtCode[ptCode].push(trace);
+        palletsByPtCode[ptCode].push({
+          traceability: lp.pallet?.traceability || "",
+          destination: lp.destination || null,
+          releaseNumber: lp.release_number || null,
+        });
       }
     });
 
-    // Merge traceability into palletDetails
+    // Merge traceability, destination, and release into products
     return products.map(p => {
-      if (!p.palletDetails) return p;
-      const ptTraces = palletsByPtCode[p.ptCode || ""] || [];
-      const enrichedDetails = p.palletDetails.map((pd, i) => ({
+      const ptEntries = palletsByPtCode[p.ptCode || ""] || [];
+      // Update destination: use first non-null from live data
+      const liveDestination = ptEntries.find(e => e.destination)?.destination;
+      // Update release: use first non-null from live data
+      const liveRelease = ptEntries.find(e => e.releaseNumber)?.releaseNumber;
+
+      const enrichedDetails = p.palletDetails?.map((pd, i) => ({
         ...pd,
-        traceability: pd.traceability || ptTraces[i] || undefined,
+        traceability: pd.traceability || ptEntries[i]?.traceability || undefined,
       }));
-      return { ...p, palletDetails: enrichedDetails };
+
+      return {
+        ...p,
+        destination: liveDestination || p.destination,
+        releaseNumber: liveRelease || p.releaseNumber,
+        palletDetails: enrichedDetails || p.palletDetails,
+      };
     });
   } catch (err) {
-    console.warn("Failed to enrich traceability:", err);
+    console.warn("Failed to enrich data:", err);
     return products;
   }
 }
