@@ -113,7 +113,7 @@ export default function Inventory() {
       const palletLoadMap = new Map<string, string>();
       (assignedResult.data || []).forEach((lp: any) => {
         if (lp.pallet_id) {
-          const loadName = lp.shipping_loads?.load_name || null;
+          const loadName = lp.shipping_loads?.load_number || null;
           palletLoadMap.set(lp.pallet_id, loadName);
         }
       });
