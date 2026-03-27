@@ -119,8 +119,8 @@ export default function Inventory() {
       });
 
       const items: SAPInventoryItem[] = (palletsResult.data || []).map((d: any) => {
-        const realStatus = assignedIds.has(d.id) ? "assigned" : "available";
-
+        const realStatus = palletLoadMap.has(d.id) ? "assigned" : "available";
+        const loadName = palletLoadMap.get(d.id) || null;
         return {
           id: d.id,
           fecha: d.fecha,
