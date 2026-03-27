@@ -2405,7 +2405,9 @@ export default function LoadDetail() {
             )}
             {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
               <Button variant="outline" onClick={async () => {
-                const enriched = await enrichWithTraceability(id!, billingValidatedData);
+                // Always rebuild from live load_pallets data to get current destination/release
+                const freshProducts = await buildFromReleasedPallets(id!);
+                const enriched = await enrichWithTraceability(id!, freshProducts);
                 const totalPalletCount = enriched.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
                   { loadNumber: load.load_number, shippingDate: load.shipping_date },
