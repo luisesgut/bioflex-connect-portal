@@ -104,15 +104,18 @@ export default function Inventory() {
           .order("pt_code", { ascending: true }),
         supabase
           .from("load_pallets")
-          .select("pallet_id")
+          .select("pallet_id, load_id, shipping_loads!load_pallets_load_id_fkey(load_name)")
       ]);
 
       if (palletsResult.error) throw palletsResult.error;
 
-      // Build a set of pallet IDs that are assigned to loads
-      const assignedIds = new Set<string>();
+      // Build a map of pallet IDs -> load name
+      const palletLoadMap = new Map<string, string>();
       (assignedResult.data || []).forEach((lp: any) => {
-        if (lp.pallet_id) assignedIds.add(lp.pallet_id);
+        if (lp.pallet_id) {
+          const loadName = lp.shipping_loads?.load_name || null;
+          palletLoadMap.set(lp.pallet_id, loadName);
+        }
       });
 
       const items: SAPInventoryItem[] = (palletsResult.data || []).map((d: any) => {
