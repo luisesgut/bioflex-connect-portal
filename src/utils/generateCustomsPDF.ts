@@ -10,6 +10,7 @@ interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  boxes?: number;
   traceability?: string;
 }
 
@@ -122,28 +123,33 @@ export function generateCustomsPDF(
       // Table header
       const colTarima = MARGIN + 2;
       const colTraza = MARGIN + 18;
-      const colPiezas = MARGIN + 65;
-      const colBruto = MARGIN + 100;
-      const colNeto = MARGIN + 140;
+      const colPiezas = MARGIN + 60;
+      const colBoxes = MARGIN + 85;
+      const colBruto = MARGIN + 110;
+      const colNeto = MARGIN + 145;
 
       doc.setFillColor(200, 200, 200);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText("Tarima", colTarima, y, { bold: true, size: 8 });
       addText("Trazabilidad", colTraza, y, { bold: true, size: 8 });
       addText("Piezas", colPiezas, y, { bold: true, size: 8 });
+      addText("Cajas", colBoxes, y, { bold: true, size: 8 });
       addText("Bruto", colBruto, y, { bold: true, size: 8 });
       addText("Neto", colNeto, y, { bold: true, size: 8 });
       y += 5;
 
       let totalPieces = 0;
+      let totalBoxes = 0;
       p.palletDetails.forEach((pd) => {
         checkPage(5);
         addText(String(pd.palletIndex), colTarima, y, { size: 8 });
         addText(pd.traceability || "—", colTraza, y, { size: 7 });
-        addRightText(fmt(pd.pieces, 0), colPiezas + 25, y, { size: 8 });
+        addRightText(fmt(pd.pieces, 0), colPiezas + 20, y, { size: 8 });
+        addRightText(fmt(pd.boxes || 0, 0), colBoxes + 20, y, { size: 8 });
         addRightText(fmt(pd.grossWeight), colBruto + 25, y, { size: 8 });
         addRightText(fmt(pd.netWeight), colNeto + 25, y, { size: 8 });
         totalPieces += pd.pieces;
+        totalBoxes += pd.boxes || 0;
         y += 4;
       });
 
@@ -152,7 +158,8 @@ export function generateCustomsPDF(
       doc.setFillColor(240, 240, 240);
       doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, 5, "F");
       addText(String(p.palletDetails.length), colTarima, y, { bold: true, size: 8 });
-      addRightText(fmt(totalPieces, 0), colPiezas + 25, y, { bold: true, size: 8 });
+      addRightText(fmt(totalPieces, 0), colPiezas + 20, y, { bold: true, size: 8 });
+      addRightText(fmt(totalBoxes, 0), colBoxes + 20, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalGrossWeight), colBruto + 25, y, { bold: true, size: 8 });
       addRightText(fmt(p.totalNetWeight), colNeto + 25, y, { bold: true, size: 8 });
       y += 6;

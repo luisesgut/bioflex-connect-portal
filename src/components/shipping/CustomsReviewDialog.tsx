@@ -26,6 +26,7 @@ export interface PalletDetail {
   grossWeight: number;
   netWeight: number;
   pieces: number;
+  boxes?: number;
   traceability?: string;
 }
 
@@ -247,6 +248,7 @@ async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductS
       grossWeight: lp.pallet.gross_weight || 0,
       netWeight: lp.pallet.net_weight || 0,
       pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
+      boxes: lp.pallet.pieces || 0,
       traceability: (lp.pallet as any).traceability || undefined,
     });
 
