@@ -139,6 +139,7 @@ export default function Inventory() {
           is_virtual: d.is_virtual || false,
           location: d.location || null,
           load_name: loadName,
+        };
       });
 
       // Put virtual items first
