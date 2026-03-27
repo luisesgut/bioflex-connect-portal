@@ -138,7 +138,7 @@ export default function Inventory() {
           synced_at: d.updated_at || d.created_at,
           is_virtual: d.is_virtual || false,
           location: d.location || null,
-        };
+          load_name: loadName,
       });
 
       // Put virtual items first
