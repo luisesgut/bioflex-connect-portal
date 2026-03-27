@@ -701,9 +701,14 @@ export default function Inventory() {
                      <TableCell className="text-right">{item.net_weight?.toLocaleString() || "-"}</TableCell>
                     <TableCell className="text-sm">{item.location || "-"}</TableCell>
                     <TableCell>
-                      <Badge className={statusStyles[item.status] || ""} variant="secondary">
-                        {item.status}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge className={statusStyles[item.status] || ""} variant="secondary">
+                          {item.status}
+                        </Badge>
+                        {item.load_name && (
+                          <span className="text-xs text-muted-foreground font-mono">{item.load_name}</span>
+                        )}
+                      </div>
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
