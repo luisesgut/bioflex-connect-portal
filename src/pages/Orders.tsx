@@ -264,9 +264,12 @@ export default function Orders() {
         products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
       `;
 
+    const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
+
     let { data: ordersData, error: ordersError } = await supabase
       .from("purchase_orders")
       .select(purchaseOrdersSelect)
+      .or(`status.neq.closed,and(status.eq.closed,updated_at.gte.${fifteenDaysAgo})`)
       .order("created_at", { ascending: false });
 
     if (ordersError) {
