@@ -46,6 +46,7 @@ interface SAPInventoryItem {
   synced_at: string;
   is_virtual?: boolean;
   location: string | null;
+  load_name?: string | null;
 }
 
 interface InventoryFilters {
