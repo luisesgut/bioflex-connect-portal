@@ -184,12 +184,13 @@ export function BillingValidationCard({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      const products = validation.validated_data as any[];
-                      const totalPalletCount = products.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                    onClick={async () => {
+                      const freshProducts = await buildFromReleasedPallets(loadId);
+                      const enriched = await enrichWithTraceability(loadId, freshProducts);
+                      const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
                       generateCustomsPDF(
                         { loadNumber, shippingDate },
-                        products,
+                        enriched,
                         totalPalletCount,
                         5000
                       );
