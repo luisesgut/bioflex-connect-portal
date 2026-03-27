@@ -109,7 +109,7 @@ function recalcDerived(p: CustomsProductSummary): CustomsProductSummary {
   return p;
 }
 
-async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductSummary[]> {
+export async function buildFromReleasedPallets(loadId: string): Promise<CustomsProductSummary[]> {
   // Fetch released (non-held) pallets
   const { data: loadPallets, error } = await supabase
     .from("load_pallets")
