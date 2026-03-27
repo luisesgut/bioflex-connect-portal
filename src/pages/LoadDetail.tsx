@@ -90,7 +90,7 @@ import { format, differenceInDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
-import { enrichWithTraceability } from "@/components/shipping/CustomsReviewDialog";
+import { enrichWithTraceability, buildFromReleasedPallets } from "@/components/shipping/CustomsReviewDialog";
 import { generatePackingList } from "@/utils/generatePackingList";
 import { generatePackingListExcel } from "@/utils/generatePackingListExcel";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
