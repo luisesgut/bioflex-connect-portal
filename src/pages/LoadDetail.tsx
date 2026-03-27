@@ -90,7 +90,7 @@ import { format, differenceInDays } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { generateCustomsDocument } from "@/utils/generateCustomsDocument";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
-import { enrichWithTraceability } from "@/components/shipping/CustomsReviewDialog";
+import { enrichWithTraceability, buildFromReleasedPallets } from "@/components/shipping/CustomsReviewDialog";
 import { generatePackingList } from "@/utils/generatePackingList";
 import { generatePackingListExcel } from "@/utils/generatePackingListExcel";
 import { LoadPOSummary } from "@/components/shipping/LoadPOSummary";
@@ -2405,7 +2405,9 @@ export default function LoadDetail() {
             )}
             {canEditShipping && (load.status === "in_transit" || load.status === "delivered") && billingValidatedData && billingValidatedData.length > 0 && (
               <Button variant="outline" onClick={async () => {
-                const enriched = await enrichWithTraceability(id!, billingValidatedData);
+                // Always rebuild from live load_pallets data to get current destination/release
+                const freshProducts = await buildFromReleasedPallets(id!);
+                const enriched = await enrichWithTraceability(id!, freshProducts);
                 const totalPalletCount = enriched.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
                   { loadNumber: load.load_number, shippingDate: load.shipping_date },
