@@ -18,6 +18,7 @@ import { Loader2, CheckCircle, XCircle, Clock, FileDown, FileCheck, Eye, Undo2 }
 import { format } from "date-fns";
 import { CustomsReviewDialog } from "./CustomsReviewDialog";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
+import { buildFromReleasedPallets, enrichWithTraceability } from "./CustomsReviewDialog";
 
 interface BillingValidation {
   id: string;
