@@ -46,6 +46,7 @@ interface SAPInventoryItem {
   synced_at: string;
   is_virtual?: boolean;
   location: string | null;
+  load_name?: string | null;
 }
 
 interface InventoryFilters {
@@ -103,20 +104,23 @@ export default function Inventory() {
           .order("pt_code", { ascending: true }),
         supabase
           .from("load_pallets")
-          .select("pallet_id")
+          .select("pallet_id, load_id, shipping_loads!load_pallets_load_id_fkey(load_name)")
       ]);
 
       if (palletsResult.error) throw palletsResult.error;
 
-      // Build a set of pallet IDs that are assigned to loads
-      const assignedIds = new Set<string>();
+      // Build a map of pallet IDs -> load name
+      const palletLoadMap = new Map<string, string>();
       (assignedResult.data || []).forEach((lp: any) => {
-        if (lp.pallet_id) assignedIds.add(lp.pallet_id);
+        if (lp.pallet_id) {
+          const loadName = lp.shipping_loads?.load_name || null;
+          palletLoadMap.set(lp.pallet_id, loadName);
+        }
       });
 
       const items: SAPInventoryItem[] = (palletsResult.data || []).map((d: any) => {
-        const realStatus = assignedIds.has(d.id) ? "assigned" : "available";
-
+        const realStatus = palletLoadMap.has(d.id) ? "assigned" : "available";
+        const loadName = palletLoadMap.get(d.id) || null;
         return {
           id: d.id,
           fecha: d.fecha,
@@ -134,6 +138,7 @@ export default function Inventory() {
           synced_at: d.updated_at || d.created_at,
           is_virtual: d.is_virtual || false,
           location: d.location || null,
+          load_name: loadName,
         };
       });
 
@@ -696,9 +701,14 @@ export default function Inventory() {
                      <TableCell className="text-right">{item.net_weight?.toLocaleString() || "-"}</TableCell>
                     <TableCell className="text-sm">{item.location || "-"}</TableCell>
                     <TableCell>
-                      <Badge className={statusStyles[item.status] || ""} variant="secondary">
-                        {item.status}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge className={statusStyles[item.status] || ""} variant="secondary">
+                          {item.status}
+                        </Badge>
+                        {item.load_name && (
+                          <span className="text-xs text-muted-foreground font-mono">{item.load_name}</span>
+                        )}
+                      </div>
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
