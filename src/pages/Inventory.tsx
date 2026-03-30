@@ -21,12 +21,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, Ghost, Trash2 } from "lucide-react";
+import { Search, Package, Loader2, ChevronDown, X, ArrowUpDown, ArrowDown, ArrowUp, RefreshCw, Clock, Ghost, Trash2, Pencil } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
+import { EditVirtualPalletDialog } from "@/components/inventory/EditVirtualPalletDialog";
 import { parseDateLocal } from "@/lib/utils";
 
 interface SAPInventoryItem {
@@ -82,6 +83,7 @@ export default function Inventory() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
+  const [editingPallet, setEditingPallet] = useState<SAPInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
@@ -710,30 +712,40 @@ export default function Inventory() {
                         )}
                       </div>
                     </TableCell>
-                    {isAdmin && (
+                     {isAdmin && (
                       <TableCell>
                         {item.is_virtual && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                              if (!confirm("¿Eliminar esta tarima virtual?")) return;
-                              const { error } = await supabase
-                                .from("inventory_pallets")
-                                .delete()
-                                .eq("id", item.id);
-                              if (error) {
-                                toast.error("Error al eliminar tarima virtual");
-                                console.error(error);
-                              } else {
-                                toast.success("Tarima virtual eliminada");
-                                loadFromDB();
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => setEditingPallet(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={async () => {
+                                if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                                const { error } = await supabase
+                                  .from("inventory_pallets")
+                                  .delete()
+                                  .eq("id", item.id);
+                                if (error) {
+                                  toast.error("Error al eliminar tarima virtual");
+                                  console.error(error);
+                                } else {
+                                  toast.success("Tarima virtual eliminada");
+                                  loadFromDB();
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     )}
@@ -749,6 +761,12 @@ export default function Inventory() {
           open={createVirtualOpen}
           onOpenChange={setCreateVirtualOpen}
           onCreated={loadFromDB}
+        />
+        <EditVirtualPalletDialog
+          open={!!editingPallet}
+          onOpenChange={(open) => { if (!open) setEditingPallet(null); }}
+          onUpdated={loadFromDB}
+          pallet={editingPallet}
         />
       </div>
     </MainLayout>

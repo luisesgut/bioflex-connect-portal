@@ -105,6 +105,7 @@ export function CreateVirtualPalletDialog({
   const [unit, setUnit] = useState(DEFAULT_UNIT);
   const [traceability, setTraceability] = useState("");
   const [netWeight, setNetWeight] = useState(DEFAULT_NET_WEIGHT);
+  const [grossWeight, setGrossWeight] = useState("");
   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
@@ -201,6 +202,7 @@ export function CreateVirtualPalletDialog({
     setUnit(DEFAULT_UNIT);
     setTraceability("");
     setNetWeight(DEFAULT_NET_WEIGHT);
+    setGrossWeight("");
     setPOSearch("");
     setPopoverOpen(false);
   };
@@ -213,6 +215,7 @@ export function CreateVirtualPalletDialog({
 
     const parsedStock = parseLocalizedNumber(stock);
     const parsedNetWeight = parseLocalizedNumber(netWeight);
+    const parsedGrossWeight = parseLocalizedNumber(grossWeight);
 
     if (!stock.trim() || parsedStock <= 0) {
       toast.error("Ingresa el stock de la tarima virtual en piezas");
@@ -248,6 +251,7 @@ export function CreateVirtualPalletDialog({
         status: "available",
         is_virtual: true,
         net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
+        gross_weight: parsedGrossWeight > 0 ? parsedGrossWeight : null,
       });
 
       let { error } = await supabase
@@ -404,8 +408,8 @@ export function CreateVirtualPalletDialog({
             </div>
           </div>
 
-          {/* Traceability & Net Weight */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Traceability & Weights */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vp-traceability">Trazabilidad</Label>
               <Input
@@ -413,6 +417,17 @@ export function CreateVirtualPalletDialog({
                 placeholder="Lote esperado (opcional)"
                 value={traceability}
                 onChange={(e) => setTraceability(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vp-gross-weight">Peso Bruto (kg)</Label>
+              <Input
+                id="vp-gross-weight"
+                type="text"
+                inputMode="decimal"
+                placeholder="e.g. 800"
+                value={grossWeight}
+                onChange={(e) => setGrossWeight(e.target.value)}
               />
             </div>
             <div className="space-y-2">
