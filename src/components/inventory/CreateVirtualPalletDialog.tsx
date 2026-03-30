@@ -251,6 +251,7 @@ export function CreateVirtualPalletDialog({
         status: "available",
         is_virtual: true,
         net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
+        gross_weight: parsedGrossWeight > 0 ? parsedGrossWeight : null,
       });
 
       let { error } = await supabase
