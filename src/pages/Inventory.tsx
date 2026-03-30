@@ -712,30 +712,40 @@ export default function Inventory() {
                         )}
                       </div>
                     </TableCell>
-                    {isAdmin && (
+                     {isAdmin && (
                       <TableCell>
                         {item.is_virtual && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={async () => {
-                              if (!confirm("¿Eliminar esta tarima virtual?")) return;
-                              const { error } = await supabase
-                                .from("inventory_pallets")
-                                .delete()
-                                .eq("id", item.id);
-                              if (error) {
-                                toast.error("Error al eliminar tarima virtual");
-                                console.error(error);
-                              } else {
-                                toast.success("Tarima virtual eliminada");
-                                loadFromDB();
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => setEditingPallet(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={async () => {
+                                if (!confirm("¿Eliminar esta tarima virtual?")) return;
+                                const { error } = await supabase
+                                  .from("inventory_pallets")
+                                  .delete()
+                                  .eq("id", item.id);
+                                if (error) {
+                                  toast.error("Error al eliminar tarima virtual");
+                                  console.error(error);
+                                } else {
+                                  toast.success("Tarima virtual eliminada");
+                                  loadFromDB();
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     )}
