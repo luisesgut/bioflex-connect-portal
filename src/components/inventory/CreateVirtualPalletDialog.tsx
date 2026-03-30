@@ -202,6 +202,7 @@ export function CreateVirtualPalletDialog({
     setUnit(DEFAULT_UNIT);
     setTraceability("");
     setNetWeight(DEFAULT_NET_WEIGHT);
+    setGrossWeight("");
     setPOSearch("");
     setPopoverOpen(false);
   };
