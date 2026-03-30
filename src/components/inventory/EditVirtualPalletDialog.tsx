@@ -67,6 +67,7 @@ export function EditVirtualPalletDialog({
     const parsedStock = parseLocalizedNumber(stock);
     const parsedNet = parseLocalizedNumber(netWeight);
     const parsedGross = parseLocalizedNumber(grossWeight);
+    const parsedBoxes = boxes.trim() ? parseInt(boxes, 10) : null;
 
     if (!stock.trim() || parsedStock <= 0) {
       toast.error("Ingresa un stock válido");
@@ -83,6 +84,8 @@ export function EditVirtualPalletDialog({
           net_weight: parsedNet > 0 ? parsedNet : null,
           gross_weight: parsedGross > 0 ? parsedGross : null,
           traceability: traceability.trim() || pallet.traceability,
+          pieces: parsedBoxes && parsedBoxes > 0 ? parsedBoxes : null,
+          location: location.trim() || null,
         })
         .eq("id", pallet.id);
 
