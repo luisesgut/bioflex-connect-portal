@@ -36,6 +36,7 @@ const navigation = [
 const adminNavigation = [
   { nameKey: "nav.users", href: "/users", icon: Users },
   { nameKey: "nav.inventory", href: "/inventory", icon: Warehouse },
+  { nameKey: "nav.potrUpdate", href: "/potr-update", icon: FileSpreadsheet },
 ];
 
 const bottomNavigation = [
