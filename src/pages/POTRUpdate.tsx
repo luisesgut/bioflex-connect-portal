@@ -41,7 +41,7 @@ export default function POTRUpdate() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer);
+      const wb = XLSX.read(buffer, { cellStyles: true, cellNF: true, cellDates: true });
       setWorkbook(wb);
 
       // Use first sheet
@@ -189,12 +189,14 @@ export default function POTRUpdate() {
       }
     }
 
-    const out = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const out = XLSX.write(workbook, { bookType: "xlsx", type: "array", cellStyles: true });
     const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
     const a = document.createElement("a");
     a.href = url;
-    a.download = fileName.replace(/\.xlsx$/i, "") + "_updated.xlsx";
+    a.download = fileName.replace(/\.xlsx$/i, "") + `_updated_${ts}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   }, [workbook, matches, shippedColIdx, onFloorColIdx, sheetName, fileName]);
