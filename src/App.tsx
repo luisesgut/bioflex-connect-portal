@@ -24,6 +24,7 @@ import Inventory from "./pages/Inventory";
 import ShippingLoads from "./pages/ShippingLoads";
 import LoadDetail from "./pages/LoadDetail";
 import POTRImport from "./pages/POTRImport";
+import POTRUpdate from "./pages/POTRUpdate";
 
 
 import ProductRequests from "./pages/ProductRequests";
