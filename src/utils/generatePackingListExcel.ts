@@ -104,7 +104,7 @@ export function generatePackingListExcel({
 
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Packing List", {
-    pageSetup: { orientation: "landscape", paperSize: 1, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    pageSetup: { orientation: "landscape", paperSize: 1 as unknown as undefined, fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
 
   // Column widths (A-I to give more room)
