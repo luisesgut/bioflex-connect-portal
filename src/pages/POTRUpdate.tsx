@@ -41,7 +41,7 @@ export default function POTRUpdate() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer);
+      const wb = XLSX.read(buffer, { cellStyles: true, cellNF: true, cellDates: true });
       setWorkbook(wb);
 
       // Use first sheet
