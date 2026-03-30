@@ -56,6 +56,8 @@ export function EditVirtualPalletDialog({
       setNetWeight(pallet.net_weight != null ? String(pallet.net_weight) : "");
       setGrossWeight(pallet.gross_weight != null ? String(pallet.gross_weight) : "");
       setTraceability(pallet.traceability || "");
+      setBoxes(pallet.pieces != null ? String(pallet.pieces) : "");
+      setLocation(pallet.location || "");
     }
   }, [pallet, open]);
 
