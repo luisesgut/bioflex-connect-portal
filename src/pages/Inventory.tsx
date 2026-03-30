@@ -762,6 +762,12 @@ export default function Inventory() {
           onOpenChange={setCreateVirtualOpen}
           onCreated={loadFromDB}
         />
+        <EditVirtualPalletDialog
+          open={!!editingPallet}
+          onOpenChange={(open) => { if (!open) setEditingPallet(null); }}
+          onUpdated={loadFromDB}
+          pallet={editingPallet}
+        />
       </div>
     </MainLayout>
   );
