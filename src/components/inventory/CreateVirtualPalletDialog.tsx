@@ -220,6 +220,7 @@ export function CreateVirtualPalletDialog({
     const parsedStock = parseLocalizedNumber(stock);
     const parsedNetWeight = parseLocalizedNumber(netWeight);
     const parsedGrossWeight = parseLocalizedNumber(grossWeight);
+    const parsedBoxes = boxes.trim() ? parseInt(boxes, 10) : null;
 
     if (!stock.trim() || parsedStock <= 0) {
       toast.error("Ingresa el stock de la tarima virtual en piezas");
