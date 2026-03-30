@@ -173,6 +173,30 @@ export function EditVirtualPalletDialog({
               />
             </div>
           </div>
+
+          {/* Boxes & Location */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-boxes">Cajas</Label>
+              <Input
+                id="edit-boxes"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 50"
+                value={boxes}
+                onChange={(e) => setBoxes(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                placeholder="e.g. A-01"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
