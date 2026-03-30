@@ -105,6 +105,7 @@ export function CreateVirtualPalletDialog({
   const [unit, setUnit] = useState(DEFAULT_UNIT);
   const [traceability, setTraceability] = useState("");
   const [netWeight, setNetWeight] = useState(DEFAULT_NET_WEIGHT);
+  const [grossWeight, setGrossWeight] = useState("");
   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
