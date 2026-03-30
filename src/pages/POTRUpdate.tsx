@@ -314,6 +314,11 @@ export default function POTRUpdate() {
                             <span className="text-blue-600 dark:text-blue-400 font-medium">{m.newOnFloor.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
+                        <TableCell className="text-right">
+                          {m.otherStock != null ? (
+                            <span className="text-amber-600 dark:text-amber-400 font-medium">{m.otherStock.toLocaleString()}</span>
+                          ) : "—"}
+                        </TableCell>
                         <TableCell>
                           {m.matched ? (
                             <Badge variant="default" className="text-xs">Match</Badge>
