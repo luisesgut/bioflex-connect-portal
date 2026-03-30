@@ -291,7 +291,8 @@ export default function POTRUpdate() {
                       <TableHead className="text-right">Shipped (actual)</TableHead>
                       <TableHead className="text-right">Shipped (nuevo)</TableHead>
                       <TableHead className="text-right">On Floor (actual)</TableHead>
-                      <TableHead className="text-right">On Floor (nuevo)</TableHead>
+                      <TableHead className="text-right">On Floor PO (nuevo)</TableHead>
+                      <TableHead className="text-right">Otro Stock</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
