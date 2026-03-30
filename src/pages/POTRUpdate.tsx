@@ -131,21 +131,21 @@ export default function POTRUpdate() {
       }
 
       const ptCodes = [...new Set((sapOrders || []).map(s => s.pt_code).filter(Boolean))] as string[];
-      // key: `${pt_code}::${bfx_order}`, value: stock sum
       const palletsByPtAndOrder = new Map<string, number>();
       const totalByPt = new Map<string, number>();
       if (ptCodes.length > 0) {
         const { data: pallets } = await supabase
           .from("inventory_pallets")
-          .select("pt_code, stock, bfx_order")
-          .eq("status", "available")
+          .select("pt_code, stock, bfx_order, status")
           .eq("is_virtual", false)
           .in("pt_code", ptCodes);
 
         for (const p of pallets || []) {
           const stock = Number(p.stock || 0);
-          totalByPt.set(p.pt_code, (totalByPt.get(p.pt_code) || 0) + stock);
-          if (p.bfx_order) {
+          if (p.status === "available") {
+            totalByPt.set(p.pt_code, (totalByPt.get(p.pt_code) || 0) + stock);
+          }
+          if (p.bfx_order && p.status === "available") {
             const key = `${p.pt_code}::${p.bfx_order}`;
             palletsByPtAndOrder.set(key, (palletsByPtAndOrder.get(key) || 0) + stock);
           }
@@ -157,12 +157,10 @@ export default function POTRUpdate() {
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
         if (sap?.ptCode) {
-          const pedidoKey = sap.pedido ? `${sap.ptCode}::${sap.pedido}` : null;
-          onFloorPO = pedidoKey ? (palletsByPtAndOrder.get(pedidoKey) ?? 0) : 0;
+          const poKey = `${sap.ptCode}::${dr.poNumber}`;
+          onFloorPO = palletsByPtAndOrder.get(poKey) ?? 0;
           const totalPt = totalByPt.get(sap.ptCode) ?? 0;
-          otherStock = totalPt - onFloorPO;
-          if (onFloorPO === 0) onFloorPO = null;
-          if (otherStock === 0) otherStock = null;
+          otherStock = Math.max(0, totalPt - onFloorPO);
         }
         return {
           ...dr,
@@ -195,14 +193,11 @@ export default function POTRUpdate() {
       // ExcelJS rows are 1-indexed, our rowIndex is 0-indexed from aoa
       const excelRow = match.rowIndex + 1;
 
-      if (match.newShipped != null) {
-        const cell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
-        cell.value = match.newShipped;
-      }
-      if (match.newOnFloor != null) {
-        const cell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
-        cell.value = match.newOnFloor;
-      }
+      const shippedCell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
+      shippedCell.value = match.newShipped ?? 0;
+
+      const onFloorCell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
+      onFloorCell.value = match.newOnFloor ?? 0;
     }
 
     const outBuffer = await wb.xlsx.writeBuffer();
