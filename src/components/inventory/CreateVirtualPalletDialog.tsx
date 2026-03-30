@@ -106,6 +106,8 @@ export function CreateVirtualPalletDialog({
   const [traceability, setTraceability] = useState("");
   const [netWeight, setNetWeight] = useState(DEFAULT_NET_WEIGHT);
   const [grossWeight, setGrossWeight] = useState("");
+  const [boxes, setBoxes] = useState("");
+  const [location, setLocation] = useState("");
   const [saving, setSaving] = useState(false);
 
   const selectedPO = useMemo(
@@ -203,6 +205,8 @@ export function CreateVirtualPalletDialog({
     setTraceability("");
     setNetWeight(DEFAULT_NET_WEIGHT);
     setGrossWeight("");
+    setBoxes("");
+    setLocation("");
     setPOSearch("");
     setPopoverOpen(false);
   };
@@ -216,6 +220,7 @@ export function CreateVirtualPalletDialog({
     const parsedStock = parseLocalizedNumber(stock);
     const parsedNetWeight = parseLocalizedNumber(netWeight);
     const parsedGrossWeight = parseLocalizedNumber(grossWeight);
+    const parsedBoxes = boxes.trim() ? parseInt(boxes, 10) : null;
 
     if (!stock.trim() || parsedStock <= 0) {
       toast.error("Ingresa el stock de la tarima virtual en piezas");
@@ -252,6 +257,8 @@ export function CreateVirtualPalletDialog({
         is_virtual: true,
         net_weight: parsedNetWeight > 0 ? parsedNetWeight : null,
         gross_weight: parsedGrossWeight > 0 ? parsedGrossWeight : null,
+        pieces: parsedBoxes && parsedBoxes > 0 ? parsedBoxes : null,
+        location: location.trim() || null,
       });
 
       let { error } = await supabase
@@ -439,6 +446,30 @@ export function CreateVirtualPalletDialog({
                 placeholder="e.g. 700"
                 value={netWeight}
                 onChange={(e) => setNetWeight(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Boxes & Location */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vp-boxes">Cajas</Label>
+              <Input
+                id="vp-boxes"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 50"
+                value={boxes}
+                onChange={(e) => setBoxes(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vp-location">Location</Label>
+              <Input
+                id="vp-location"
+                placeholder="e.g. A-01"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
               />
             </div>
           </div>

@@ -29,6 +29,8 @@ interface EditVirtualPalletDialogProps {
     net_weight: number | null;
     gross_weight: number | null;
     bfx_order: string | null;
+    pieces: number | null;
+    location: string | null;
   } | null;
 }
 
@@ -43,6 +45,8 @@ export function EditVirtualPalletDialog({
   const [netWeight, setNetWeight] = useState("");
   const [grossWeight, setGrossWeight] = useState("");
   const [traceability, setTraceability] = useState("");
+  const [boxes, setBoxes] = useState("");
+  const [location, setLocation] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -52,6 +56,8 @@ export function EditVirtualPalletDialog({
       setNetWeight(pallet.net_weight != null ? String(pallet.net_weight) : "");
       setGrossWeight(pallet.gross_weight != null ? String(pallet.gross_weight) : "");
       setTraceability(pallet.traceability || "");
+      setBoxes(pallet.pieces != null ? String(pallet.pieces) : "");
+      setLocation(pallet.location || "");
     }
   }, [pallet, open]);
 
@@ -61,6 +67,7 @@ export function EditVirtualPalletDialog({
     const parsedStock = parseLocalizedNumber(stock);
     const parsedNet = parseLocalizedNumber(netWeight);
     const parsedGross = parseLocalizedNumber(grossWeight);
+    const parsedBoxes = boxes.trim() ? parseInt(boxes, 10) : null;
 
     if (!stock.trim() || parsedStock <= 0) {
       toast.error("Ingresa un stock válido");
@@ -77,6 +84,8 @@ export function EditVirtualPalletDialog({
           net_weight: parsedNet > 0 ? parsedNet : null,
           gross_weight: parsedGross > 0 ? parsedGross : null,
           traceability: traceability.trim() || pallet.traceability,
+          pieces: parsedBoxes && parsedBoxes > 0 ? parsedBoxes : null,
+          location: location.trim() || null,
         })
         .eq("id", pallet.id);
 
@@ -161,6 +170,30 @@ export function EditVirtualPalletDialog({
                 inputMode="decimal"
                 value={netWeight}
                 onChange={(e) => setNetWeight(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Boxes & Location */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-boxes">Cajas</Label>
+              <Input
+                id="edit-boxes"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 50"
+                value={boxes}
+                onChange={(e) => setBoxes(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                placeholder="e.g. A-01"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
               />
             </div>
           </div>
