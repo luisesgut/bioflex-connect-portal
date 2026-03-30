@@ -200,6 +200,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.changeRequests': 'Solicitudes de Cambio',
     'nav.productCodes': 'Códigos de Producto',
     'nav.inventory': 'Inventario',
+    'nav.potrUpdate': 'POTR Update',
     'nav.shippingLoads': 'Cargas de Envío',
     'nav.shippedPallets': 'Tarimas Enviadas',
     'nav.settings': 'Configuración',
