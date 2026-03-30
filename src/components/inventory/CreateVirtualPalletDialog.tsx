@@ -449,6 +449,30 @@ export function CreateVirtualPalletDialog({
               />
             </div>
           </div>
+
+          {/* Boxes & Location */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vp-boxes">Cajas</Label>
+              <Input
+                id="vp-boxes"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 50"
+                value={boxes}
+                onChange={(e) => setBoxes(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vp-location">Location</Label>
+              <Input
+                id="vp-location"
+                placeholder="e.g. A-01"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

@@ -29,6 +29,8 @@ interface EditVirtualPalletDialogProps {
     net_weight: number | null;
     gross_weight: number | null;
     bfx_order: string | null;
+    pieces: number | null;
+    location: string | null;
   } | null;
 }
 
@@ -43,6 +45,8 @@ export function EditVirtualPalletDialog({
   const [netWeight, setNetWeight] = useState("");
   const [grossWeight, setGrossWeight] = useState("");
   const [traceability, setTraceability] = useState("");
+  const [boxes, setBoxes] = useState("");
+  const [location, setLocation] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
