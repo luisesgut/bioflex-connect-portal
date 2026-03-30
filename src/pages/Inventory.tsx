@@ -83,6 +83,7 @@ export default function Inventory() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [createVirtualOpen, setCreateVirtualOpen] = useState(false);
+  const [editingPallet, setEditingPallet] = useState<SAPInventoryItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<InventoryFilters>({
     fecha: [],
