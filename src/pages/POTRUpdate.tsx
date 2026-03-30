@@ -193,14 +193,11 @@ export default function POTRUpdate() {
       // ExcelJS rows are 1-indexed, our rowIndex is 0-indexed from aoa
       const excelRow = match.rowIndex + 1;
 
-      if (match.newShipped != null) {
-        const cell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
-        cell.value = match.newShipped;
-      }
-      if (match.newOnFloor != null) {
-        const cell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
-        cell.value = match.newOnFloor;
-      }
+      const shippedCell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
+      shippedCell.value = match.newShipped ?? 0;
+
+      const onFloorCell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
+      onFloorCell.value = match.newOnFloor ?? 0;
     }
 
     const outBuffer = await wb.xlsx.writeBuffer();
