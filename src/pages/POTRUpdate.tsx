@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Loader2, Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle } from "lucide-react";
-import { useLanguage } from "@/hooks/useLanguage";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 interface POTRMatch {
   rowIndex: number;
@@ -22,8 +21,7 @@ interface POTRMatch {
 }
 
 export default function POTRUpdate() {
-  const { t } = useLanguage();
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
+  const [workbookBuffer, setWorkbookBuffer] = useState<ArrayBuffer | null>(null);
   const [fileName, setFileName] = useState("");
   const [matches, setMatches] = useState<POTRMatch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,41 +39,49 @@ export default function POTRUpdate() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { cellStyles: true, cellNF: true, cellDates: true });
-      setWorkbook(wb);
+      setWorkbookBuffer(buffer);
 
-      // Use first sheet
-      const wsName = wb.SheetNames[0];
-      setSheetName(wsName);
-      const ws = wb.Sheets[wsName];
-      const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" }) as string[][];
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(buffer);
 
-      // Find header row — look for "Item #" and "DP"
+      const ws = wb.worksheets[0];
+      if (!ws) { setLoading(false); return; }
+      setSheetName(ws.name);
+
+      // Convert to array of arrays for header detection
+      const aoa: string[][] = [];
+      ws.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+        const vals: string[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          while (vals.length < colNumber - 1) vals.push("");
+          vals.push(String(cell.value ?? ""));
+        });
+        while (aoa.length < rowNumber - 1) aoa.push([]);
+        aoa.push(vals);
+      });
+
+      // Find header row
       let hIdx = -1;
       for (let i = 0; i < Math.min(aoa.length, 15); i++) {
-        const row = aoa[i].map(c => String(c || "").toLowerCase());
+        const row = aoa[i].map(c => c.toLowerCase());
         if (row.some(c => c === "item #" || c === "item#") && row.some(c => c === "dp")) {
           hIdx = i;
           break;
         }
       }
       if (hIdx < 0) {
-        // Fallback: look for "priority" + "shipped"
         for (let i = 0; i < Math.min(aoa.length, 15); i++) {
-          const row = aoa[i].map(c => String(c || "").toLowerCase());
+          const row = aoa[i].map(c => c.toLowerCase());
           if (row.some(c => c.includes("priority")) && row.some(c => c.includes("shipped"))) {
             hIdx = i;
             break;
           }
         }
       }
-      if (hIdx < 0) {
-        setLoading(false);
-        return;
-      }
+      if (hIdx < 0) { setLoading(false); return; }
 
       setHeaderRowIdx(hIdx);
-      const headers = aoa[hIdx].map(h => String(h || "").trim().toLowerCase());
+      const headers = aoa[hIdx].map(h => h.trim().toLowerCase());
 
       const dpIdx = headers.findIndex(h => h === "dp");
       const itemIdx = headers.findIndex(h => h === "item #" || h === "item#");
@@ -86,36 +92,32 @@ export default function POTRUpdate() {
       setShippedColIdx(sIdx);
       setOnFloorColIdx(fIdx);
 
-      if (dpIdx < 0) {
-        setLoading(false);
-        return;
-      }
+      if (dpIdx < 0) { setLoading(false); return; }
 
-      // Collect PO numbers from all data rows
       const poNumbers: string[] = [];
       const dataRows: { rowIndex: number; poNumber: string; itemCode: string; description: string; currentShipped: string; currentOnFloor: string }[] = [];
 
       for (let i = hIdx + 1; i < aoa.length; i++) {
         const row = aoa[i];
-        const po = String(row[dpIdx] || "").trim();
-        if (!po || !/^\d+$/.test(po)) continue; // PO numbers are numeric
+        const po = (row[dpIdx] || "").trim();
+        if (!po || !/^\d+$/.test(po)) continue;
 
-        const itemCode = itemIdx >= 0 ? String(row[itemIdx] || "").trim() : "";
-        const desc = descIdx >= 0 ? String(row[descIdx] || "").trim() : "";
-        const curShipped = sIdx >= 0 ? String(row[sIdx] || "").trim() : "";
-        const curFloor = fIdx >= 0 ? String(row[fIdx] || "").trim() : "";
-
+        dataRows.push({
+          rowIndex: i,
+          poNumber: po,
+          itemCode: itemIdx >= 0 ? (row[itemIdx] || "").trim() : "",
+          description: descIdx >= 0 ? (row[descIdx] || "").trim() : "",
+          currentShipped: sIdx >= 0 ? (row[sIdx] || "").trim() : "",
+          currentOnFloor: fIdx >= 0 ? (row[fIdx] || "").trim() : "",
+        });
         poNumbers.push(po);
-        dataRows.push({ rowIndex: i, poNumber: po, itemCode, description: desc, currentShipped: curShipped, currentOnFloor: curFloor });
       }
 
-      // Query SAP orders for shipped quantities and pt_codes
       const { data: sapOrders } = await supabase
         .from("sap_orders")
         .select("po_number, cantidad_enviada, pt_code")
         .in("po_number", poNumbers);
 
-      // Build map: po_number → { shipped, pt_code }
       const sapMap = new Map<string, { shipped: number | null; ptCode: string | null }>();
       for (const so of sapOrders || []) {
         if (so.po_number) {
@@ -126,10 +128,7 @@ export default function POTRUpdate() {
         }
       }
 
-      // Get unique pt_codes to query inventory
       const ptCodes = [...new Set((sapOrders || []).map(s => s.pt_code).filter(Boolean))] as string[];
-
-      // Query inventory for on-floor stock grouped by pt_code
       const floorMap = new Map<string, number>();
       if (ptCodes.length > 0) {
         const { data: pallets } = await supabase
@@ -140,23 +139,17 @@ export default function POTRUpdate() {
           .in("pt_code", ptCodes);
 
         for (const p of pallets || []) {
-          const current = floorMap.get(p.pt_code) || 0;
-          floorMap.set(p.pt_code, current + Number(p.stock || 0));
+          floorMap.set(p.pt_code, (floorMap.get(p.pt_code) || 0) + Number(p.stock || 0));
         }
       }
 
-      // Build match results
       const results: POTRMatch[] = dataRows.map(dr => {
         const sap = sapMap.get(dr.poNumber);
-        const matched = !!sap;
-        const newShipped = sap?.shipped ?? null;
-        const newOnFloor = sap?.ptCode ? (floorMap.get(sap.ptCode) ?? null) : null;
-
         return {
           ...dr,
-          newShipped,
-          newOnFloor,
-          matched,
+          newShipped: sap?.shipped ?? null,
+          newOnFloor: sap?.ptCode ? (floorMap.get(sap.ptCode) ?? null) : null,
+          matched: !!sap,
         };
       });
 
@@ -168,29 +161,32 @@ export default function POTRUpdate() {
     }
   }, []);
 
-  const handleDownload = useCallback(() => {
-    if (!workbook || shippedColIdx < 0 || onFloorColIdx < 0) return;
+  const handleDownload = useCallback(async () => {
+    if (!workbookBuffer || shippedColIdx < 0 || onFloorColIdx < 0) return;
 
-    const ws = workbook.Sheets[sheetName];
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(workbookBuffer);
+
+    const ws = wb.worksheets[0];
+    if (!ws) return;
 
     for (const match of matches) {
       if (!match.matched) continue;
+      // ExcelJS rows are 1-indexed, our rowIndex is 0-indexed from aoa
+      const excelRow = match.rowIndex + 1;
 
-      // Write shipped value
       if (match.newShipped != null) {
-        const shippedCell = XLSX.utils.encode_cell({ r: match.rowIndex, c: shippedColIdx });
-        ws[shippedCell] = { t: "n", v: match.newShipped };
+        const cell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
+        cell.value = match.newShipped;
       }
-
-      // Write on-floor value
       if (match.newOnFloor != null) {
-        const floorCell = XLSX.utils.encode_cell({ r: match.rowIndex, c: onFloorColIdx });
-        ws[floorCell] = { t: "n", v: match.newOnFloor };
+        const cell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
+        cell.value = match.newOnFloor;
       }
     }
 
-    const out = XLSX.write(workbook, { bookType: "xlsx", type: "array", cellStyles: true });
-    const blob = new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const outBuffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([outBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const now = new Date();
     const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
@@ -199,7 +195,7 @@ export default function POTRUpdate() {
     a.download = fileName.replace(/\.xlsx$/i, "") + `_updated_${ts}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [workbook, matches, shippedColIdx, onFloorColIdx, sheetName, fileName]);
+  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, fileName]);
 
   const matchedCount = matches.filter(m => m.matched).length;
   const unmatchedCount = matches.filter(m => !m.matched).length;
@@ -215,18 +211,12 @@ export default function POTRUpdate() {
           </p>
         </div>
 
-        {/* Upload */}
         {matches.length === 0 && !loading && (
           <Card className="border-dashed border-2 p-12 flex flex-col items-center gap-4">
             <FileSpreadsheet className="h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground text-sm">Selecciona el archivo POTR (.xlsx)</p>
             <label>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+              <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
               <Button variant="default" className="gap-2 cursor-pointer" asChild>
                 <span><Upload className="h-4 w-4" /> Subir archivo POTR</span>
               </Button>
@@ -243,7 +233,6 @@ export default function POTRUpdate() {
 
         {matches.length > 0 && !loading && (
           <>
-            {/* Stats */}
             <div className="flex gap-4 flex-wrap items-center">
               <Badge variant="default" className="text-sm px-3 py-1 gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -257,12 +246,7 @@ export default function POTRUpdate() {
               )}
               <div className="ml-auto flex gap-2">
                 <label>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
+                  <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
                   <Button variant="outline" size="sm" className="gap-2 cursor-pointer" asChild>
                     <span><Upload className="h-4 w-4" /> Cambiar archivo</span>
                   </Button>
@@ -273,7 +257,6 @@ export default function POTRUpdate() {
               </div>
             </div>
 
-            {/* Preview table */}
             <Card className="overflow-hidden">
               <div className="px-4 py-3 border-b bg-muted/50 font-semibold text-sm">
                 Vista previa de cambios
@@ -298,24 +281,16 @@ export default function POTRUpdate() {
                         <TableCell className="font-medium">{m.poNumber}</TableCell>
                         <TableCell>{m.itemCode}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{m.description}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {m.currentShipped || "—"}
-                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">{m.currentShipped || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newShipped != null ? (
-                            <span className="text-green-600 dark:text-green-400 font-medium">
-                              {m.newShipped.toLocaleString()}
-                            </span>
+                            <span className="text-green-600 dark:text-green-400 font-medium">{m.newShipped.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {m.currentOnFloor || "—"}
-                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">{m.currentOnFloor || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newOnFloor != null ? (
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">
-                              {m.newOnFloor.toLocaleString()}
-                            </span>
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">{m.newOnFloor.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
                         <TableCell>
