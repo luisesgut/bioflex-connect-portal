@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
 import { CreateVirtualPalletDialog } from "@/components/inventory/CreateVirtualPalletDialog";
+import { EditVirtualPalletDialog } from "@/components/inventory/EditVirtualPalletDialog";
 import { parseDateLocal } from "@/lib/utils";
 
 interface SAPInventoryItem {
