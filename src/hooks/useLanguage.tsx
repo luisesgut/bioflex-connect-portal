@@ -20,6 +20,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.changeRequests': 'Change Requests',
     'nav.productCodes': 'Product Codes',
     'nav.inventory': 'Inventory',
+    'nav.potrUpdate': 'POTR Update',
     'nav.shippingLoads': 'Shipping Loads',
     'nav.shippedPallets': 'Shipped Pallets',
     'nav.settings': 'Settings',
