@@ -116,40 +116,59 @@ export default function POTRUpdate() {
 
       const { data: sapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code")
+        .select("po_number, cantidad_enviada, pt_code, pedido")
         .in("po_number", poNumbers);
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null }>();
+      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null }>();
       for (const so of sapOrders || []) {
         if (so.po_number) {
           sapMap.set(so.po_number, {
             shipped: so.cantidad_enviada != null ? Number(so.cantidad_enviada) : null,
             ptCode: so.pt_code || null,
+            pedido: so.pedido != null ? String(so.pedido) : null,
           });
         }
       }
 
       const ptCodes = [...new Set((sapOrders || []).map(s => s.pt_code).filter(Boolean))] as string[];
-      const floorMap = new Map<string, number>();
+      // key: `${pt_code}::${bfx_order}`, value: stock sum
+      const palletsByPtAndOrder = new Map<string, number>();
+      const totalByPt = new Map<string, number>();
       if (ptCodes.length > 0) {
         const { data: pallets } = await supabase
           .from("inventory_pallets")
-          .select("pt_code, stock")
+          .select("pt_code, stock, bfx_order")
           .eq("status", "available")
           .eq("is_virtual", false)
           .in("pt_code", ptCodes);
 
         for (const p of pallets || []) {
-          floorMap.set(p.pt_code, (floorMap.get(p.pt_code) || 0) + Number(p.stock || 0));
+          const stock = Number(p.stock || 0);
+          totalByPt.set(p.pt_code, (totalByPt.get(p.pt_code) || 0) + stock);
+          if (p.bfx_order) {
+            const key = `${p.pt_code}::${p.bfx_order}`;
+            palletsByPtAndOrder.set(key, (palletsByPtAndOrder.get(key) || 0) + stock);
+          }
         }
       }
 
       const results: POTRMatch[] = dataRows.map(dr => {
         const sap = sapMap.get(dr.poNumber);
+        let onFloorPO: number | null = null;
+        let otherStock: number | null = null;
+        if (sap?.ptCode) {
+          const pedidoKey = sap.pedido ? `${sap.ptCode}::${sap.pedido}` : null;
+          onFloorPO = pedidoKey ? (palletsByPtAndOrder.get(pedidoKey) ?? 0) : 0;
+          const totalPt = totalByPt.get(sap.ptCode) ?? 0;
+          otherStock = totalPt - onFloorPO;
+          if (onFloorPO === 0) onFloorPO = null;
+          if (otherStock === 0) otherStock = null;
+        }
         return {
           ...dr,
           newShipped: sap?.shipped ?? null,
-          newOnFloor: sap?.ptCode ? (floorMap.get(sap.ptCode) ?? null) : null,
+          newOnFloor: onFloorPO,
+          otherStock,
           matched: !!sap,
         };
       });
