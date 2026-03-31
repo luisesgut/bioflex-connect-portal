@@ -190,16 +190,38 @@ export default function POTRUpdate() {
     const ws = wb.worksheets[0];
     if (!ws) return;
 
+    // Determine columns for the two new fields: after the last used column
+    const headerExcelRow = headerRowIdx + 1;
+    const headerRow = ws.getRow(headerExcelRow);
+    let maxCol = 0;
+    headerRow.eachCell({ includeEmpty: false }, (_cell, colNumber) => {
+      if (colNumber > maxCol) maxCol = colNumber;
+    });
+    const salesOrderCol = maxCol + 1;
+    const otherStockCol = maxCol + 2;
+
+    // Write headers for new columns
+    const soHeaderCell = headerRow.getCell(salesOrderCol);
+    soHeaderCell.value = "Sales Order #";
+    soHeaderCell.font = { bold: true };
+
+    const osHeaderCell = headerRow.getCell(otherStockCol);
+    osHeaderCell.value = "Other Stock (Same Product)";
+    osHeaderCell.font = { bold: true };
+
     for (const match of matches) {
       if (!match.matched) continue;
-      // ExcelJS rows are 1-indexed, our rowIndex is 0-indexed from aoa
       const excelRow = match.rowIndex + 1;
+      const row = ws.getRow(excelRow);
 
-      const shippedCell = ws.getRow(excelRow).getCell(shippedColIdx + 1);
+      const shippedCell = row.getCell(shippedColIdx + 1);
       shippedCell.value = match.newShipped ?? 0;
 
-      const onFloorCell = ws.getRow(excelRow).getCell(onFloorColIdx + 1);
+      const onFloorCell = row.getCell(onFloorColIdx + 1);
       onFloorCell.value = match.newOnFloor ?? 0;
+
+      row.getCell(salesOrderCol).value = match.salesOrder || "";
+      row.getCell(otherStockCol).value = match.otherStock ?? 0;
     }
 
     const outBuffer = await wb.xlsx.writeBuffer();
@@ -212,7 +234,7 @@ export default function POTRUpdate() {
     a.download = fileName.replace(/\.xlsx$/i, "") + `_updated_${ts}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, fileName]);
+  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, headerRowIdx, fileName]);
 
   const matchedCount = matches.filter(m => m.matched).length;
   const unmatchedCount = matches.filter(m => !m.matched).length;
