@@ -168,6 +168,7 @@ export default function POTRUpdate() {
           newShipped: sap?.shipped ?? null,
           newOnFloor: onFloorPO,
           otherStock,
+          salesOrder: sap?.pedido ?? null,
           matched: !!sap,
         };
       });
