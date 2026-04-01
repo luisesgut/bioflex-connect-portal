@@ -118,16 +118,17 @@ export default function POTRUpdate() {
 
       const { data: sapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido")
+        .select("po_number, cantidad_enviada, pt_code, pedido, precio")
         .in("po_number", poNumbers);
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null }>();
+      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
       for (const so of sapOrders || []) {
         if (so.po_number) {
           sapMap.set(so.po_number, {
             shipped: so.cantidad_enviada != null ? Number(so.cantidad_enviada) : null,
             ptCode: so.pt_code || null,
             pedido: so.pedido != null ? String(so.pedido) : null,
+            precio: so.precio != null ? Number(so.precio) : null,
           });
         }
       }
