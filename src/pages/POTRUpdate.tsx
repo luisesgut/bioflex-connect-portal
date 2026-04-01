@@ -19,6 +19,7 @@ interface POTRMatch {
   newOnFloor: number | null;
   otherStock: number | null;
   salesOrder: string | null;
+  pricePerThousand: number | null;
   matched: boolean;
 }
 
@@ -117,16 +118,17 @@ export default function POTRUpdate() {
 
       const { data: sapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido")
+        .select("po_number, cantidad_enviada, pt_code, pedido, precio")
         .in("po_number", poNumbers);
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null }>();
+      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
       for (const so of sapOrders || []) {
         if (so.po_number) {
           sapMap.set(so.po_number, {
             shipped: so.cantidad_enviada != null ? Number(so.cantidad_enviada) : null,
             ptCode: so.pt_code || null,
             pedido: so.pedido != null ? String(so.pedido) : null,
+            precio: so.precio != null ? Number(so.precio) : null,
           });
         }
       }
@@ -169,6 +171,7 @@ export default function POTRUpdate() {
           newOnFloor: onFloorPO,
           otherStock,
           salesOrder: sap?.pedido ?? null,
+          pricePerThousand: sap?.precio ?? null,
           matched: !!sap,
         };
       });
@@ -199,6 +202,7 @@ export default function POTRUpdate() {
     });
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
+    const priceCol = maxCol + 3;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -208,6 +212,10 @@ export default function POTRUpdate() {
     const osHeaderCell = headerRow.getCell(otherStockCol);
     osHeaderCell.value = "Other Stock (Same Product)";
     osHeaderCell.font = { bold: true };
+
+    const priceHeaderCell = headerRow.getCell(priceCol);
+    priceHeaderCell.value = "Price Per Thousand";
+    priceHeaderCell.font = { bold: true };
 
     for (const match of matches) {
       if (!match.matched) continue;
@@ -222,6 +230,7 @@ export default function POTRUpdate() {
 
       row.getCell(salesOrderCol).value = match.salesOrder || "";
       row.getCell(otherStockCol).value = match.otherStock ?? 0;
+      row.getCell(priceCol).value = match.pricePerThousand ?? "";
     }
 
     const outBuffer = await wb.xlsx.writeBuffer();
@@ -312,6 +321,7 @@ export default function POTRUpdate() {
                       <TableHead className="text-right">On Floor (actual)</TableHead>
                       <TableHead className="text-right">On Floor PO (nuevo)</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
+                      <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -336,6 +346,11 @@ export default function POTRUpdate() {
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">{m.otherStock.toLocaleString()}</span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {m.pricePerThousand != null ? (
+                            <span className="font-medium">${m.pricePerThousand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           ) : "—"}
                         </TableCell>
                         <TableCell>
