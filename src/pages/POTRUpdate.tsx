@@ -321,6 +321,7 @@ export default function POTRUpdate() {
                       <TableHead className="text-right">On Floor (actual)</TableHead>
                       <TableHead className="text-right">On Floor PO (nuevo)</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
+                      <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -345,6 +346,11 @@ export default function POTRUpdate() {
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">{m.otherStock.toLocaleString()}</span>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {m.pricePerThousand != null ? (
+                            <span className="font-medium">${m.pricePerThousand.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           ) : "—"}
                         </TableCell>
                         <TableCell>
