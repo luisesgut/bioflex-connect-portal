@@ -202,6 +202,7 @@ export default function POTRUpdate() {
     });
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
+    const priceCol = maxCol + 3;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -211,6 +212,10 @@ export default function POTRUpdate() {
     const osHeaderCell = headerRow.getCell(otherStockCol);
     osHeaderCell.value = "Other Stock (Same Product)";
     osHeaderCell.font = { bold: true };
+
+    const priceHeaderCell = headerRow.getCell(priceCol);
+    priceHeaderCell.value = "Price Per Thousand";
+    priceHeaderCell.font = { bold: true };
 
     for (const match of matches) {
       if (!match.matched) continue;
@@ -225,6 +230,7 @@ export default function POTRUpdate() {
 
       row.getCell(salesOrderCol).value = match.salesOrder || "";
       row.getCell(otherStockCol).value = match.otherStock ?? 0;
+      row.getCell(priceCol).value = match.pricePerThousand ?? "";
     }
 
     const outBuffer = await wb.xlsx.writeBuffer();
