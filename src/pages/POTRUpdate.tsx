@@ -138,14 +138,15 @@ export default function POTRUpdate() {
       if (missedPOs.length > 0) {
         const { data: localOrders } = await supabase
           .from("purchase_orders")
-          .select("po_number, sales_order_number, price_per_thousand, product_id, products(pt_code)")
+          .select("po_number, sales_order_number, price_per_thousand, quantity, status, product_id, products(pt_code)")
           .in("po_number", missedPOs);
 
         for (const lo of localOrders || []) {
           if (lo.po_number && !sapMap.has(lo.po_number)) {
             const ptCode = (lo.products as any)?.pt_code || null;
+            const isClosed = lo.status === 'closed' || lo.status === 'delivered' || lo.status === 'shipped';
             sapMap.set(lo.po_number, {
-              shipped: null,
+              shipped: isClosed ? lo.quantity : null,
               ptCode,
               pedido: lo.sales_order_number || null,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
