@@ -171,6 +171,7 @@ export default function POTRUpdate() {
           newOnFloor: onFloorPO,
           otherStock,
           salesOrder: sap?.pedido ?? null,
+          pricePerThousand: sap?.precio ?? null,
           matched: !!sap,
         };
       });
