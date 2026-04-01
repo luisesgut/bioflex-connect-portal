@@ -133,6 +133,27 @@ export default function POTRUpdate() {
         }
       }
 
+      // Fallback: for POs not found in SAP (closed/completed), check purchase_orders
+      const missedPOs = poNumbers.filter(po => !sapMap.has(po));
+      if (missedPOs.length > 0) {
+        const { data: localOrders } = await supabase
+          .from("purchase_orders")
+          .select("po_number, sales_order_number, price_per_thousand, product_id, products(pt_code)")
+          .in("po_number", missedPOs);
+
+        for (const lo of localOrders || []) {
+          if (lo.po_number && !sapMap.has(lo.po_number)) {
+            const ptCode = (lo.products as any)?.pt_code || null;
+            sapMap.set(lo.po_number, {
+              shipped: null,
+              ptCode,
+              pedido: lo.sales_order_number || null,
+              precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
+            });
+          }
+        }
+      }
+
       const ptCodes = [...new Set((sapOrders || []).map(s => s.pt_code).filter(Boolean))] as string[];
       const palletsByPtAndOrder = new Map<string, number>();
       const totalByPt = new Map<string, number>();
