@@ -19,6 +19,7 @@ interface POTRMatch {
   newOnFloor: number | null;
   otherStock: number | null;
   salesOrder: string | null;
+  pricePerThousand: number | null;
   matched: boolean;
 }
 
