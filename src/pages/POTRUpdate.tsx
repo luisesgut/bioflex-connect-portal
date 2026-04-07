@@ -553,7 +553,7 @@ export default function POTRUpdate() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {m.matched ? produced.toLocaleString() : "—"}
+                          {m.isFromSAP && m.matched ? produced.toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
@@ -561,7 +561,7 @@ export default function POTRUpdate() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {m.blanketQuantity != null ? m.blanketQuantity.toLocaleString() : "—"}
+                          {m.isFromSAP && m.blanketQuantity != null ? (m.blanketQuantity * 1000).toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
