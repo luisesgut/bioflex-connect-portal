@@ -248,6 +248,7 @@ export default function POTRUpdate() {
         }
         return {
           ...dr,
+          itemType: "",
           newShipped: sap?.shipped ?? null,
           newOnFloor: onFloorPO,
           otherStock,
@@ -256,6 +257,7 @@ export default function POTRUpdate() {
           matched: !!sap,
           isFromSAP: false,
           dueDate: null,
+          blanketQuantity: sap?.cantidad ?? null,
         };
       });
 
