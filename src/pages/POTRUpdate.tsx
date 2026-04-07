@@ -94,9 +94,11 @@ export default function POTRUpdate() {
       const descIdx = headers.findIndex(h => h.includes("description"));
       const sIdx = headers.findIndex(h => h.includes("shipped") || h.includes("already"));
       const fIdx = headers.findIndex(h => h.includes("floor") || h.includes("bioflex"));
+      const ddIdx = headers.findIndex(h => h.includes("due") || h.includes("vencimiento") || h.includes("date due"));
 
       setShippedColIdx(sIdx);
       setOnFloorColIdx(fIdx);
+      setDueDateColIdx(ddIdx >= 0 ? ddIdx : 10); // Column K = index 10 (0-based)
 
       if (dpIdx < 0) { setLoading(false); return; }
 
