@@ -33,6 +33,7 @@ export default function POTRUpdate() {
   const [headerRowIdx, setHeaderRowIdx] = useState(-1);
   const [shippedColIdx, setShippedColIdx] = useState(-1);
   const [onFloorColIdx, setOnFloorColIdx] = useState(-1);
+  const [dueDateColIdx, setDueDateColIdx] = useState(-1);
   const [sheetName, setSheetName] = useState("");
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,9 +94,11 @@ export default function POTRUpdate() {
       const descIdx = headers.findIndex(h => h.includes("description"));
       const sIdx = headers.findIndex(h => h.includes("shipped") || h.includes("already"));
       const fIdx = headers.findIndex(h => h.includes("floor") || h.includes("bioflex"));
+      const ddIdx = headers.findIndex(h => h.includes("due") || h.includes("vencimiento") || h.includes("date due"));
 
       setShippedColIdx(sIdx);
       setOnFloorColIdx(fIdx);
+      setDueDateColIdx(ddIdx >= 0 ? ddIdx : 10); // Column K = index 10 (0-based)
 
       if (dpIdx < 0) { setLoading(false); return; }
 
@@ -121,10 +124,13 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento");
+        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
       const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null }[] = [];
+
+      // Collect SAP-only pt_codes to look up item_type from products table
+      const sapOnlyPtCodes = new Set<string>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -138,7 +144,7 @@ export default function POTRUpdate() {
         if (excelPoSet.has(so.po_number)) {
           sapMap.set(so.po_number, entry);
         } else {
-          // This PO is in SAP but NOT in the Excel
+          if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
           sapOnlyEntries.push({
             poNumber: so.po_number,
             ptCode: so.pt_code || "",
@@ -147,7 +153,31 @@ export default function POTRUpdate() {
             pedido: entry.pedido,
             precio: entry.precio,
             dueDate: so.fecha_vencimiento || null,
-          });
+            tipoEmpaque: so.tipo_empaque || "",
+          } as any);
+        }
+      }
+
+      // Fetch item_type from products table for SAP-only entries
+      const itemTypeByPt = new Map<string, string>();
+      if (sapOnlyPtCodes.size > 0) {
+        const { data: prods } = await supabase
+          .from("products")
+          .select("pt_code, item_type")
+          .in("pt_code", [...sapOnlyPtCodes]);
+        for (const p of prods || []) {
+          if (p.pt_code && p.item_type) itemTypeByPt.set(p.pt_code, p.item_type);
+        }
+      }
+
+      // Enrich SAP-only descriptions with item_type / tipo_empaque
+      for (const entry of sapOnlyEntries) {
+        const raw = entry as any;
+        const itemType = itemTypeByPt.get(entry.ptCode) || "";
+        const tipoEmpaque = raw.tipoEmpaque || "";
+        const suffix = itemType || tipoEmpaque;
+        if (suffix) {
+          entry.description = entry.description ? `${entry.description} (${suffix})` : suffix;
         }
       }
 
@@ -290,7 +320,8 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    const dueDateCol = maxCol + 4;
+    // PO Due Date goes to the existing due date column (column K = dueDateColIdx + 1)
+    const dueDateExcelCol = dueDateColIdx + 1;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -305,9 +336,8 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
-    const dueDateHeaderCell = headerRow.getCell(dueDateCol);
-    dueDateHeaderCell.value = "PO Date Due";
-    dueDateHeaderCell.font = { bold: true };
+    // Number format for thousands
+    const thousandsFmt = '#,##0';
 
     // Find column indices from headers for DP, Item#, Description
     const headers = [];
@@ -327,14 +357,17 @@ export default function POTRUpdate() {
 
       const shippedCell = row.getCell(shippedColIdx + 1);
       shippedCell.value = match.newShipped ?? 0;
+      shippedCell.numFmt = thousandsFmt;
 
       const onFloorCell = row.getCell(onFloorColIdx + 1);
       onFloorCell.value = match.newOnFloor ?? 0;
+      onFloorCell.numFmt = thousandsFmt;
 
       row.getCell(salesOrderCol).value = match.salesOrder || "";
-      row.getCell(otherStockCol).value = match.otherStock ?? 0;
+      const osCell = row.getCell(otherStockCol);
+      osCell.value = match.otherStock ?? 0;
+      osCell.numFmt = thousandsFmt;
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
-      row.getCell(dueDateCol).value = "";
     }
 
     // Append SAP-only rows at the bottom
@@ -357,12 +390,18 @@ export default function POTRUpdate() {
         if (dpColExcel > 0) row.getCell(dpColExcel).value = match.poNumber;
         if (itemColExcel > 0) row.getCell(itemColExcel).value = match.itemCode;
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
-        row.getCell(shippedColIdx + 1).value = match.newShipped ?? 0;
-        row.getCell(onFloorColIdx + 1).value = match.newOnFloor ?? 0;
+        const sc = row.getCell(shippedColIdx + 1);
+        sc.value = match.newShipped ?? 0;
+        sc.numFmt = thousandsFmt;
+        const fc = row.getCell(onFloorColIdx + 1);
+        fc.value = match.newOnFloor ?? 0;
+        fc.numFmt = thousandsFmt;
         row.getCell(salesOrderCol).value = match.salesOrder || "";
-        row.getCell(otherStockCol).value = match.otherStock ?? 0;
+        const oc = row.getCell(otherStockCol);
+        oc.value = match.otherStock ?? 0;
+        oc.numFmt = thousandsFmt;
         row.getCell(priceCol).value = match.pricePerThousand ?? "";
-        row.getCell(dueDateCol).value = match.dueDate || "";
+        if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
         currentRow++;
       }
     }
@@ -377,7 +416,7 @@ export default function POTRUpdate() {
     a.download = fileName.replace(/\.xlsx$/i, "") + `_updated_${ts}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, headerRowIdx, fileName]);
+  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, dueDateColIdx, headerRowIdx, fileName]);
 
   const matchedCount = matches.filter(m => m.matched && !m.isFromSAP).length;
   const unmatchedCount = matches.filter(m => !m.matched).length;
