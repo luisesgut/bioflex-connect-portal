@@ -326,8 +326,12 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    // PO Due Date goes to the existing due date column (column K = dueDateColIdx + 1)
+    const blanketCol = maxCol + 4;
+    const producedCol = maxCol + 5;
+    // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
+    // Item Type goes to column G (index 7, 1-based)
+    const itemTypeExcelCol = 7;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -342,11 +346,19 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
+    const blanketHeaderCell = headerRow.getCell(blanketCol);
+    blanketHeaderCell.value = "Qty on Blanket Order";
+    blanketHeaderCell.font = { bold: true };
+
+    const producedHeaderCell = headerRow.getCell(producedCol);
+    producedHeaderCell.value = "Quantity Produced";
+    producedHeaderCell.font = { bold: true };
+
     // Number format for thousands
     const thousandsFmt = '#,##0';
 
     // Find column indices from headers for DP, Item#, Description
-    const headers = [];
+    const headers: string[] = [];
     headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
       headers[colNumber] = String(cell.value ?? "").trim().toLowerCase();
     });
@@ -354,36 +366,54 @@ export default function POTRUpdate() {
     const itemColExcel = headers.findIndex(h => h === "item #" || h === "item#");
     const descColExcel = headers.findIndex(h => h?.includes("description"));
 
+    // Helper to write common fields for a match row
+    const writeMatchToRow = (row: ExcelJS.Row, match: POTRMatch) => {
+      const sc = row.getCell(shippedColIdx + 1);
+      sc.value = match.newShipped ?? 0;
+      sc.numFmt = thousandsFmt;
+
+      const fc = row.getCell(onFloorColIdx + 1);
+      fc.value = match.newOnFloor ?? 0;
+      fc.numFmt = thousandsFmt;
+
+      row.getCell(salesOrderCol).value = match.salesOrder || "";
+
+      const oc = row.getCell(otherStockCol);
+      oc.value = match.otherStock ?? 0;
+      oc.numFmt = thousandsFmt;
+
+      row.getCell(priceCol).value = match.pricePerThousand ?? "";
+
+      const bq = row.getCell(blanketCol);
+      bq.value = match.blanketQuantity ?? "";
+      if (match.blanketQuantity != null) bq.numFmt = thousandsFmt;
+
+      // Quantity Produced = shipped + on floor
+      const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
+      const pc = row.getCell(producedCol);
+      pc.value = produced;
+      pc.numFmt = thousandsFmt;
+
+      if (match.itemType) {
+        row.getCell(itemTypeExcelCol).value = match.itemType;
+      }
+    };
+
     // Write Excel-based matches
     for (const match of matches) {
       if (match.isFromSAP) continue;
       if (!match.matched) continue;
       const excelRow = match.rowIndex + 1;
       const row = ws.getRow(excelRow);
-
-      const shippedCell = row.getCell(shippedColIdx + 1);
-      shippedCell.value = match.newShipped ?? 0;
-      shippedCell.numFmt = thousandsFmt;
-
-      const onFloorCell = row.getCell(onFloorColIdx + 1);
-      onFloorCell.value = match.newOnFloor ?? 0;
-      onFloorCell.numFmt = thousandsFmt;
-
-      row.getCell(salesOrderCol).value = match.salesOrder || "";
-      const osCell = row.getCell(otherStockCol);
-      osCell.value = match.otherStock ?? 0;
-      osCell.numFmt = thousandsFmt;
-      row.getCell(priceCol).value = match.pricePerThousand ?? "";
+      writeMatchToRow(row, match);
     }
 
     // Append SAP-only rows at the bottom
     const sapOnlyMatches = matches.filter(m => m.isFromSAP);
     if (sapOnlyMatches.length > 0) {
-      // Find the last row with data
       let lastDataRow = ws.rowCount;
-      const startRow = lastDataRow + 2; // leave a blank row
+      const startRow = lastDataRow + 2;
 
-      // Add a separator label
       const sepRow = ws.getRow(startRow);
       if (dpColExcel > 0) {
         sepRow.getCell(dpColExcel).value = "--- POs Solo en SAP ---";
@@ -396,17 +426,7 @@ export default function POTRUpdate() {
         if (dpColExcel > 0) row.getCell(dpColExcel).value = match.poNumber;
         if (itemColExcel > 0) row.getCell(itemColExcel).value = match.itemCode;
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
-        const sc = row.getCell(shippedColIdx + 1);
-        sc.value = match.newShipped ?? 0;
-        sc.numFmt = thousandsFmt;
-        const fc = row.getCell(onFloorColIdx + 1);
-        fc.value = match.newOnFloor ?? 0;
-        fc.numFmt = thousandsFmt;
-        row.getCell(salesOrderCol).value = match.salesOrder || "";
-        const oc = row.getCell(otherStockCol);
-        oc.value = match.otherStock ?? 0;
-        oc.numFmt = thousandsFmt;
-        row.getCell(priceCol).value = match.pricePerThousand ?? "";
+        writeMatchToRow(row, match);
         if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
         currentRow++;
       }
