@@ -416,7 +416,7 @@ export default function POTRUpdate() {
     a.download = fileName.replace(/\.xlsx$/i, "") + `_updated_${ts}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, headerRowIdx, fileName]);
+  }, [workbookBuffer, matches, shippedColIdx, onFloorColIdx, dueDateColIdx, headerRowIdx, fileName]);
 
   const matchedCount = matches.filter(m => m.matched && !m.isFromSAP).length;
   const unmatchedCount = matches.filter(m => !m.matched).length;
