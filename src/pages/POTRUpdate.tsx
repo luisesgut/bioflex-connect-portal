@@ -126,10 +126,10 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
-      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null }[] = [];
+      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null; cantidad: number | null }>();
+      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number | null }[] = [];
 
       // Collect SAP-only pt_codes to look up item_type from products table
       const sapOnlyPtCodes = new Set<string>();
