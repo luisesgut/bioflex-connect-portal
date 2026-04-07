@@ -141,6 +141,7 @@ export default function POTRUpdate() {
           ptCode: so.pt_code || null,
           pedido: so.pedido != null ? String(so.pedido) : null,
           precio: so.precio != null ? Number(so.precio) : null,
+          cantidad: so.cantidad != null ? Number(so.cantidad) : null,
         };
 
         if (excelPoSet.has(so.po_number)) {
@@ -156,7 +157,8 @@ export default function POTRUpdate() {
             precio: entry.precio,
             dueDate: so.fecha_vencimiento || null,
             tipoEmpaque: so.tipo_empaque || "",
-          } as any);
+            cantidad: entry.cantidad,
+          });
         }
       }
 
