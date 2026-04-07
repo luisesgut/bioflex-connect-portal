@@ -326,12 +326,13 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    const blanketCol = maxCol + 4;
-    const producedCol = maxCol + 5;
     // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
     // Item Type goes to column G (index 7, 1-based)
     const itemTypeExcelCol = 7;
+    // Blanket Qty → Column L (12), Qty Produced → Column M (13) — SAP-only rows
+    const blanketExcelCol = 12;
+    const producedExcelCol = 13;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
