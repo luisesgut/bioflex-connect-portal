@@ -326,12 +326,13 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    const blanketCol = maxCol + 4;
-    const producedCol = maxCol + 5;
     // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
     // Item Type goes to column G (index 7, 1-based)
     const itemTypeExcelCol = 7;
+    // Blanket Qty → Column L (12), Qty Produced → Column M (13) — SAP-only rows
+    const blanketExcelCol = 12;
+    const producedExcelCol = 13;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -346,13 +347,6 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
-    const blanketHeaderCell = headerRow.getCell(blanketCol);
-    blanketHeaderCell.value = "Qty on Blanket Order";
-    blanketHeaderCell.font = { bold: true };
-
-    const producedHeaderCell = headerRow.getCell(producedCol);
-    producedHeaderCell.value = "Quantity Produced";
-    producedHeaderCell.font = { bold: true };
 
     // Number format for thousands
     const thousandsFmt = '#,##0';
@@ -383,20 +377,6 @@ export default function POTRUpdate() {
       oc.numFmt = thousandsFmt;
 
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
-
-      const bq = row.getCell(blanketCol);
-      bq.value = match.blanketQuantity ?? "";
-      if (match.blanketQuantity != null) bq.numFmt = thousandsFmt;
-
-      // Quantity Produced = shipped + on floor
-      const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
-      const pc = row.getCell(producedCol);
-      pc.value = produced;
-      pc.numFmt = thousandsFmt;
-
-      if (match.itemType) {
-        row.getCell(itemTypeExcelCol).value = match.itemType;
-      }
     };
 
     // Write Excel-based matches
@@ -428,6 +408,17 @@ export default function POTRUpdate() {
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
         writeMatchToRow(row, match);
         if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
+        if (match.itemType) row.getCell(itemTypeExcelCol).value = match.itemType;
+        // Blanket Qty (×1000 to convert from thousands to pieces) → Column L
+        const blanketPieces = match.blanketQuantity != null ? match.blanketQuantity * 1000 : null;
+        const bqCell = row.getCell(blanketExcelCol);
+        bqCell.value = blanketPieces ?? "";
+        if (blanketPieces != null) bqCell.numFmt = thousandsFmt;
+        // Qty Produced (shipped + on floor) → Column M
+        const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
+        const pcCell = row.getCell(producedExcelCol);
+        pcCell.value = produced;
+        pcCell.numFmt = thousandsFmt;
         currentRow++;
       }
     }
@@ -562,7 +553,7 @@ export default function POTRUpdate() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {m.matched ? produced.toLocaleString() : "—"}
+                          {m.isFromSAP && m.matched ? produced.toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
@@ -570,7 +561,7 @@ export default function POTRUpdate() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {m.blanketQuantity != null ? m.blanketQuantity.toLocaleString() : "—"}
+                          {m.isFromSAP && m.blanketQuantity != null ? (m.blanketQuantity * 1000).toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
