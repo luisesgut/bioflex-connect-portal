@@ -174,15 +174,12 @@ export default function POTRUpdate() {
         }
       }
 
-      // Enrich SAP-only descriptions with item_type / tipo_empaque
+      // Build itemType lookup for SAP-only entries (separate field, not concatenated)
+      const sapOnlyItemTypes = new Map<string, string>();
       for (const entry of sapOnlyEntries) {
-        const raw = entry as any;
         const itemType = itemTypeByPt.get(entry.ptCode) || "";
-        const tipoEmpaque = raw.tipoEmpaque || "";
-        const suffix = itemType || tipoEmpaque;
-        if (suffix) {
-          entry.description = entry.description ? `${entry.description} (${suffix})` : suffix;
-        }
+        const tipoEmpaque = entry.tipoEmpaque || "";
+        sapOnlyItemTypes.set(entry.poNumber, itemType || tipoEmpaque);
       }
 
       // Fallback: for POs not found in SAP (closed/completed), check purchase_orders
