@@ -13,6 +13,7 @@ interface POTRMatch {
   poNumber: string;
   itemCode: string;
   description: string;
+  itemType: string; // Item Type or Tipo Empaque for column G
   currentShipped: string;
   currentOnFloor: string;
   newShipped: number | null;
@@ -23,6 +24,7 @@ interface POTRMatch {
   matched: boolean;
   isFromSAP: boolean;
   dueDate: string | null;
+  blanketQuantity: number | null; // total cantidad from SAP for column L
 }
 
 export default function POTRUpdate() {
