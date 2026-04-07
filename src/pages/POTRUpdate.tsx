@@ -390,12 +390,18 @@ export default function POTRUpdate() {
         if (dpColExcel > 0) row.getCell(dpColExcel).value = match.poNumber;
         if (itemColExcel > 0) row.getCell(itemColExcel).value = match.itemCode;
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
-        row.getCell(shippedColIdx + 1).value = match.newShipped ?? 0;
-        row.getCell(onFloorColIdx + 1).value = match.newOnFloor ?? 0;
+        const sc = row.getCell(shippedColIdx + 1);
+        sc.value = match.newShipped ?? 0;
+        sc.numFmt = thousandsFmt;
+        const fc = row.getCell(onFloorColIdx + 1);
+        fc.value = match.newOnFloor ?? 0;
+        fc.numFmt = thousandsFmt;
         row.getCell(salesOrderCol).value = match.salesOrder || "";
-        row.getCell(otherStockCol).value = match.otherStock ?? 0;
+        const oc = row.getCell(otherStockCol);
+        oc.value = match.otherStock ?? 0;
+        oc.numFmt = thousandsFmt;
         row.getCell(priceCol).value = match.pricePerThousand ?? "";
-        row.getCell(dueDateCol).value = match.dueDate || "";
+        if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
         currentRow++;
       }
     }
