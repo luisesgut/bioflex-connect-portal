@@ -408,6 +408,17 @@ export default function POTRUpdate() {
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
         writeMatchToRow(row, match);
         if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
+        if (match.itemType) row.getCell(itemTypeExcelCol).value = match.itemType;
+        // Blanket Qty (×1000 to convert from thousands to pieces) → Column L
+        const blanketPieces = match.blanketQuantity != null ? match.blanketQuantity * 1000 : null;
+        const bqCell = row.getCell(blanketExcelCol);
+        bqCell.value = blanketPieces ?? "";
+        if (blanketPieces != null) bqCell.numFmt = thousandsFmt;
+        // Qty Produced (shipped + on floor) → Column M
+        const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
+        const pcCell = row.getCell(producedExcelCol);
+        pcCell.value = produced;
+        pcCell.numFmt = thousandsFmt;
         currentRow++;
       }
     }
