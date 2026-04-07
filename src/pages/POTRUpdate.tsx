@@ -276,6 +276,7 @@ export default function POTRUpdate() {
           poNumber: entry.poNumber,
           itemCode: entry.ptCode,
           description: entry.description,
+          itemType: sapOnlyItemTypes.get(entry.poNumber) || "",
           currentShipped: "",
           currentOnFloor: "",
           newShipped: entry.shipped,
@@ -286,6 +287,7 @@ export default function POTRUpdate() {
           matched: true,
           isFromSAP: true,
           dueDate: entry.dueDate,
+          blanketQuantity: entry.cantidad,
         };
       });
 
