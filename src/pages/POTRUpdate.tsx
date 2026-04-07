@@ -124,10 +124,13 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento");
+        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
       const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null }[] = [];
+
+      // Collect SAP-only pt_codes to look up item_type from products table
+      const sapOnlyPtCodes = new Set<string>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -141,7 +144,7 @@ export default function POTRUpdate() {
         if (excelPoSet.has(so.po_number)) {
           sapMap.set(so.po_number, entry);
         } else {
-          // This PO is in SAP but NOT in the Excel
+          if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
           sapOnlyEntries.push({
             poNumber: so.po_number,
             ptCode: so.pt_code || "",
@@ -150,7 +153,31 @@ export default function POTRUpdate() {
             pedido: entry.pedido,
             precio: entry.precio,
             dueDate: so.fecha_vencimiento || null,
-          });
+            tipoEmpaque: so.tipo_empaque || "",
+          } as any);
+        }
+      }
+
+      // Fetch item_type from products table for SAP-only entries
+      const itemTypeByPt = new Map<string, string>();
+      if (sapOnlyPtCodes.size > 0) {
+        const { data: prods } = await supabase
+          .from("products")
+          .select("pt_code, item_type")
+          .in("pt_code", [...sapOnlyPtCodes]);
+        for (const p of prods || []) {
+          if (p.pt_code && p.item_type) itemTypeByPt.set(p.pt_code, p.item_type);
+        }
+      }
+
+      // Enrich SAP-only descriptions with item_type / tipo_empaque
+      for (const entry of sapOnlyEntries) {
+        const raw = entry as any;
+        const itemType = itemTypeByPt.get(entry.ptCode) || "";
+        const tipoEmpaque = raw.tipoEmpaque || "";
+        const suffix = itemType || tipoEmpaque;
+        if (suffix) {
+          entry.description = entry.description ? `${entry.description} (${suffix})` : suffix;
         }
       }
 
