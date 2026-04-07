@@ -199,6 +199,7 @@ export default function POTRUpdate() {
               ptCode,
               pedido: lo.sales_order_number || null,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
+              cantidad: lo.quantity != null ? Number(lo.quantity) : null,
             });
           }
         }
