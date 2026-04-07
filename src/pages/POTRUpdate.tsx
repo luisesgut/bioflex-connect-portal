@@ -377,20 +377,6 @@ export default function POTRUpdate() {
       oc.numFmt = thousandsFmt;
 
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
-
-      const bq = row.getCell(blanketCol);
-      bq.value = match.blanketQuantity ?? "";
-      if (match.blanketQuantity != null) bq.numFmt = thousandsFmt;
-
-      // Quantity Produced = shipped + on floor
-      const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
-      const pc = row.getCell(producedCol);
-      pc.value = produced;
-      pc.numFmt = thousandsFmt;
-
-      if (match.itemType) {
-        row.getCell(itemTypeExcelCol).value = match.itemType;
-      }
     };
 
     // Write Excel-based matches
