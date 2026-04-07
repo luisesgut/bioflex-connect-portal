@@ -13,6 +13,7 @@ interface POTRMatch {
   poNumber: string;
   itemCode: string;
   description: string;
+  itemType: string; // Item Type or Tipo Empaque for column G
   currentShipped: string;
   currentOnFloor: string;
   newShipped: number | null;
@@ -23,6 +24,7 @@ interface POTRMatch {
   matched: boolean;
   isFromSAP: boolean;
   dueDate: string | null;
+  blanketQuantity: number | null; // total cantidad from SAP for column L
 }
 
 export default function POTRUpdate() {
@@ -124,10 +126,10 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null }>();
-      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null }[] = [];
+      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null; cantidad: number | null }>();
+      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number | null }[] = [];
 
       // Collect SAP-only pt_codes to look up item_type from products table
       const sapOnlyPtCodes = new Set<string>();
@@ -139,6 +141,7 @@ export default function POTRUpdate() {
           ptCode: so.pt_code || null,
           pedido: so.pedido != null ? String(so.pedido) : null,
           precio: so.precio != null ? Number(so.precio) : null,
+          cantidad: so.cantidad != null ? Number(so.cantidad) : null,
         };
 
         if (excelPoSet.has(so.po_number)) {
@@ -154,7 +157,8 @@ export default function POTRUpdate() {
             precio: entry.precio,
             dueDate: so.fecha_vencimiento || null,
             tipoEmpaque: so.tipo_empaque || "",
-          } as any);
+            cantidad: entry.cantidad,
+          });
         }
       }
 
@@ -170,15 +174,12 @@ export default function POTRUpdate() {
         }
       }
 
-      // Enrich SAP-only descriptions with item_type / tipo_empaque
+      // Build itemType lookup for SAP-only entries (separate field, not concatenated)
+      const sapOnlyItemTypes = new Map<string, string>();
       for (const entry of sapOnlyEntries) {
-        const raw = entry as any;
         const itemType = itemTypeByPt.get(entry.ptCode) || "";
-        const tipoEmpaque = raw.tipoEmpaque || "";
-        const suffix = itemType || tipoEmpaque;
-        if (suffix) {
-          entry.description = entry.description ? `${entry.description} (${suffix})` : suffix;
-        }
+        const tipoEmpaque = entry.tipoEmpaque || "";
+        sapOnlyItemTypes.set(entry.poNumber, itemType || tipoEmpaque);
       }
 
       // Fallback: for POs not found in SAP (closed/completed), check purchase_orders
@@ -198,6 +199,7 @@ export default function POTRUpdate() {
               ptCode,
               pedido: lo.sales_order_number || null,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
+              cantidad: lo.quantity != null ? Number(lo.quantity) : null,
             });
           }
         }
@@ -247,6 +249,7 @@ export default function POTRUpdate() {
         }
         return {
           ...dr,
+          itemType: "",
           newShipped: sap?.shipped ?? null,
           newOnFloor: onFloorPO,
           otherStock,
@@ -255,6 +258,7 @@ export default function POTRUpdate() {
           matched: !!sap,
           isFromSAP: false,
           dueDate: null,
+          blanketQuantity: sap?.cantidad ?? null,
         };
       });
 
@@ -273,6 +277,7 @@ export default function POTRUpdate() {
           poNumber: entry.poNumber,
           itemCode: entry.ptCode,
           description: entry.description,
+          itemType: sapOnlyItemTypes.get(entry.poNumber) || "",
           currentShipped: "",
           currentOnFloor: "",
           newShipped: entry.shipped,
@@ -283,6 +288,7 @@ export default function POTRUpdate() {
           matched: true,
           isFromSAP: true,
           dueDate: entry.dueDate,
+          blanketQuantity: entry.cantidad,
         };
       });
 
@@ -320,8 +326,12 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    // PO Due Date goes to the existing due date column (column K = dueDateColIdx + 1)
+    const blanketCol = maxCol + 4;
+    const producedCol = maxCol + 5;
+    // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
+    // Item Type goes to column G (index 7, 1-based)
+    const itemTypeExcelCol = 7;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -336,11 +346,19 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
+    const blanketHeaderCell = headerRow.getCell(blanketCol);
+    blanketHeaderCell.value = "Qty on Blanket Order";
+    blanketHeaderCell.font = { bold: true };
+
+    const producedHeaderCell = headerRow.getCell(producedCol);
+    producedHeaderCell.value = "Quantity Produced";
+    producedHeaderCell.font = { bold: true };
+
     // Number format for thousands
     const thousandsFmt = '#,##0';
 
     // Find column indices from headers for DP, Item#, Description
-    const headers = [];
+    const headers: string[] = [];
     headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
       headers[colNumber] = String(cell.value ?? "").trim().toLowerCase();
     });
@@ -348,36 +366,54 @@ export default function POTRUpdate() {
     const itemColExcel = headers.findIndex(h => h === "item #" || h === "item#");
     const descColExcel = headers.findIndex(h => h?.includes("description"));
 
+    // Helper to write common fields for a match row
+    const writeMatchToRow = (row: ExcelJS.Row, match: POTRMatch) => {
+      const sc = row.getCell(shippedColIdx + 1);
+      sc.value = match.newShipped ?? 0;
+      sc.numFmt = thousandsFmt;
+
+      const fc = row.getCell(onFloorColIdx + 1);
+      fc.value = match.newOnFloor ?? 0;
+      fc.numFmt = thousandsFmt;
+
+      row.getCell(salesOrderCol).value = match.salesOrder || "";
+
+      const oc = row.getCell(otherStockCol);
+      oc.value = match.otherStock ?? 0;
+      oc.numFmt = thousandsFmt;
+
+      row.getCell(priceCol).value = match.pricePerThousand ?? "";
+
+      const bq = row.getCell(blanketCol);
+      bq.value = match.blanketQuantity ?? "";
+      if (match.blanketQuantity != null) bq.numFmt = thousandsFmt;
+
+      // Quantity Produced = shipped + on floor
+      const produced = (match.newShipped ?? 0) + (match.newOnFloor ?? 0);
+      const pc = row.getCell(producedCol);
+      pc.value = produced;
+      pc.numFmt = thousandsFmt;
+
+      if (match.itemType) {
+        row.getCell(itemTypeExcelCol).value = match.itemType;
+      }
+    };
+
     // Write Excel-based matches
     for (const match of matches) {
       if (match.isFromSAP) continue;
       if (!match.matched) continue;
       const excelRow = match.rowIndex + 1;
       const row = ws.getRow(excelRow);
-
-      const shippedCell = row.getCell(shippedColIdx + 1);
-      shippedCell.value = match.newShipped ?? 0;
-      shippedCell.numFmt = thousandsFmt;
-
-      const onFloorCell = row.getCell(onFloorColIdx + 1);
-      onFloorCell.value = match.newOnFloor ?? 0;
-      onFloorCell.numFmt = thousandsFmt;
-
-      row.getCell(salesOrderCol).value = match.salesOrder || "";
-      const osCell = row.getCell(otherStockCol);
-      osCell.value = match.otherStock ?? 0;
-      osCell.numFmt = thousandsFmt;
-      row.getCell(priceCol).value = match.pricePerThousand ?? "";
+      writeMatchToRow(row, match);
     }
 
     // Append SAP-only rows at the bottom
     const sapOnlyMatches = matches.filter(m => m.isFromSAP);
     if (sapOnlyMatches.length > 0) {
-      // Find the last row with data
       let lastDataRow = ws.rowCount;
-      const startRow = lastDataRow + 2; // leave a blank row
+      const startRow = lastDataRow + 2;
 
-      // Add a separator label
       const sepRow = ws.getRow(startRow);
       if (dpColExcel > 0) {
         sepRow.getCell(dpColExcel).value = "--- POs Solo en SAP ---";
@@ -390,17 +426,7 @@ export default function POTRUpdate() {
         if (dpColExcel > 0) row.getCell(dpColExcel).value = match.poNumber;
         if (itemColExcel > 0) row.getCell(itemColExcel).value = match.itemCode;
         if (descColExcel > 0) row.getCell(descColExcel).value = match.description;
-        const sc = row.getCell(shippedColIdx + 1);
-        sc.value = match.newShipped ?? 0;
-        sc.numFmt = thousandsFmt;
-        const fc = row.getCell(onFloorColIdx + 1);
-        fc.value = match.newOnFloor ?? 0;
-        fc.numFmt = thousandsFmt;
-        row.getCell(salesOrderCol).value = match.salesOrder || "";
-        const oc = row.getCell(otherStockCol);
-        oc.value = match.otherStock ?? 0;
-        oc.numFmt = thousandsFmt;
-        row.getCell(priceCol).value = match.pricePerThousand ?? "";
+        writeMatchToRow(row, match);
         if (dueDateExcelCol > 0) row.getCell(dueDateExcelCol).value = match.dueDate || "";
         currentRow++;
       }
@@ -496,18 +522,21 @@ export default function POTRUpdate() {
                       <TableHead>DP PO#</TableHead>
                       <TableHead>Item #</TableHead>
                       <TableHead>Descripción</TableHead>
-                      <TableHead className="text-right">Shipped (actual)</TableHead>
-                      <TableHead className="text-right">Shipped (nuevo)</TableHead>
-                      <TableHead className="text-right">On Floor (actual)</TableHead>
-                      <TableHead className="text-right">On Floor PO (nuevo)</TableHead>
+                      <TableHead>Item Type</TableHead>
+                      <TableHead className="text-right">Shipped</TableHead>
+                      <TableHead className="text-right">On Floor</TableHead>
+                      <TableHead className="text-right">Qty Produced</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
+                      <TableHead className="text-right">Blanket Qty</TableHead>
                       <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>PO Date Due</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {matches.map((m, idx) => (
+                    {matches.map((m, idx) => {
+                      const produced = (m.newShipped ?? 0) + (m.newOnFloor ?? 0);
+                      return (
                       <TableRow
                         key={`${m.poNumber}-${m.rowIndex}-${idx}`}
                         className={
@@ -521,22 +550,27 @@ export default function POTRUpdate() {
                         <TableCell className="font-medium">{m.poNumber}</TableCell>
                         <TableCell>{m.itemCode}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{m.description}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{m.currentShipped || "—"}</TableCell>
+                        <TableCell className="text-sm">{m.itemType || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newShipped != null ? (
                             <span className="text-green-600 dark:text-green-400 font-medium">{m.newShipped.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">{m.currentOnFloor || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newOnFloor != null ? (
                             <span className="text-blue-600 dark:text-blue-400 font-medium">{m.newOnFloor.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {m.matched ? produced.toLocaleString() : "—"}
+                        </TableCell>
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">{m.otherStock.toLocaleString()}</span>
                           ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {m.blanketQuantity != null ? m.blanketQuantity.toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
@@ -556,7 +590,8 @@ export default function POTRUpdate() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>
