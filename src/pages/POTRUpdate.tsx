@@ -320,7 +320,8 @@ export default function POTRUpdate() {
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
     const priceCol = maxCol + 3;
-    const dueDateCol = maxCol + 4;
+    // PO Due Date goes to the existing due date column (column K = dueDateColIdx + 1)
+    const dueDateExcelCol = dueDateColIdx + 1;
 
     // Write headers for new columns
     const soHeaderCell = headerRow.getCell(salesOrderCol);
@@ -335,9 +336,8 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
-    const dueDateHeaderCell = headerRow.getCell(dueDateCol);
-    dueDateHeaderCell.value = "PO Date Due";
-    dueDateHeaderCell.font = { bold: true };
+    // Number format for thousands
+    const thousandsFmt = '#,##0';
 
     // Find column indices from headers for DP, Item#, Description
     const headers = [];
@@ -357,14 +357,17 @@ export default function POTRUpdate() {
 
       const shippedCell = row.getCell(shippedColIdx + 1);
       shippedCell.value = match.newShipped ?? 0;
+      shippedCell.numFmt = thousandsFmt;
 
       const onFloorCell = row.getCell(onFloorColIdx + 1);
       onFloorCell.value = match.newOnFloor ?? 0;
+      onFloorCell.numFmt = thousandsFmt;
 
       row.getCell(salesOrderCol).value = match.salesOrder || "";
-      row.getCell(otherStockCol).value = match.otherStock ?? 0;
+      const osCell = row.getCell(otherStockCol);
+      osCell.value = match.otherStock ?? 0;
+      osCell.numFmt = thousandsFmt;
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
-      row.getCell(dueDateCol).value = "";
     }
 
     // Append SAP-only rows at the bottom
