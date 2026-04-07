@@ -33,6 +33,7 @@ export default function POTRUpdate() {
   const [headerRowIdx, setHeaderRowIdx] = useState(-1);
   const [shippedColIdx, setShippedColIdx] = useState(-1);
   const [onFloorColIdx, setOnFloorColIdx] = useState(-1);
+  const [dueDateColIdx, setDueDateColIdx] = useState(-1);
   const [sheetName, setSheetName] = useState("");
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
