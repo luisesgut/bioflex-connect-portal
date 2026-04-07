@@ -522,18 +522,21 @@ export default function POTRUpdate() {
                       <TableHead>DP PO#</TableHead>
                       <TableHead>Item #</TableHead>
                       <TableHead>Descripción</TableHead>
-                      <TableHead className="text-right">Shipped (actual)</TableHead>
-                      <TableHead className="text-right">Shipped (nuevo)</TableHead>
-                      <TableHead className="text-right">On Floor (actual)</TableHead>
-                      <TableHead className="text-right">On Floor PO (nuevo)</TableHead>
+                      <TableHead>Item Type</TableHead>
+                      <TableHead className="text-right">Shipped</TableHead>
+                      <TableHead className="text-right">On Floor</TableHead>
+                      <TableHead className="text-right">Qty Produced</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
+                      <TableHead className="text-right">Blanket Qty</TableHead>
                       <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>PO Date Due</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {matches.map((m, idx) => (
+                    {matches.map((m, idx) => {
+                      const produced = (m.newShipped ?? 0) + (m.newOnFloor ?? 0);
+                      return (
                       <TableRow
                         key={`${m.poNumber}-${m.rowIndex}-${idx}`}
                         className={
@@ -547,22 +550,27 @@ export default function POTRUpdate() {
                         <TableCell className="font-medium">{m.poNumber}</TableCell>
                         <TableCell>{m.itemCode}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{m.description}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{m.currentShipped || "—"}</TableCell>
+                        <TableCell className="text-sm">{m.itemType || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newShipped != null ? (
                             <span className="text-green-600 dark:text-green-400 font-medium">{m.newShipped.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">{m.currentOnFloor || "—"}</TableCell>
                         <TableCell className="text-right">
                           {m.newOnFloor != null ? (
                             <span className="text-blue-600 dark:text-blue-400 font-medium">{m.newOnFloor.toLocaleString()}</span>
                           ) : "—"}
                         </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {m.matched ? produced.toLocaleString() : "—"}
+                        </TableCell>
                         <TableCell className="text-right">
                           {m.otherStock != null ? (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">{m.otherStock.toLocaleString()}</span>
                           ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {m.blanketQuantity != null ? m.blanketQuantity.toLocaleString() : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
@@ -582,7 +590,8 @@ export default function POTRUpdate() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>
