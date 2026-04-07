@@ -347,13 +347,6 @@ export default function POTRUpdate() {
     priceHeaderCell.value = "Price Per Thousand";
     priceHeaderCell.font = { bold: true };
 
-    const blanketHeaderCell = headerRow.getCell(blanketCol);
-    blanketHeaderCell.value = "Qty on Blanket Order";
-    blanketHeaderCell.font = { bold: true };
-
-    const producedHeaderCell = headerRow.getCell(producedCol);
-    producedHeaderCell.value = "Quantity Produced";
-    producedHeaderCell.font = { bold: true };
 
     // Number format for thousands
     const thousandsFmt = '#,##0';
