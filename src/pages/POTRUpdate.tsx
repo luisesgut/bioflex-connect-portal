@@ -126,12 +126,14 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
+      // Track closed status per pedido: closed when cantidad_enviada >= cantidad_solicitada
       const sapOnlyPtCodes = new Set<string>();
-      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidos: Set<string>; precio: number | null; cantidad: number }>();
-      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidos: Set<string>; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
+      type PedidoInfo = { pedido: string; closed: boolean };
+      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; cantidad: number }>();
+      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -139,6 +141,8 @@ export default function POTRUpdate() {
         const pedido = so.pedido != null ? String(so.pedido) : null;
         const precio = so.precio != null ? Number(so.precio) : null;
         const cantidad = so.cantidad != null ? Number(so.cantidad) : 0;
+        const cantidadSolicitada = so.cantidad_solicitada != null ? Number(so.cantidad_solicitada) : 0;
+        const isClosed = cantidadSolicitada > 0 && shipped >= cantidadSolicitada;
 
         if (excelPoSet.has(so.po_number)) {
           const existing = sapMap.get(so.po_number);
@@ -146,14 +150,16 @@ export default function POTRUpdate() {
             existing.shipped += shipped;
             existing.cantidad += cantidad;
             if (so.pt_code) existing.ptCodes.add(so.pt_code);
-            if (pedido) existing.pedidos.add(pedido);
+            if (pedido && !existing.pedidoInfos.some(p => p.pedido === pedido)) {
+              existing.pedidoInfos.push({ pedido, closed: isClosed });
+            }
             if (precio != null && existing.precio == null) existing.precio = precio;
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
-            const pedidos = new Set<string>();
-            if (pedido) pedidos.add(pedido);
-            sapMap.set(so.po_number, { shipped, ptCodes, pedidos, precio, cantidad });
+            const pedidoInfos: PedidoInfo[] = [];
+            if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
+            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, cantidad });
           }
         } else {
           if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
@@ -162,7 +168,9 @@ export default function POTRUpdate() {
             existing.shipped += shipped;
             existing.cantidad += cantidad;
             if (so.pt_code) existing.ptCodes.add(so.pt_code);
-            if (pedido) existing.pedidos.add(pedido);
+            if (pedido && !existing.pedidoInfos.some(p => p.pedido === pedido)) {
+              existing.pedidoInfos.push({ pedido, closed: isClosed });
+            }
             if (precio != null && existing.precio == null) existing.precio = precio;
             if (so.producto && !existing.descriptions.includes(so.producto)) existing.descriptions.push(so.producto);
             if (so.fecha_vencimiento && !existing.dueDates.includes(so.fecha_vencimiento)) existing.dueDates.push(so.fecha_vencimiento);
@@ -170,13 +178,13 @@ export default function POTRUpdate() {
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
-            const pedidos = new Set<string>();
-            if (pedido) pedidos.add(pedido);
+            const pedidoInfos: PedidoInfo[] = [];
+            if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
             sapOnlyAgg.set(so.po_number, {
               ptCodes,
               descriptions: so.producto ? [so.producto] : [],
               shipped,
-              pedidos,
+              pedidoInfos,
               precio,
               dueDates: so.fecha_vencimiento ? [so.fecha_vencimiento] : [],
               tipoEmpaques: so.tipo_empaque ? [so.tipo_empaque] : [],
@@ -186,6 +194,12 @@ export default function POTRUpdate() {
         }
       }
 
+      // Helper to format pedido infos as "pedido1, pedido2 (closed)"
+      const formatPedidoInfos = (infos: PedidoInfo[]): string | null => {
+        if (infos.length === 0) return null;
+        return infos.map(p => p.closed ? `${p.pedido} (closed)` : p.pedido).join(", ");
+      };
+
       // Convert sapOnlyAgg to sapOnlyEntries array
       const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
       for (const [poNumber, agg] of sapOnlyAgg) {
@@ -194,7 +208,7 @@ export default function POTRUpdate() {
           ptCode: [...agg.ptCodes][0] || "",
           description: agg.descriptions[0] || "",
           shipped: agg.shipped,
-          pedido: agg.pedidos.size > 0 ? [...agg.pedidos].join(", ") : null,
+          pedido: formatPedidoInfos(agg.pedidoInfos),
           precio: agg.precio,
           dueDate: agg.dueDates[0] || null,
           tipoEmpaque: agg.tipoEmpaques[0] || "",
@@ -236,12 +250,12 @@ export default function POTRUpdate() {
             const isClosed = lo.status === 'closed' || lo.status === 'delivered' || lo.status === 'shipped';
             const ptCodes = new Set<string>();
             if (ptCode) ptCodes.add(ptCode);
-            const pedidos = new Set<string>();
-            if (lo.sales_order_number) pedidos.add(lo.sales_order_number);
+            const pedidoInfos: PedidoInfo[] = [];
+            if (lo.sales_order_number) pedidoInfos.push({ pedido: lo.sales_order_number, closed: isClosed });
             sapMap.set(lo.po_number, {
               shipped: isClosed ? lo.quantity : 0,
               ptCodes,
-              pedidos,
+              pedidoInfos,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
               cantidad: lo.quantity != null ? Number(lo.quantity) : 0,
             });
@@ -280,15 +294,13 @@ export default function POTRUpdate() {
         }
       }
 
-      // Helper: sum on-floor stock for a PO by matching all its sales orders (pedidos)
-      const getOnFloorForPO = (ptCodes: Set<string> | string[], pedidos: Set<string> | string[]) => {
+      // Helper: sum on-floor stock for a PO by matching bfx_order = poNumber
+      // (inventory bfx_order stores the customer PO number)
+      const getOnFloorForPO = (ptCodes: Set<string> | string[], poNumber: string) => {
         let onFloor = 0;
         const ptArr = ptCodes instanceof Set ? [...ptCodes] : ptCodes;
-        const pedArr = pedidos instanceof Set ? [...pedidos] : pedidos;
         for (const ptc of ptArr) {
-          for (const ped of pedArr) {
-            onFloor += palletsByPtAndOrder.get(`${ptc}::${ped}`) ?? 0;
-          }
+          onFloor += palletsByPtAndOrder.get(`${ptc}::${poNumber}`) ?? 0;
         }
         return onFloor;
       };
@@ -299,7 +311,7 @@ export default function POTRUpdate() {
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
         if (sap && sap.ptCodes.size > 0) {
-          onFloorPO = getOnFloorForPO(sap.ptCodes, sap.pedidos);
+          onFloorPO = getOnFloorForPO(sap.ptCodes, dr.poNumber);
           let totalPtAll = 0;
           for (const ptc of sap.ptCodes) {
             totalPtAll += totalByPt.get(ptc) ?? 0;
@@ -312,7 +324,7 @@ export default function POTRUpdate() {
           newShipped: sap ? sap.shipped : null,
           newOnFloor: onFloorPO,
           otherStock,
-          salesOrder: sap && sap.pedidos.size > 0 ? [...sap.pedidos].join(", ") : null,
+          salesOrder: sap ? formatPedidoInfos(sap.pedidoInfos) : null,
           pricePerThousand: sap?.precio ?? null,
           matched: !!sap,
           isFromSAP: false,
@@ -326,9 +338,7 @@ export default function POTRUpdate() {
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
         if (entry.ptCode) {
-          // Use pedido(s) for inventory lookup
-          const pedidos = entry.pedido ? entry.pedido.split(", ") : [];
-          onFloorPO = getOnFloorForPO([entry.ptCode], pedidos);
+          onFloorPO = getOnFloorForPO([entry.ptCode], entry.poNumber);
           const totalPt = totalByPt.get(entry.ptCode) ?? 0;
           otherStock = Math.max(0, totalPt - onFloorPO);
         }
