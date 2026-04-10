@@ -278,6 +278,8 @@ export default function Orders() {
     }
 
     let catOrdenByPO: Record<string, CatOrdenOpenItem> = {};
+    // Store all pedidos (sales orders) per PO for multi-SO aggregation
+    let allPedidosByPO: Record<string, Set<string>> = {};
     try {
       const catOrdenResponse = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
         signal: AbortSignal.timeout(30000),
@@ -286,13 +288,48 @@ export default function Orders() {
       if (catOrdenResponse.ok) {
         const catOrdenPayload = (await catOrdenResponse.json()) as CatOrdenOpenItem[];
         if (Array.isArray(catOrdenPayload)) {
-          catOrdenByPO = catOrdenPayload.reduce<Record<string, CatOrdenOpenItem>>((acc, item) => {
+          // Group all items by PO, aggregate quantities and collect all pedidos
+          catOrdenPayload.forEach((item) => {
             const poKey = normalizePoKey(item.u_PO2);
-            if (poKey && !acc[poKey]) {
-              acc[poKey] = item;
+            if (!poKey) return;
+            // Track all pedidos for this PO
+            if (!allPedidosByPO[poKey]) allPedidosByPO[poKey] = new Set();
+            if (item.pedido != null && item.pedido !== undefined) {
+              allPedidosByPO[poKey].add(String(item.pedido));
             }
-            return acc;
-          }, {});
+            if (!catOrdenByPO[poKey]) {
+              // First item for this PO — use as base
+              catOrdenByPO[poKey] = { ...item };
+            } else {
+              // Merge: sum numeric fields, concat warehouse details
+              const existing = catOrdenByPO[poKey];
+              const existCantidad = parseApiNumber(existing.cantidad) ?? 0;
+              const newCantidad = parseApiNumber(item.cantidad) ?? 0;
+              existing.cantidad = existCantidad + newCantidad;
+              const existSolicitada = parseApiNumber(existing.cantidadSolicitada) ?? 0;
+              const newSolicitada = parseApiNumber(item.cantidadSolicitada) ?? 0;
+              existing.cantidadSolicitada = existSolicitada + newSolicitada;
+              const existEnviada = parseApiNumber(existing.cantidadEnviada) ?? 0;
+              const newEnviada = parseApiNumber(item.cantidadEnviada) ?? 0;
+              existing.cantidadEnviada = existEnviada + newEnviada;
+              const existValue = parseApiNumber(existing.value) ?? 0;
+              const newValue = parseApiNumber(item.value) ?? 0;
+              existing.value = existValue + newValue;
+              // Merge warehouse details arrays
+              existing.detallesAlmacen = [
+                ...(existing.detallesAlmacen || []),
+                ...(item.detallesAlmacen || []),
+              ];
+              existing.detallesAlmacenTotal = [
+                ...(existing.detallesAlmacenTotal || []),
+                ...(item.detallesAlmacenTotal || []),
+              ];
+              // Sum totalStockDisponible
+              const existStock = parseApiNumber(existing.totalStockDisponible) ?? 0;
+              const newStock = parseApiNumber(item.totalStockDisponible) ?? 0;
+              existing.totalStockDisponible = existStock + newStock;
+            }
+          });
         } else {
           console.warn("Unexpected CatOrden open-with-orden response format");
         }
