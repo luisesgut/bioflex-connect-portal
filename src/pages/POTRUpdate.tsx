@@ -615,14 +615,24 @@ export default function POTRUpdate() {
                         <TableCell>{m.itemCode}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{m.description}</TableCell>
                         <TableCell className="text-sm">{m.itemType || "—"}</TableCell>
+                        <TableCell className="text-right text-muted-foreground text-xs">
+                          {!m.isFromSAP && m.currentShipped ? m.currentShipped.replace(/\.0$/, "") : "—"}
+                        </TableCell>
                         <TableCell className="text-right">
                           {m.newShipped != null ? (
-                            <span className="text-green-600 dark:text-green-400 font-medium">{m.newShipped.toLocaleString()}</span>
+                            <span className={`font-medium ${!m.isFromSAP && m.currentShipped && String(m.newShipped) !== m.currentShipped.replace(/,/g, "").replace(/\.0$/, "") ? "text-green-600 dark:text-green-400" : ""}`}>
+                              {m.newShipped.toLocaleString()}
+                            </span>
                           ) : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground text-xs">
+                          {!m.isFromSAP && m.currentOnFloor ? m.currentOnFloor.replace(/\.0$/, "") : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.newOnFloor != null ? (
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">{m.newOnFloor.toLocaleString()}</span>
+                            <span className={`font-medium ${!m.isFromSAP && m.currentOnFloor && String(m.newOnFloor) !== m.currentOnFloor.replace(/,/g, "").replace(/\.0$/, "") ? "text-blue-600 dark:text-blue-400" : ""}`}>
+                              {m.newOnFloor.toLocaleString()}
+                            </span>
                           ) : "—"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
@@ -643,6 +653,9 @@ export default function POTRUpdate() {
                         </TableCell>
                         <TableCell className="text-sm">
                           {m.dueDate || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {m.salesOrder || "—"}
                         </TableCell>
                         <TableCell>
                           {m.isFromSAP ? (
