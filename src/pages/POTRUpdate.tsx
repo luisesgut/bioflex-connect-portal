@@ -126,7 +126,7 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
       // Track closed status per pedido: closed when cantidad_enviada >= cantidad_solicitada
