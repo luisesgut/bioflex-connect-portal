@@ -233,12 +233,16 @@ export default function POTRUpdate() {
           if (lo.po_number && !sapMap.has(lo.po_number)) {
             const ptCode = (lo.products as any)?.pt_code || null;
             const isClosed = lo.status === 'closed' || lo.status === 'delivered' || lo.status === 'shipped';
+            const ptCodes = new Set<string>();
+            if (ptCode) ptCodes.add(ptCode);
+            const pedidos = new Set<string>();
+            if (lo.sales_order_number) pedidos.add(lo.sales_order_number);
             sapMap.set(lo.po_number, {
-              shipped: isClosed ? lo.quantity : null,
-              ptCode,
-              pedido: lo.sales_order_number || null,
+              shipped: isClosed ? lo.quantity : 0,
+              ptCodes,
+              pedidos,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
-              cantidad: lo.quantity != null ? Number(lo.quantity) : null,
+              cantidad: lo.quantity != null ? Number(lo.quantity) : 0,
             });
           }
         }
@@ -247,7 +251,7 @@ export default function POTRUpdate() {
       // Collect ALL pt_codes for inventory lookup (from both Excel-matched and SAP-only)
       const allPtCodes = new Set<string>();
       for (const s of sapMap.values()) {
-        if (s.ptCode) allPtCodes.add(s.ptCode);
+        for (const pc of s.ptCodes) allPtCodes.add(pc);
       }
       for (const s of sapOnlyEntries) {
         if (s.ptCode) allPtCodes.add(s.ptCode);
@@ -280,24 +284,28 @@ export default function POTRUpdate() {
         const sap = sapMap.get(dr.poNumber);
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
-        if (sap?.ptCode) {
-          const poKey = `${sap.ptCode}::${dr.poNumber}`;
-          onFloorPO = palletsByPtAndOrder.get(poKey) ?? 0;
-          const totalPt = totalByPt.get(sap.ptCode) ?? 0;
-          otherStock = Math.max(0, totalPt - onFloorPO);
+        if (sap && sap.ptCodes.size > 0) {
+          onFloorPO = 0;
+          let totalPtAll = 0;
+          for (const ptc of sap.ptCodes) {
+            const poKey = `${ptc}::${dr.poNumber}`;
+            onFloorPO += palletsByPtAndOrder.get(poKey) ?? 0;
+            totalPtAll += totalByPt.get(ptc) ?? 0;
+          }
+          otherStock = Math.max(0, totalPtAll - onFloorPO);
         }
         return {
           ...dr,
           itemType: "",
-          newShipped: sap?.shipped ?? null,
+          newShipped: sap ? sap.shipped : null,
           newOnFloor: onFloorPO,
           otherStock,
-          salesOrder: sap?.pedido ?? null,
+          salesOrder: sap && sap.pedidos.size > 0 ? [...sap.pedidos].join(", ") : null,
           pricePerThousand: sap?.precio ?? null,
           matched: !!sap,
           isFromSAP: false,
           dueDate: null,
-          blanketQuantity: sap?.cantidad ?? null,
+          blanketQuantity: sap ? sap.cantidad : null,
         };
       });
 
