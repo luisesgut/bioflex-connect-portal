@@ -278,6 +278,8 @@ export default function Orders() {
     }
 
     let catOrdenByPO: Record<string, CatOrdenOpenItem> = {};
+    // Store all pedidos (sales orders) per PO for multi-SO aggregation
+    let allPedidosByPO: Record<string, Set<string>> = {};
     try {
       const catOrdenResponse = await fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
         signal: AbortSignal.timeout(30000),
@@ -286,13 +288,48 @@ export default function Orders() {
       if (catOrdenResponse.ok) {
         const catOrdenPayload = (await catOrdenResponse.json()) as CatOrdenOpenItem[];
         if (Array.isArray(catOrdenPayload)) {
-          catOrdenByPO = catOrdenPayload.reduce<Record<string, CatOrdenOpenItem>>((acc, item) => {
+          // Group all items by PO, aggregate quantities and collect all pedidos
+          catOrdenPayload.forEach((item) => {
             const poKey = normalizePoKey(item.u_PO2);
-            if (poKey && !acc[poKey]) {
-              acc[poKey] = item;
+            if (!poKey) return;
+            // Track all pedidos for this PO
+            if (!allPedidosByPO[poKey]) allPedidosByPO[poKey] = new Set();
+            if (item.pedido != null && item.pedido !== undefined) {
+              allPedidosByPO[poKey].add(String(item.pedido));
             }
-            return acc;
-          }, {});
+            if (!catOrdenByPO[poKey]) {
+              // First item for this PO — use as base
+              catOrdenByPO[poKey] = { ...item };
+            } else {
+              // Merge: sum numeric fields, concat warehouse details
+              const existing = catOrdenByPO[poKey];
+              const existCantidad = parseApiNumber(existing.cantidad) ?? 0;
+              const newCantidad = parseApiNumber(item.cantidad) ?? 0;
+              existing.cantidad = existCantidad + newCantidad;
+              const existSolicitada = parseApiNumber(existing.cantidadSolicitada) ?? 0;
+              const newSolicitada = parseApiNumber(item.cantidadSolicitada) ?? 0;
+              existing.cantidadSolicitada = existSolicitada + newSolicitada;
+              const existEnviada = parseApiNumber(existing.cantidadEnviada) ?? 0;
+              const newEnviada = parseApiNumber(item.cantidadEnviada) ?? 0;
+              existing.cantidadEnviada = existEnviada + newEnviada;
+              const existValue = parseApiNumber(existing.value) ?? 0;
+              const newValue = parseApiNumber(item.value) ?? 0;
+              existing.value = existValue + newValue;
+              // Merge warehouse details arrays
+              existing.detallesAlmacen = [
+                ...(existing.detallesAlmacen || []),
+                ...(item.detallesAlmacen || []),
+              ];
+              existing.detallesAlmacenTotal = [
+                ...(existing.detallesAlmacenTotal || []),
+                ...(item.detallesAlmacenTotal || []),
+              ];
+              // Sum totalStockDisponible
+              const existStock = parseApiNumber(existing.totalStockDisponible) ?? 0;
+              const newStock = parseApiNumber(item.totalStockDisponible) ?? 0;
+              existing.totalStockDisponible = existStock + newStock;
+            }
+          });
         } else {
           console.warn("Unexpected CatOrden open-with-orden response format");
         }
@@ -338,12 +375,15 @@ export default function Orders() {
 
       const sapInserts = missingSapItems.map((item) => {
         const poNumber = item.u_PO2!.trim();
-        const sapCantidad = parseApiNumber(item.cantidad);
-        const sapPrecio = parseApiNumber(item.precio);
+        const poKey = normalizePoKey(poNumber);
+        // Use aggregated data from catOrdenByPO
+        const aggItem = catOrdenByPO[poKey];
+        const sapCantidad = parseApiNumber(aggItem?.cantidad ?? item.cantidad);
+        const sapPrecio = parseApiNumber(aggItem?.precio ?? item.precio);
         const quantity = sapCantidad !== null ? sapCantidad * 1000 : 0;
         const totalPrice = sapCantidad !== null && sapPrecio !== null ? sapCantidad * sapPrecio : null;
-        const salesOrderNumber =
-          item.pedido !== null && item.pedido !== undefined ? String(item.pedido) : null;
+        const pedidos = allPedidosByPO[poKey];
+        const salesOrderNumber = pedidos && pedidos.size > 0 ? [...pedidos].join(", ") : null;
         const productKey = (item.clave || "").trim().toUpperCase();
         const productId = productKey ? productIdByKey.get(productKey) || null : null;
 
@@ -379,9 +419,22 @@ export default function Orders() {
 
     const combinedOrdersSource = ordersData || [];
 
-    const salesOrderNumbers = combinedOrdersSource
-      .map((o: any) => o.sales_order_number)
-      .filter((son: unknown): son is string => typeof son === "string" && son.trim() !== "");
+    // Collect all sales order numbers from both local DB and API aggregation
+    const salesOrderNumbersSet = new Set<string>();
+    combinedOrdersSource.forEach((o: any) => {
+      if (typeof o.sales_order_number === "string" && o.sales_order_number.trim()) {
+        // Handle comma-separated sales orders stored in DB
+        o.sales_order_number.split(",").forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed) salesOrderNumbersSet.add(trimmed);
+        });
+      }
+    });
+    // Add all pedidos from API
+    Object.entries(allPedidosByPO).forEach(([poKey, pedidos]) => {
+      pedidos.forEach((p) => salesOrderNumbersSet.add(p));
+    });
+    const salesOrderNumbers = [...salesOrderNumbersSet];
 
     const poNumbers = combinedOrdersSource
       .map((o: any) => o.po_number)
@@ -393,10 +446,21 @@ export default function Orders() {
     let shippedTraceability: Record<string, Set<string>> = {};
 
     const salesOrderToPO: Record<string, string> = {};
+    // Map from local DB
     combinedOrdersSource.forEach((order: any) => {
       if (order.sales_order_number && order.po_number) {
-        salesOrderToPO[order.sales_order_number] = order.po_number;
+        order.sales_order_number.split(",").forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed) salesOrderToPO[trimmed] = order.po_number;
+        });
       }
+    });
+    // Map from API pedidos
+    Object.entries(allPedidosByPO).forEach(([poKey, pedidos]) => {
+      // Find the actual PO number for this key
+      const order = combinedOrdersSource.find((o: any) => normalizePoKey(o.po_number) === poKey);
+      const poNumber = order?.po_number || poKey;
+      pedidos.forEach((p) => { salesOrderToPO[p] = poNumber; });
     });
     
     if (salesOrderNumbers.length > 0) {
@@ -654,10 +718,12 @@ export default function Orders() {
       const quantityFromApi = apiCantidad !== null ? apiCantidad * 1000 : null;
       const totalPriceFromApi = parseApiNumber(catOrdenItem?.value) ??
         (apiCantidad !== null && apiPrecio !== null ? apiCantidad * apiPrecio : null);
-      const salesOrderFromApi =
-        catOrdenItem?.pedido !== null && catOrdenItem?.pedido !== undefined
-          ? String(catOrdenItem.pedido)
-          : null;
+      // Collect all pedidos for this PO from API aggregation
+      const poKey = normalizePoKey(order.po_number);
+      const apiPedidos = allPedidosByPO[poKey];
+      const salesOrderFromApi = apiPedidos && apiPedidos.size > 0
+        ? [...apiPedidos].join(", ")
+        : null;
       const mergedQuantity = quantityFromApi ?? order.quantity;
       const mergedSalesOrder = salesOrderFromApi || order.sales_order_number || null;
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
