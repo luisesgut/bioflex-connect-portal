@@ -718,10 +718,12 @@ export default function Orders() {
       const quantityFromApi = apiCantidad !== null ? apiCantidad * 1000 : null;
       const totalPriceFromApi = parseApiNumber(catOrdenItem?.value) ??
         (apiCantidad !== null && apiPrecio !== null ? apiCantidad * apiPrecio : null);
-      const salesOrderFromApi =
-        catOrdenItem?.pedido !== null && catOrdenItem?.pedido !== undefined
-          ? String(catOrdenItem.pedido)
-          : null;
+      // Collect all pedidos for this PO from API aggregation
+      const poKey = normalizePoKey(order.po_number);
+      const apiPedidos = allPedidosByPO[poKey];
+      const salesOrderFromApi = apiPedidos && apiPedidos.size > 0
+        ? [...apiPedidos].join(", ")
+        : null;
       const mergedQuantity = quantityFromApi ?? order.quantity;
       const mergedSalesOrder = salesOrderFromApi || order.sales_order_number || null;
       const stats = inventoryByPO[order.po_number] || { inFloor: 0, shipped: 0 };
