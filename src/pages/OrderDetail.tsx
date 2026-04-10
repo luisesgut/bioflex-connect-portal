@@ -318,8 +318,43 @@ export default function OrderDetail() {
 
         const payload = await orderResponse.json();
         const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload : [];
-        const sapItem =
-          list.find((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number)) || null;
+        // Aggregate ALL matching SAP items for this PO (multiple sales orders)
+        const matchingItems = list.filter((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number));
+        let sapItem: CatOrdenOpenItem | null = null;
+        const allPedidos = new Set<string>();
+        if (matchingItems.length > 0) {
+          sapItem = { ...matchingItems[0] };
+          for (const mi of matchingItems) {
+            if (mi.pedido != null && mi.pedido !== undefined) {
+              allPedidos.add(String(mi.pedido));
+            }
+          }
+          if (matchingItems.length > 1) {
+            // Sum quantities across all matching items
+            let totalCantidad = 0, totalSolicitada = 0, totalEnviada = 0, totalValue = 0;
+            let mergedAlmacen: StockWarehouseDetail[] = [];
+            let mergedAlmacenTotal: StockWarehouseDetail[] = [];
+            let totalStockDisp = 0;
+            for (const mi of matchingItems) {
+              totalCantidad += parseApiNumber(mi.cantidad) ?? 0;
+              totalSolicitada += parseApiNumber(mi.cantidadSolicitada) ?? 0;
+              totalEnviada += parseApiNumber(mi.cantidadEnviada) ?? 0;
+              totalValue += parseApiNumber(mi.value) ?? 0;
+              totalStockDisp += parseApiNumber(mi.totalStockDisponible) ?? 0;
+              mergedAlmacen = [...mergedAlmacen, ...((mi.detallesAlmacen as StockWarehouseDetail[]) || [])];
+              mergedAlmacenTotal = [...mergedAlmacenTotal, ...((mi.detallesAlmacenTotal as StockWarehouseDetail[]) || [])];
+            }
+            sapItem.cantidad = totalCantidad;
+            sapItem.cantidadSolicitada = totalSolicitada;
+            sapItem.cantidadEnviada = totalEnviada;
+            sapItem.value = totalValue;
+            sapItem.totalStockDisponible = totalStockDisp;
+            sapItem.detallesAlmacen = mergedAlmacen as any;
+            sapItem.detallesAlmacenTotal = mergedAlmacenTotal as any;
+            // Store joined pedidos in the pedido field
+            sapItem.pedido = allPedidos.size > 0 ? [...allPedidos].join(", ") : null;
+          }
+        }
 
 
         const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
