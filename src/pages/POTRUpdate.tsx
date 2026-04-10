@@ -129,9 +129,11 @@ export default function POTRUpdate() {
         .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
+      // Track closed status per pedido: closed when cantidad_enviada >= cantidad_solicitada
       const sapOnlyPtCodes = new Set<string>();
-      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidos: Set<string>; precio: number | null; cantidad: number }>();
-      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidos: Set<string>; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
+      type PedidoInfo = { pedido: string; closed: boolean };
+      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; cantidad: number }>();
+      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -139,6 +141,8 @@ export default function POTRUpdate() {
         const pedido = so.pedido != null ? String(so.pedido) : null;
         const precio = so.precio != null ? Number(so.precio) : null;
         const cantidad = so.cantidad != null ? Number(so.cantidad) : 0;
+        const cantidadSolicitada = (so as any).cantidad_solicitada != null ? Number((so as any).cantidad_solicitada) : 0;
+        const isClosed = cantidadSolicitada > 0 && shipped >= cantidadSolicitada;
 
         if (excelPoSet.has(so.po_number)) {
           const existing = sapMap.get(so.po_number);
@@ -146,14 +150,16 @@ export default function POTRUpdate() {
             existing.shipped += shipped;
             existing.cantidad += cantidad;
             if (so.pt_code) existing.ptCodes.add(so.pt_code);
-            if (pedido) existing.pedidos.add(pedido);
+            if (pedido && !existing.pedidoInfos.some(p => p.pedido === pedido)) {
+              existing.pedidoInfos.push({ pedido, closed: isClosed });
+            }
             if (precio != null && existing.precio == null) existing.precio = precio;
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
-            const pedidos = new Set<string>();
-            if (pedido) pedidos.add(pedido);
-            sapMap.set(so.po_number, { shipped, ptCodes, pedidos, precio, cantidad });
+            const pedidoInfos: PedidoInfo[] = [];
+            if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
+            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, cantidad });
           }
         } else {
           if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
@@ -162,7 +168,9 @@ export default function POTRUpdate() {
             existing.shipped += shipped;
             existing.cantidad += cantidad;
             if (so.pt_code) existing.ptCodes.add(so.pt_code);
-            if (pedido) existing.pedidos.add(pedido);
+            if (pedido && !existing.pedidoInfos.some(p => p.pedido === pedido)) {
+              existing.pedidoInfos.push({ pedido, closed: isClosed });
+            }
             if (precio != null && existing.precio == null) existing.precio = precio;
             if (so.producto && !existing.descriptions.includes(so.producto)) existing.descriptions.push(so.producto);
             if (so.fecha_vencimiento && !existing.dueDates.includes(so.fecha_vencimiento)) existing.dueDates.push(so.fecha_vencimiento);
@@ -170,13 +178,13 @@ export default function POTRUpdate() {
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
-            const pedidos = new Set<string>();
-            if (pedido) pedidos.add(pedido);
+            const pedidoInfos: PedidoInfo[] = [];
+            if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
             sapOnlyAgg.set(so.po_number, {
               ptCodes,
               descriptions: so.producto ? [so.producto] : [],
               shipped,
-              pedidos,
+              pedidoInfos,
               precio,
               dueDates: so.fecha_vencimiento ? [so.fecha_vencimiento] : [],
               tipoEmpaques: so.tipo_empaque ? [so.tipo_empaque] : [],
