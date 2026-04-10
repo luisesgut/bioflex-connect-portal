@@ -584,13 +584,16 @@ export default function POTRUpdate() {
                       <TableHead>Item #</TableHead>
                       <TableHead>Descripción</TableHead>
                       <TableHead>Item Type</TableHead>
-                      <TableHead className="text-right">Shipped</TableHead>
-                      <TableHead className="text-right">On Floor</TableHead>
+                      <TableHead className="text-right text-muted-foreground">Shipped (Excel)</TableHead>
+                      <TableHead className="text-right">Shipped (SAP)</TableHead>
+                      <TableHead className="text-right text-muted-foreground">On Floor (Excel)</TableHead>
+                      <TableHead className="text-right">On Floor (SAP)</TableHead>
                       <TableHead className="text-right">Qty Produced</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
                       <TableHead className="text-right">Blanket Qty</TableHead>
                       <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>PO Date Due</TableHead>
+                      <TableHead>Sales Order</TableHead>
                       <TableHead>Estado</TableHead>
                     </TableRow>
                   </TableHeader>
