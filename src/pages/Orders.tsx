@@ -375,12 +375,15 @@ export default function Orders() {
 
       const sapInserts = missingSapItems.map((item) => {
         const poNumber = item.u_PO2!.trim();
-        const sapCantidad = parseApiNumber(item.cantidad);
-        const sapPrecio = parseApiNumber(item.precio);
+        const poKey = normalizePoKey(poNumber);
+        // Use aggregated data from catOrdenByPO
+        const aggItem = catOrdenByPO[poKey];
+        const sapCantidad = parseApiNumber(aggItem?.cantidad ?? item.cantidad);
+        const sapPrecio = parseApiNumber(aggItem?.precio ?? item.precio);
         const quantity = sapCantidad !== null ? sapCantidad * 1000 : 0;
         const totalPrice = sapCantidad !== null && sapPrecio !== null ? sapCantidad * sapPrecio : null;
-        const salesOrderNumber =
-          item.pedido !== null && item.pedido !== undefined ? String(item.pedido) : null;
+        const pedidos = allPedidosByPO[poKey];
+        const salesOrderNumber = pedidos && pedidos.size > 0 ? [...pedidos].join(", ") : null;
         const productKey = (item.clave || "").trim().toUpperCase();
         const productId = productKey ? productIdByKey.get(productKey) || null : null;
 
