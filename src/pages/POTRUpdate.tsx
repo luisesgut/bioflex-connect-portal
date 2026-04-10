@@ -128,38 +128,77 @@ export default function POTRUpdate() {
         .from("sap_orders")
         .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
-      const sapMap = new Map<string, { shipped: number | null; ptCode: string | null; pedido: string | null; precio: number | null; cantidad: number | null }>();
-      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number | null; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number | null }[] = [];
-
-      // Collect SAP-only pt_codes to look up item_type from products table
-      const sapOnlyPtCodes = new Set<string>();
+      // Aggregate multiple SAP orders per PO number
+      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidos: Set<string>; precio: number | null; cantidad: number }>();
+      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidos: Set<string>; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
-        const entry = {
-          shipped: so.cantidad_enviada != null ? Number(so.cantidad_enviada) : null,
-          ptCode: so.pt_code || null,
-          pedido: so.pedido != null ? String(so.pedido) : null,
-          precio: so.precio != null ? Number(so.precio) : null,
-          cantidad: so.cantidad != null ? Number(so.cantidad) : null,
-        };
+        const shipped = so.cantidad_enviada != null ? Number(so.cantidad_enviada) : 0;
+        const pedido = so.pedido != null ? String(so.pedido) : null;
+        const precio = so.precio != null ? Number(so.precio) : null;
+        const cantidad = so.cantidad != null ? Number(so.cantidad) : 0;
 
         if (excelPoSet.has(so.po_number)) {
-          sapMap.set(so.po_number, entry);
+          const existing = sapMap.get(so.po_number);
+          if (existing) {
+            existing.shipped += shipped;
+            existing.cantidad += cantidad;
+            if (so.pt_code) existing.ptCodes.add(so.pt_code);
+            if (pedido) existing.pedidos.add(pedido);
+            if (precio != null && existing.precio == null) existing.precio = precio;
+          } else {
+            const ptCodes = new Set<string>();
+            if (so.pt_code) ptCodes.add(so.pt_code);
+            const pedidos = new Set<string>();
+            if (pedido) pedidos.add(pedido);
+            sapMap.set(so.po_number, { shipped, ptCodes, pedidos, precio, cantidad });
+          }
         } else {
           if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
-          sapOnlyEntries.push({
-            poNumber: so.po_number,
-            ptCode: so.pt_code || "",
-            description: so.producto || "",
-            shipped: entry.shipped,
-            pedido: entry.pedido,
-            precio: entry.precio,
-            dueDate: so.fecha_vencimiento || null,
-            tipoEmpaque: so.tipo_empaque || "",
-            cantidad: entry.cantidad,
-          });
+          const existing = sapOnlyAgg.get(so.po_number);
+          if (existing) {
+            existing.shipped += shipped;
+            existing.cantidad += cantidad;
+            if (so.pt_code) existing.ptCodes.add(so.pt_code);
+            if (pedido) existing.pedidos.add(pedido);
+            if (precio != null && existing.precio == null) existing.precio = precio;
+            if (so.producto && !existing.descriptions.includes(so.producto)) existing.descriptions.push(so.producto);
+            if (so.fecha_vencimiento && !existing.dueDates.includes(so.fecha_vencimiento)) existing.dueDates.push(so.fecha_vencimiento);
+            if (so.tipo_empaque && !existing.tipoEmpaques.includes(so.tipo_empaque)) existing.tipoEmpaques.push(so.tipo_empaque);
+          } else {
+            const ptCodes = new Set<string>();
+            if (so.pt_code) ptCodes.add(so.pt_code);
+            const pedidos = new Set<string>();
+            if (pedido) pedidos.add(pedido);
+            sapOnlyAgg.set(so.po_number, {
+              ptCodes,
+              descriptions: so.producto ? [so.producto] : [],
+              shipped,
+              pedidos,
+              precio,
+              dueDates: so.fecha_vencimiento ? [so.fecha_vencimiento] : [],
+              tipoEmpaques: so.tipo_empaque ? [so.tipo_empaque] : [],
+              cantidad,
+            });
+          }
         }
+      }
+
+      // Convert sapOnlyAgg to sapOnlyEntries array
+      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
+      for (const [poNumber, agg] of sapOnlyAgg) {
+        sapOnlyEntries.push({
+          poNumber,
+          ptCode: [...agg.ptCodes][0] || "",
+          description: agg.descriptions[0] || "",
+          shipped: agg.shipped,
+          pedido: agg.pedidos.size > 0 ? [...agg.pedidos].join(", ") : null,
+          precio: agg.precio,
+          dueDate: agg.dueDates[0] || null,
+          tipoEmpaque: agg.tipoEmpaques[0] || "",
+          cantidad: agg.cantidad,
+        });
       }
 
       // Fetch item_type from products table for SAP-only entries
