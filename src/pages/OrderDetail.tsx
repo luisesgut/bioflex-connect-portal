@@ -307,7 +307,11 @@ export default function OrderDetail() {
         if (poResult.data) {
           for (const po of poResult.data) {
             if (po.sales_order_number && po.po_number) {
-              poBySONumber[po.sales_order_number] = po.po_number;
+              // Handle comma-separated sales order numbers
+              po.sales_order_number.split(",").forEach((s: string) => {
+                const trimmed = s.trim();
+                if (trimmed) poBySONumber[trimmed] = po.po_number;
+              });
             }
           }
         }
