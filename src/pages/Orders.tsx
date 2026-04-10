@@ -419,9 +419,22 @@ export default function Orders() {
 
     const combinedOrdersSource = ordersData || [];
 
-    const salesOrderNumbers = combinedOrdersSource
-      .map((o: any) => o.sales_order_number)
-      .filter((son: unknown): son is string => typeof son === "string" && son.trim() !== "");
+    // Collect all sales order numbers from both local DB and API aggregation
+    const salesOrderNumbersSet = new Set<string>();
+    combinedOrdersSource.forEach((o: any) => {
+      if (typeof o.sales_order_number === "string" && o.sales_order_number.trim()) {
+        // Handle comma-separated sales orders stored in DB
+        o.sales_order_number.split(",").forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed) salesOrderNumbersSet.add(trimmed);
+        });
+      }
+    });
+    // Add all pedidos from API
+    Object.entries(allPedidosByPO).forEach(([poKey, pedidos]) => {
+      pedidos.forEach((p) => salesOrderNumbersSet.add(p));
+    });
+    const salesOrderNumbers = [...salesOrderNumbersSet];
 
     const poNumbers = combinedOrdersSource
       .map((o: any) => o.po_number)
@@ -433,10 +446,21 @@ export default function Orders() {
     let shippedTraceability: Record<string, Set<string>> = {};
 
     const salesOrderToPO: Record<string, string> = {};
+    // Map from local DB
     combinedOrdersSource.forEach((order: any) => {
       if (order.sales_order_number && order.po_number) {
-        salesOrderToPO[order.sales_order_number] = order.po_number;
+        order.sales_order_number.split(",").forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed) salesOrderToPO[trimmed] = order.po_number;
+        });
       }
+    });
+    // Map from API pedidos
+    Object.entries(allPedidosByPO).forEach(([poKey, pedidos]) => {
+      // Find the actual PO number for this key
+      const order = combinedOrdersSource.find((o: any) => normalizePoKey(o.po_number) === poKey);
+      const poNumber = order?.po_number || poKey;
+      pedidos.forEach((p) => { salesOrderToPO[p] = poNumber; });
     });
     
     if (salesOrderNumbers.length > 0) {
