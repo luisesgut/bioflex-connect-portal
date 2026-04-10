@@ -129,6 +129,7 @@ export default function POTRUpdate() {
         .select("po_number, cantidad_enviada, cantidad, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
+      const sapOnlyPtCodes = new Set<string>();
       const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidos: Set<string>; precio: number | null; cantidad: number }>();
       const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidos: Set<string>; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
