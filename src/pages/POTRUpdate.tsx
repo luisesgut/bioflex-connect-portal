@@ -280,17 +280,28 @@ export default function POTRUpdate() {
         }
       }
 
+      // Helper: sum on-floor stock for a PO by matching all its sales orders (pedidos)
+      const getOnFloorForPO = (ptCodes: Set<string> | string[], pedidos: Set<string> | string[]) => {
+        let onFloor = 0;
+        const ptArr = ptCodes instanceof Set ? [...ptCodes] : ptCodes;
+        const pedArr = pedidos instanceof Set ? [...pedidos] : pedidos;
+        for (const ptc of ptArr) {
+          for (const ped of pedArr) {
+            onFloor += palletsByPtAndOrder.get(`${ptc}::${ped}`) ?? 0;
+          }
+        }
+        return onFloor;
+      };
+
       // Build Excel-based results
       const excelResults: POTRMatch[] = dataRows.map(dr => {
         const sap = sapMap.get(dr.poNumber);
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
         if (sap && sap.ptCodes.size > 0) {
-          onFloorPO = 0;
+          onFloorPO = getOnFloorForPO(sap.ptCodes, sap.pedidos);
           let totalPtAll = 0;
           for (const ptc of sap.ptCodes) {
-            const poKey = `${ptc}::${dr.poNumber}`;
-            onFloorPO += palletsByPtAndOrder.get(poKey) ?? 0;
             totalPtAll += totalByPt.get(ptc) ?? 0;
           }
           otherStock = Math.max(0, totalPtAll - onFloorPO);
