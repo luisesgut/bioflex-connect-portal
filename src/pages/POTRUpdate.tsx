@@ -326,8 +326,9 @@ export default function POTRUpdate() {
         let onFloorPO: number | null = null;
         let otherStock: number | null = null;
         if (entry.ptCode) {
-          const poKey = `${entry.ptCode}::${entry.poNumber}`;
-          onFloorPO = palletsByPtAndOrder.get(poKey) ?? 0;
+          // Use pedido(s) for inventory lookup
+          const pedidos = entry.pedido ? entry.pedido.split(", ") : [];
+          onFloorPO = getOnFloorForPO([entry.ptCode], pedidos);
           const totalPt = totalByPt.get(entry.ptCode) ?? 0;
           otherStock = Math.max(0, totalPt - onFloorPO);
         }
