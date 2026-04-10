@@ -141,7 +141,7 @@ export default function POTRUpdate() {
         const pedido = so.pedido != null ? String(so.pedido) : null;
         const precio = so.precio != null ? Number(so.precio) : null;
         const cantidad = so.cantidad != null ? Number(so.cantidad) : 0;
-        const cantidadSolicitada = (so as any).cantidad_solicitada != null ? Number((so as any).cantidad_solicitada) : 0;
+        const cantidadSolicitada = so.cantidad_solicitada != null ? Number(so.cantidad_solicitada) : 0;
         const isClosed = cantidadSolicitada > 0 && shipped >= cantidadSolicitada;
 
         if (excelPoSet.has(so.po_number)) {
