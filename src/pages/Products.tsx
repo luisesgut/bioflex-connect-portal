@@ -190,7 +190,7 @@ export default function Products() {
           normalizeDestinyCode(product.customer_item);
         const destiny = destinyByCode[lookupCode];
 
-        const tipoEmpaque = destiny?.tipoEmpaque || product.tipo_empaque;
+        const tipoEmpaque = destiny?.tipoEmpaque || null;
 
         // Auto-map product_line and item_type from tipo_empaque if not already set
         let productLine = product.product_line;

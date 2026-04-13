@@ -625,18 +625,8 @@ export default function CreateOrder() {
                     </Command>
               </PopoverContent>
                 </Popover>
-                {selectedProduct && (selectedProduct.print_card_url || selectedProduct.customer_tech_spec_url) && (
+                {selectedProduct && selectedProduct.customer_tech_spec_url && (
                   <div className="flex items-center gap-3 mt-2">
-                    {selectedProduct.print_card_url && (
-                      <button
-                        type="button"
-                        onClick={() => openStorageFile(selectedProduct.print_card_url, 'print-cards')}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Print Card
-                      </button>
-                    )}
                     {selectedProduct.customer_tech_spec_url && (
                       <button
                         type="button"
