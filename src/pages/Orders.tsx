@@ -261,7 +261,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, pt_code)
+        products (name, customer, item_type, product_line, dp_sales_csr_names, customer_item, item_description, pt_code)
       `;
 
     const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
@@ -752,7 +752,7 @@ export default function Orders() {
           : null;
       const excessStock = excessStockFromSap ?? excessStockFromInventory;
       const productPtCode = (order.products as any)?.pt_code || null;
-      const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
+      const productTipoEmpaque = catOrdenItem?.tipoEmpaque || null;
       const derivedProductItemType =
         order.products?.item_type ||
         mapProductLineToItemType((order.products as any)?.product_line) ||
