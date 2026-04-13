@@ -613,19 +613,49 @@ export default function LoadDetail() {
           .select("po_number, quantity")
           .in("po_number", loadPONumbers);
 
-        // Fetch shipped quantities per PO from shipped_pallets
-        const { data: shippedData } = await supabase
+        // Fetch shipped quantities per PO from shipped_pallets (by customer_lot AND bfx_order)
+        const { data: shippedByLot } = await supabase
           .from("shipped_pallets")
-          .select("customer_lot, quantity")
-          .in("customer_lot", loadPONumbers);
+          .select("customer_lot, bfx_order, quantity")
+          .or(`customer_lot.in.(${loadPONumbers.join(',')}),bfx_order.in.(${loadPONumbers.join(',')})`);
+
+        // Fetch SAP shipped quantities as fallback/supplement
+        const { data: sapShippedData } = await supabase
+          .from("sap_orders")
+          .select("po_number, cantidad_enviada")
+          .in("po_number", loadPONumbers);
 
         (poQuantities || []).forEach((po: any) => {
           totalsMap.set(po.po_number, { total_quantity: po.quantity, shipped_quantity: 0 });
         });
-        (shippedData || []).forEach((sp: any) => {
-          const entry = totalsMap.get(sp.customer_lot);
+
+        // Aggregate shipped from shipped_pallets
+        const shippedFromPallets = new Map<string, number>();
+        (shippedByLot || []).forEach((sp: any) => {
+          const poKey = sp.customer_lot || sp.bfx_order;
+          if (poKey && loadPOSet.has(poKey)) {
+            shippedFromPallets.set(poKey, (shippedFromPallets.get(poKey) || 0) + (sp.quantity || 0));
+          }
+        });
+
+        // Aggregate shipped from SAP (cantidad_enviada is already in pieces)
+        const shippedFromSAP = new Map<string, number>();
+        (sapShippedData || []).forEach((so: any) => {
+          if (so.cantidad_enviada && so.po_number) {
+            shippedFromSAP.set(so.po_number, (shippedFromSAP.get(so.po_number) || 0) + (so.cantidad_enviada || 0));
+          }
+        });
+
+        // Use the higher of shipped_pallets vs SAP for each PO
+        loadPONumbers.forEach((poNum) => {
+          const entry = totalsMap.get(poNum);
           if (entry) {
-            entry.shipped_quantity += sp.quantity;
+            const fromPallets = shippedFromPallets.get(poNum) || 0;
+            const fromSAP = shippedFromSAP.get(poNum) || 0;
+            entry.shipped_quantity = Math.max(fromPallets, fromSAP);
+          } else if (shippedFromSAP.has(poNum)) {
+            // PO might not be in purchase_orders but SAP has data
+            totalsMap.set(poNum, { total_quantity: 0, shipped_quantity: shippedFromSAP.get(poNum) || 0 });
           }
         });
         setPoTotalsMap(totalsMap);
