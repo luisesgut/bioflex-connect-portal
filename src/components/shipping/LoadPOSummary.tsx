@@ -156,6 +156,7 @@ export function LoadPOSummary({
       "Product": po.description,
       "Pallets": po.pallet_count,
       "Volume": po.total_quantity,
+      ...(showPoTotals ? { "Prev. Shipped": po.prev_shipped || "" } : {}),
       "Release #": po.release_numbers.size > 0 ? Array.from(po.release_numbers).join(", ") : "",
       "Released": po.released_count,
       "Pending": po.pending_count,
