@@ -250,7 +250,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
         item_description: form.item_description || null,
         customer: form.customer || null,
         item_type: form.item_type || null,
-        tipo_empaque: form.tipo_empaque || null,
+        
         pt_code: form.pt_code || null,
         pieces_per_pallet: form.pieces_per_pallet || null,
         unidades_por_tarima: form.unidades_por_tarima || null,
