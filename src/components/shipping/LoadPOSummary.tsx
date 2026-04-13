@@ -44,6 +44,7 @@ interface POSummary {
   on_hold_count: number;
   subtotal: number | null;
   release_numbers: Set<string>;
+  prev_shipped: number;
 }
 
 interface PODocuments {
