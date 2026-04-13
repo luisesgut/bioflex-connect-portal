@@ -127,8 +127,19 @@ export function LoadPOSummary({
       }
     });
     
+    // Calculate previously shipped volume (total shipped minus what's in this load)
+    if (poTotalsMap) {
+      poMap.forEach((po) => {
+        const totals = poTotalsMap.get(po.customer_lot);
+        if (totals) {
+          // shipped_quantity = all shipped ever; subtract this load's volume to get previous
+          po.prev_shipped = Math.max(0, totals.shipped_quantity - po.total_quantity);
+        }
+      });
+    }
+
     return Array.from(poMap.values());
-  }, [pallets, ptCodeToPOMap, bfxOrderToPOMap, poPriceMap]);
+  }, [pallets, ptCodeToPOMap, bfxOrderToPOMap, poPriceMap, poTotalsMap]);
 
   const grandTotal = useMemo(() => {
     if (!showSubtotals) return 0;
