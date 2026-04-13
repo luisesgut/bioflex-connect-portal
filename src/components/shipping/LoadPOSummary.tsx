@@ -44,6 +44,7 @@ interface POSummary {
   on_hold_count: number;
   subtotal: number | null;
   release_numbers: Set<string>;
+  prev_shipped: number;
 }
 
 interface PODocuments {
@@ -121,12 +122,24 @@ export function LoadPOSummary({
           on_hold_count: isOnHold ? 1 : 0,
           subtotal: price ? palletSubtotal : null,
           release_numbers: releaseSet,
+          prev_shipped: 0,
         });
       }
     });
     
+    // Calculate previously shipped volume (total shipped minus what's in this load)
+    if (poTotalsMap) {
+      poMap.forEach((po) => {
+        const totals = poTotalsMap.get(po.customer_lot);
+        if (totals) {
+          // shipped_quantity = all shipped ever; subtract this load's volume to get previous
+          po.prev_shipped = Math.max(0, totals.shipped_quantity - po.total_quantity);
+        }
+      });
+    }
+
     return Array.from(poMap.values());
-  }, [pallets, ptCodeToPOMap, bfxOrderToPOMap, poPriceMap]);
+  }, [pallets, ptCodeToPOMap, bfxOrderToPOMap, poPriceMap, poTotalsMap]);
 
   const grandTotal = useMemo(() => {
     if (!showSubtotals) return 0;
@@ -143,6 +156,7 @@ export function LoadPOSummary({
       "Product": po.description,
       "Pallets": po.pallet_count,
       "Volume": po.total_quantity,
+      ...(showPoTotals ? { "Prev. Shipped": po.prev_shipped || "" } : {}),
       "Release #": po.release_numbers.size > 0 ? Array.from(po.release_numbers).join(", ") : "",
       "Released": po.released_count,
       "Pending": po.pending_count,
@@ -197,6 +211,7 @@ export function LoadPOSummary({
                 <TableHead>Docs</TableHead>
                 <TableHead className="text-center">Pallets</TableHead>
                 <TableHead className="text-right">Volume</TableHead>
+                {showPoTotals && <TableHead className="text-right">Prev. Shipped</TableHead>}
                 <TableHead className="text-center">Released</TableHead>
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
@@ -253,6 +268,11 @@ export function LoadPOSummary({
                     <TableCell className="text-right font-medium">
                       {po.total_quantity.toLocaleString()}
                     </TableCell>
+                    {showPoTotals && (
+                      <TableCell className="text-right text-muted-foreground">
+                        {po.prev_shipped > 0 ? po.prev_shipped.toLocaleString() : "—"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-center">
                       {po.released_count > 0 && (
                         <Badge variant="secondary" className="border border-success/20 bg-success/10 text-success">
@@ -299,7 +319,7 @@ export function LoadPOSummary({
             {showSubtotals && grandTotal > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 3 : 0)} className="text-right font-semibold">
+                  <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 4 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
                       <DollarSign className="h-4 w-4 text-success" />
                       <span>Load Total:</span>
