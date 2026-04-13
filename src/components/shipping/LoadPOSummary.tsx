@@ -267,6 +267,11 @@ export function LoadPOSummary({
                     <TableCell className="text-right font-medium">
                       {po.total_quantity.toLocaleString()}
                     </TableCell>
+                    {showPoTotals && (
+                      <TableCell className="text-right text-muted-foreground">
+                        {po.prev_shipped > 0 ? po.prev_shipped.toLocaleString() : "—"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-center">
                       {po.released_count > 0 && (
                         <Badge variant="secondary" className="border border-success/20 bg-success/10 text-success">
