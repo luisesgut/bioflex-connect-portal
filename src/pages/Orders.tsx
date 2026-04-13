@@ -261,7 +261,7 @@ export default function Orders() {
         pdf_url,
         sales_order_number,
         accepted_at,
-        products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, codigo_producto, pt_code)
+        products (name, customer, item_type, product_line, tipo_empaque, dp_sales_csr_names, customer_item, item_description, pt_code)
       `;
 
     const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
@@ -360,16 +360,12 @@ export default function Orders() {
 
       const productIdByKey = new Map<string, string>();
       if (sapProductKeys.length > 0) {
-        const [byPtCode, byCodigoProducto] = await Promise.all([
+        const [byPtCode] = await Promise.all([
           supabase.from("products").select("id, pt_code").in("pt_code", sapProductKeys),
-          supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapProductKeys),
         ]);
 
         (byPtCode.data || []).forEach((p: any) => {
           if (p.pt_code) productIdByKey.set(String(p.pt_code).trim().toUpperCase(), p.id);
-        });
-        (byCodigoProducto.data || []).forEach((p: any) => {
-          if (p.codigo_producto) productIdByKey.set(String(p.codigo_producto).trim().toUpperCase(), p.id);
         });
       }
 
@@ -599,7 +595,7 @@ export default function Orders() {
     }
 
     const ptCodes = combinedOrdersSource
-      .map((o: any) => o.products?.codigo_producto || o.products?.pt_code)
+      .map((o: any) => o.products?.pt_code)
       .filter((pt: string | null): pt is string => pt !== null && pt !== "");
     
     let excessStockByPT: Record<string, ExcessStockDetail> = {};
@@ -639,17 +635,13 @@ export default function Orders() {
         );
 
         if (sapClaves.length > 0) {
-          const [byPtCode2, byCodigoProducto2] = await Promise.all([
+          const [byPtCode2] = await Promise.all([
             supabase.from("products").select("id, pt_code").in("pt_code", sapClaves),
-            supabase.from("products").select("id, codigo_producto").in("codigo_producto", sapClaves),
           ]);
 
           const linkMap = new Map<string, string>();
           (byPtCode2.data || []).forEach((p: any) => {
             if (p.pt_code) linkMap.set(String(p.pt_code).trim().toUpperCase(), p.id);
-          });
-          (byCodigoProducto2.data || []).forEach((p: any) => {
-            if (p.codigo_producto) linkMap.set(String(p.codigo_producto).trim().toUpperCase(), p.id);
           });
 
           const updatePromises = ordersWithoutProduct
@@ -749,7 +741,7 @@ export default function Orders() {
       const percentProduced = requestedForProgress > 0 ? Math.round((effectiveShipped / requestedForProgress) * 100) : 0;
       const loadDetails = loadDetailsByPO[order.po_number] || [];
       const shippedLoadDetails = shippedLoadDetailsByPO[order.po_number] || [];
-      const productSkuForInventory = order.products?.codigo_producto || order.products?.pt_code || null;
+      const productSkuForInventory = order.products?.pt_code || null;
       const excessStockFromInventory = productSkuForInventory ? excessStockByPT[productSkuForInventory] || null : null;
       const excessStockFromSap =
         hasSapWarehouseData && sapStockAvailable > pending
@@ -759,7 +751,7 @@ export default function Orders() {
             }
           : null;
       const excessStock = excessStockFromSap ?? excessStockFromInventory;
-      const productPtCode = (order.products as any)?.codigo_producto || (order.products as any)?.pt_code || null;
+      const productPtCode = (order.products as any)?.pt_code || null;
       const productTipoEmpaque = catOrdenItem?.tipoEmpaque || order.products?.tipo_empaque || null;
       const derivedProductItemType =
         order.products?.item_type ||

@@ -222,8 +222,8 @@ export default function AdminProducts() {
         }
       });
 
-      // Check for required identifier (codigo_producto or sku)
-      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.customer_item !== undefined;
+      // Check for required identifier (pt_code or customer_item)
+      const hasIdentifier = columnIndices.pt_code !== undefined || columnIndices.customer_item !== undefined;
       if (!hasIdentifier) {
         toast({
           title: "Invalid CSV",

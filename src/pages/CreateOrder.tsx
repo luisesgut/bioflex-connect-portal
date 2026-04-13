@@ -35,7 +35,6 @@ interface Product {
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
   item_description: string | null;
-  print_card_url: string | null;
   customer_tech_spec_url: string | null;
 }
 
@@ -83,7 +82,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, print_card_url, customer_tech_spec_url")
+        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, customer_tech_spec_url")
         .order("name");
 
       if (error) {
