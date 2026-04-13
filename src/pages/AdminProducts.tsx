@@ -456,9 +456,7 @@ export default function AdminProducts() {
 
       uploadedCount++;
 
-      // Get public URL
       matchedCount++;
-      }
     }
 
     toast({
