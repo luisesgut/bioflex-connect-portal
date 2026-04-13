@@ -122,6 +122,7 @@ export function LoadPOSummary({
           on_hold_count: isOnHold ? 1 : 0,
           subtotal: price ? palletSubtotal : null,
           release_numbers: releaseSet,
+          prev_shipped: 0,
         });
       }
     });
