@@ -234,31 +234,19 @@ export function LoadPOSummary({
                     <TableCell className="max-w-[200px] truncate">{po.description}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1">
-                        {docs?.print_card_url ? (
+                        {docs?.pc_number ? (
                           <Button
                             type="button"
                             variant="link"
                             className="h-auto p-0 text-xs"
-                            onClick={() => onOpenStorageFile?.(docs.print_card_url, "print-cards")}
+                            onClick={() => onOpenStorageFile?.(docs.pc_number, "print-cards")}
                           >
                             <FileText className="mr-1 h-3.5 w-3.5" />
                             PC
                           </Button>
-                        ) : null}
-                        {docs?.bfx_spec_url ? (
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="h-auto p-0 text-xs"
-                            onClick={() => onOpenStorageFile?.(docs.bfx_spec_url, "print-cards")}
-                          >
-                            <FileText className="mr-1 h-3.5 w-3.5" />
-                            BFX Spec
-                          </Button>
-                        ) : null}
-                        {!docs?.print_card_url && !docs?.bfx_spec_url ? (
+                        ) : (
                           <span className="text-sm text-muted-foreground">—</span>
-                        ) : null}
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

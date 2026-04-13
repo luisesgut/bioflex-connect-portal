@@ -661,7 +661,7 @@ export default function LoadDetail() {
       }
 
       // Fetch products CSR map by pt_code
-      const ptCodesInLoad = [...new Set((palletsData as any || []).map((p: any) => p.pallet?.pt_code).filter(Boolean))];
+      const ptCodesInLoad: string[] = [...new Set((palletsData as any || []).map((p: any) => p.pallet?.pt_code).filter(Boolean))] as string[];
       if (ptCodesInLoad.length > 0) {
         const { data: csrProducts } = await supabase
           .from("products")
