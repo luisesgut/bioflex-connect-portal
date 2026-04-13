@@ -297,7 +297,7 @@ export default function LoadDetail() {
   const [bfxOrderToPOMap, setBfxOrderToPOMap] = useState<Map<string, string>>(new Map());
   const [poPriceMap, setPoPriceMap] = useState<Map<string, number>>(new Map());
   const [poSalesOrderMap, setPoSalesOrderMap] = useState<Map<string, { sales_order_number: string | null; customer_item: string | null }>>(new Map());
-  const [poDocumentsMap, setPoDocumentsMap] = useState<Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>>(new Map());
+  const [poDocumentsMap, setPoDocumentsMap] = useState<Map<string, { pc_number: string | null }>>(new Map());
   const [selectedReleasedPallets, setSelectedReleasedPallets] = useState<Set<string>>(new Set());
   const [selectedOnHoldPallets, setSelectedOnHoldPallets] = useState<Set<string>>(new Set());
   const [ptCodeToCsrMap, setPtCodeToCsrMap] = useState<Map<string, string>>(new Map());
@@ -456,14 +456,14 @@ export default function LoadDetail() {
           po_number,
           quantity,
           sales_order_number,
-          product:products(codigo_producto, pt_code, name, pieces_per_pallet)
+          product:products(pt_code, name, pieces_per_pallet)
         `)
         .in("status", ["pending", "confirmed", "accepted", "in_production"]);
 
       // Build products map for pieces_per_pallet validation
       const prodMap = new Map<string, { pieces_per_pallet: number | null }>();
       (activePOs || []).forEach((po: any) => {
-        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        const ptCode = po.product?.pt_code;
         if (ptCode) {
           prodMap.set(ptCode, {
             pieces_per_pallet: po.product.pieces_per_pallet || null
@@ -489,7 +489,7 @@ export default function LoadDetail() {
       // Match POs with available inventory by PT code (show all active POs)
       const poInventoryData: ActivePOWithInventory[] = [];
       (activePOs || []).forEach((po: any) => {
-        const ptCode = po.product?.codigo_producto || po.product?.pt_code || "";
+        const ptCode = po.product?.pt_code || "";
         const matchingPallets = ptCode ? filteredPallets.filter(p => p.pt_code === ptCode) : [];
         
         poInventoryData.push({
@@ -508,7 +508,7 @@ export default function LoadDetail() {
       // Build pt_code -> po_number map for Customer PO fallback
       const ptToPO = new Map<string, string>();
       (activePOs || []).forEach((po: any) => {
-        const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+        const ptCode = po.product?.pt_code;
         if (ptCode && !ptToPO.has(ptCode)) {
           ptToPO.set(ptCode, po.po_number);
         }
@@ -567,7 +567,7 @@ export default function LoadDetail() {
       if (loadPONumbers.length > 0) {
         const { data: priceData } = await supabase
           .from("purchase_orders")
-          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, codigo_producto, print_card_url, bfx_spec_url)")
+          .select("po_number, price_per_thousand, sales_order_number, product:products(customer_item, pt_code, pc_number)")
           .in("po_number", loadPONumbers);
 
         // Also fetch item_number from sap_orders for fallback
@@ -583,18 +583,17 @@ export default function LoadDetail() {
         });
         const priceMap = new Map<string, number>();
         const salesMap = new Map<string, { sales_order_number: string | null; customer_item: string | null }>();
-        const documentsMap = new Map<string, { print_card_url: string | null; bfx_spec_url: string | null }>();
+        const documentsMap = new Map<string, { pc_number: string | null }>();
         (priceData || []).forEach((po: any) => {
           if (po.price_per_thousand) {
             priceMap.set(po.po_number, po.price_per_thousand);
           }
           salesMap.set(po.po_number, {
             sales_order_number: po.sales_order_number || null,
-            customer_item: po.product?.customer_item || po.product?.codigo_producto || sapItemMap.get(po.po_number) || null,
+            customer_item: po.product?.customer_item || po.product?.pt_code || sapItemMap.get(po.po_number) || null,
           });
           documentsMap.set(po.po_number, {
-            print_card_url: po.product?.print_card_url || null,
-            bfx_spec_url: po.product?.bfx_spec_url || null,
+            pc_number: po.product?.pc_number || null,
           });
         });
         setPoPriceMap(priceMap);
@@ -666,12 +665,11 @@ export default function LoadDetail() {
       if (ptCodesInLoad.length > 0) {
         const { data: csrProducts } = await supabase
           .from("products")
-          .select("codigo_producto, pt_code, dp_sales_csr_names")
-          .or(ptCodesInLoad.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
+          .select("pt_code, dp_sales_csr_names")
+          .in("pt_code", ptCodesInLoad);
         const csrMap = new Map<string, string>();
         (csrProducts || []).forEach((p: any) => {
           if (p.dp_sales_csr_names) {
-            if (p.codigo_producto) csrMap.set(p.codigo_producto, p.dp_sales_csr_names);
             if (p.pt_code) csrMap.set(p.pt_code, p.dp_sales_csr_names);
           }
         });

@@ -48,8 +48,7 @@ interface POSummary {
 }
 
 interface PODocuments {
-  print_card_url: string | null;
-  bfx_spec_url: string | null;
+  pc_number: string | null;
 }
 
 interface LoadPOSummaryProps {
