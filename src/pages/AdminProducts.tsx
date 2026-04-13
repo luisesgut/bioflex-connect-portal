@@ -42,7 +42,7 @@ interface Product {
   et: string | null;
   activa: boolean | null;
   et_verificada: boolean | null;
-  tipo_empaque: string | null;
+  
   estructura: string | null;
   ancho: number | null;
   alto: number | null;
