@@ -210,6 +210,7 @@ export function LoadPOSummary({
                 <TableHead>Docs</TableHead>
                 <TableHead className="text-center">Pallets</TableHead>
                 <TableHead className="text-right">Volume</TableHead>
+                {showPoTotals && <TableHead className="text-right">Prev. Shipped</TableHead>}
                 <TableHead className="text-center">Released</TableHead>
                 <TableHead className="text-center">Pending</TableHead>
                 <TableHead className="text-center">On Hold</TableHead>
