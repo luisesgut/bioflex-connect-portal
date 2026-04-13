@@ -29,7 +29,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
           sales_order_number,
           notes,
           created_at,
-          products (name, sku)
+          products (name, pt_code)
         `)
         .order("created_at", { ascending: false });
 
@@ -56,7 +56,7 @@ export function BulkOrdersManager({ onUpdated }: BulkOrdersManagerProps) {
       const rows = (data || []).map((order: any) => [
         order.id,
         order.po_number,
-        order.products?.codigo_producto || "",
+        order.products?.pt_code || "",
         order.products?.name || "",
         order.quantity,
         order.price_per_thousand || "",
