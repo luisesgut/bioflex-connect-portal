@@ -319,7 +319,7 @@ export function LoadPOSummary({
             {showSubtotals && grandTotal > 0 && (
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 3 : 0)} className="text-right font-semibold">
+                  <TableCell colSpan={(isAdmin ? 9 : 8) + (showPoTotals ? 4 : 0)} className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
                       <DollarSign className="h-4 w-4 text-success" />
                       <span>Load Total:</span>
