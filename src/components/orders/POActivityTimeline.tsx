@@ -325,7 +325,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
       // Also check shipped_pallets for historical data
       let shippedQuery = supabase
         .from("shipped_pallets")
-        .select("*, shipping_loads:load_id(id, load_number, status, shipping_date)")
+        .select("*")
         .not("destination", "is", null);
 
       if (order.sales_order_number) {
