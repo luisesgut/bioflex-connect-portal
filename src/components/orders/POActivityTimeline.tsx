@@ -336,7 +336,15 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
 
       const { data: shippedPallets } = await shippedQuery;
 
-      if (shippedPallets) {
+      if (shippedPallets && shippedPallets.length > 0) {
+        // Fetch load info for shipped pallets
+        const shippedLoadIds = [...new Set(shippedPallets.map(sp => sp.load_id))];
+        const { data: shippedLoads } = await supabase
+          .from("shipping_loads")
+          .select("id, load_number, status, shipping_date")
+          .in("id", shippedLoadIds);
+        const shippedLoadsMap = new Map((shippedLoads || []).map(l => [l.id, l]));
+
         // Group by load_id
         const shippedLoadMap = new Map<string, { count: number; totalVolume: number; destinations: Set<string>; shippedAt: string; load: any }>();
         for (const sp of shippedPallets) {
@@ -353,7 +361,7 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
               totalVolume: Number(sp.quantity) || 0,
               destinations: dests,
               shippedAt: sp.shipped_at,
-              load: sp.shipping_loads,
+              load: shippedLoadsMap.get(sp.load_id) || null,
             });
           }
         }
@@ -372,7 +380,6 @@ export function POActivityTimeline({ open, onOpenChange, order }: POActivityTime
               metadata: { load_number: group.load.load_number },
             });
 
-            // Check for delivery dates per destination from shipped_pallets
             const deliveredByDest = new Map<string, string>();
             for (const sp of shippedPallets) {
               if (sp.load_id === loadId && sp.destination && sp.delivery_date) {
