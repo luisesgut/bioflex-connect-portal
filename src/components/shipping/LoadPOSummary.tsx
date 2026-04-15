@@ -33,6 +33,10 @@ interface LoadPallet {
   };
 }
 
+const hasInventoryPallet = (row: LoadPallet): row is LoadPallet & { pallet: NonNullable<LoadPallet["pallet"]> } => {
+  return !!row?.pallet;
+};
+
 interface POSummary {
   customer_lot: string;
   pt_code: string;
@@ -84,7 +88,7 @@ export function LoadPOSummary({
   const poSummary = useMemo(() => {
     const poMap = new Map<string, POSummary>();
     
-    pallets.forEach((pallet) => {
+    pallets.filter(hasInventoryPallet).forEach((pallet) => {
       const key = pallet.pallet.customer_lot || (pallet.pallet.bfx_order && bfxOrderToPOMap?.get(pallet.pallet.bfx_order)) || ptCodeToPOMap?.get(pallet.pallet.pt_code) || "unassigned";
       const existing = poMap.get(key);
       

@@ -86,6 +86,9 @@ interface StockWarehouseDetail {
   po_number?: string | null;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
 interface CatOrdenOpenItem {
   pedido?: number | string | null;
   u_PO2?: string | null;
@@ -142,13 +145,40 @@ const parseApiNumber = (value: unknown): number | null => {
 const normalizePoKey = (value: string | null | undefined): string => {
   const cleaned = (value || "").trim().toUpperCase();
   if (!cleaned) return "";
-  const compact = cleaned.replace(/\s+/g, "");
+  const compact = cleaned.replace(/^PO\s*/i, "").replace(/\s+/g, "");
   if (/^\d+$/.test(compact)) return String(Number(compact));
   return compact;
 };
 
 const sumWarehouseQty = (details?: StockWarehouseDetail[] | null): number =>
   (details || []).reduce((sum, lot) => sum + (parseApiNumber(lot?.cantidad) || 0), 0);
+
+const toWarehouseDetails = (value: unknown): StockWarehouseDetail[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter(isRecord).map((detail) => ({
+    lote: String(detail.lote || ""),
+    cantidad: parseApiNumber(detail.cantidad) ?? 0,
+    pesoBruto: parseApiNumber(detail.pesoBruto) ?? 0,
+    pesoNeto: parseApiNumber(detail.pesoNeto) ?? 0,
+    cajas: parseApiNumber(detail.cajas) ?? 0,
+    fecha: typeof detail.fecha === "string" ? detail.fecha : null,
+    bfx_order: typeof detail.bfx_order === "string" ? detail.bfx_order : null,
+    po_number: typeof detail.po_number === "string" ? detail.po_number : null,
+  }));
+};
+
+const formatNumber = (value: unknown): string => {
+  const parsed = parseApiNumber(value);
+  return parsed === null ? "—" : parsed.toLocaleString();
+};
+
+const formatOptionalDate = (dateString?: string | null): string => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" });
+};
 
 
 const statusStyles: Record<string, string> = {
@@ -317,9 +347,9 @@ export default function OrderDetail() {
         }
 
         const payload = await orderResponse.json();
-        const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload : [];
+        const list: CatOrdenOpenItem[] = Array.isArray(payload) ? payload.filter(isRecord) as CatOrdenOpenItem[] : [];
         // Aggregate ALL matching SAP items for this PO (multiple sales orders)
-        const matchingItems = list.filter((item) => normalizePoKey(item.u_PO2) === normalizePoKey(order.po_number));
+        const matchingItems = list.filter((item) => normalizePoKey(item?.u_PO2) === normalizePoKey(order.po_number));
         let sapItem: CatOrdenOpenItem | null = null;
         const allPedidos = new Set<string>();
         if (matchingItems.length > 0) {
@@ -341,8 +371,8 @@ export default function OrderDetail() {
               totalEnviada += parseApiNumber(mi.cantidadEnviada) ?? 0;
               totalValue += parseApiNumber(mi.value) ?? 0;
               totalStockDisp += parseApiNumber(mi.totalStockDisponible) ?? 0;
-              mergedAlmacen = [...mergedAlmacen, ...((mi.detallesAlmacen as StockWarehouseDetail[]) || [])];
-              mergedAlmacenTotal = [...mergedAlmacenTotal, ...((mi.detallesAlmacenTotal as StockWarehouseDetail[]) || [])];
+              mergedAlmacen = [...mergedAlmacen, ...toWarehouseDetails(mi.detallesAlmacen)];
+              mergedAlmacenTotal = [...mergedAlmacenTotal, ...toWarehouseDetails(mi.detallesAlmacenTotal)];
             }
             sapItem.cantidad = totalCantidad;
             sapItem.cantidadSolicitada = totalSolicitada;
@@ -357,9 +387,9 @@ export default function OrderDetail() {
         }
 
 
-        const enrichWithFecha = (details: StockWarehouseDetail[]): StockWarehouseDetail[] =>
-          details.map((d) => {
-            const bfxOrder = bfxOrderByLote[d.lote] || null;
+        const enrichWithFecha = (details: unknown): StockWarehouseDetail[] =>
+          toWarehouseDetails(details).map((d) => {
+            const bfxOrder = d.bfx_order || bfxOrderByLote[d.lote] || null;
             return {
               ...d,
               fecha: d.fecha || fechaByLote[d.lote] || null,
@@ -380,8 +410,8 @@ export default function OrderDetail() {
           ((parseApiNumber(sapItem.cantidad) || 0) * 1000);
         const shipped = parseApiNumber(sapItem.cantidadEnviada) ?? 0;
         const pending = Math.max(0, requested - shipped);
-        const lotsCurrent = enrichWithFecha(sapItem.detallesAlmacen || []);
-        const lotsOther = enrichWithFecha(sapItem.detallesAlmacenTotal || []);
+        const lotsCurrent = enrichWithFecha(sapItem.detallesAlmacen);
+        const lotsOther = enrichWithFecha(sapItem.detallesAlmacenTotal);
         const assignedFromLots = sumWarehouseQty(lotsCurrent);
         const otherFromLots = sumWarehouseQty(lotsOther);
         const totalStock =
@@ -1236,12 +1266,12 @@ export default function OrderDetail() {
                                               >
                                                 {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
                                                 <td className="px-3 py-1 text-muted-foreground">
-                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }) : "—"}
+                                                  {formatOptionalDate(detalle.fecha)}
                                                 </td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.cantidad)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.cajas)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.pesoBruto)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.pesoNeto)}</td>
                                               </tr>
                                             ))}
                                           </tbody>
@@ -1280,12 +1310,12 @@ export default function OrderDetail() {
                                                 {isAdmin && <td className="px-3 py-1 font-medium">{detalle.lote}</td>}
                                                 <td className="px-3 py-1 text-muted-foreground font-medium">{detalle.po_number || detalle.bfx_order || "—"}</td>
                                                 <td className="px-3 py-1 text-muted-foreground">
-                                                  {detalle.fecha ? new Date(detalle.fecha).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" }) : "—"}
+                                                  {formatOptionalDate(detalle.fecha)}
                                                 </td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cantidad.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.cajas.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoBruto.toLocaleString()}</td>
-                                                <td className="px-3 py-1 text-right tabular-nums">{detalle.pesoNeto.toLocaleString()}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.cantidad)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.cajas)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.pesoBruto)}</td>
+                                                <td className="px-3 py-1 text-right tabular-nums">{formatNumber(detalle.pesoNeto)}</td>
                                               </tr>
                                             ))}
                                           </tbody>

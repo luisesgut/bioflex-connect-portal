@@ -161,6 +161,12 @@ interface LoadPallet {
   };
 }
 
+const isLoadPalletWithInventory = (row: unknown): row is LoadPallet => {
+  if (!row || typeof row !== "object" || !("pallet" in row)) return false;
+  const pallet = (row as { pallet?: unknown }).pallet;
+  return !!pallet && typeof pallet === "object" && !Array.isArray(pallet);
+};
+
 interface ShippingLoad {
   id: string;
   load_number: string;
@@ -401,7 +407,12 @@ export default function LoadDetail() {
         .eq("load_id", id);
 
       if (palletsError) throw palletsError;
-      const typedPallets = (palletsData as any) || [];
+      const rawPallets = Array.isArray(palletsData) ? palletsData : [];
+      const typedPallets = rawPallets.filter(isLoadPalletWithInventory);
+      const orphanPalletRows = rawPallets.filter((row) => !isLoadPalletWithInventory(row));
+      if (orphanPalletRows.length > 0) {
+        console.warn("Load contains pallet rows without matching inventory records:", orphanPalletRows);
+      }
       setPallets(typedPallets);
 
       // Fetch profiles for actioned_by users
