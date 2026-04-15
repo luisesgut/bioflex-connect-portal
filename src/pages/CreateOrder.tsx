@@ -35,7 +35,6 @@ interface Product {
   piezas_totales_por_caja: number | null;
   pieces_per_pallet: number | null;
   item_description: string | null;
-  print_card_url: string | null;
   customer_tech_spec_url: string | null;
 }
 
@@ -83,7 +82,7 @@ export default function CreateOrder() {
       setLoading(true);
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, print_card_url, customer_tech_spec_url")
+        .select("id, name, customer_item, units, piezas_totales_por_caja, pieces_per_pallet, item_description, customer_tech_spec_url")
         .order("name");
 
       if (error) {
@@ -626,18 +625,8 @@ export default function CreateOrder() {
                     </Command>
               </PopoverContent>
                 </Popover>
-                {selectedProduct && (selectedProduct.print_card_url || selectedProduct.customer_tech_spec_url) && (
+                {selectedProduct && selectedProduct.customer_tech_spec_url && (
                   <div className="flex items-center gap-3 mt-2">
-                    {selectedProduct.print_card_url && (
-                      <button
-                        type="button"
-                        onClick={() => openStorageFile(selectedProduct.print_card_url, 'print-cards')}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        Print Card
-                      </button>
-                    )}
                     {selectedProduct.customer_tech_spec_url && (
                       <button
                         type="button"

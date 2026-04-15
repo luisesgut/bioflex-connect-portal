@@ -65,17 +65,13 @@ interface OrderDetails {
     name: string;
     customer: string | null;
     item_type: string | null;
-    tipo_empaque: string | null;
     customer_item: string | null;
     item_description: string | null;
     dp_sales_csr_names: string | null;
-    codigo_producto: string | null;
     pt_code: string | null;
     pieces_per_pallet: number | null;
     pc_number: string | null;
-    print_card_url: string | null;
     customer_tech_spec_url: string | null;
-    bfx_spec_url: string | null;
   } | null;
 }
 
@@ -394,7 +390,7 @@ export default function OrderDetail() {
 
         setStockVerification([
           {
-            claveProducto: sapItem.clave || order.product?.codigo_producto || order.product?.pt_code || "",
+            claveProducto: sapItem.clave || order.product?.pt_code || "",
             producto: sapItem.producto || sapItem.frgnName || order.product?.name || "",
             cantidadSolicitada: requested,
             unidadSolicitada: "Units",
@@ -425,7 +421,7 @@ export default function OrderDetail() {
     return () => {
       controller.abort();
     };
-  }, [order?.po_number, order?.product?.codigo_producto, order?.product?.name, order?.product?.pt_code]);
+  }, [order?.po_number, order?.product?.name, order?.product?.pt_code]);
 
   const fetchOrderDetails = async () => {
     if (!id) return;
@@ -457,17 +453,13 @@ export default function OrderDetail() {
           name,
           customer,
           item_type,
-          tipo_empaque,
           customer_item,
           item_description,
           dp_sales_csr_names,
-          codigo_producto,
           pt_code,
           pieces_per_pallet,
           pc_number,
-          print_card_url,
-          customer_tech_spec_url,
-          bfx_spec_url
+          customer_tech_spec_url
         )
       `)
       .eq("id", id)
@@ -641,8 +633,8 @@ export default function OrderDetail() {
   const displayItemCode = sapOrderData?.u_ItemNo || order.product?.customer_item || "—";
   const displayItemDescription = sapOrderData?.frgnName || sapOrderData?.producto || order.product?.item_description || "—";
   const displayFinalCustomer = sapOrderData?.u_Cl1 || order.product?.customer || "—";
-  const displayTipoEmpaque = sapOrderData?.tipoEmpaque || order.product?.tipo_empaque || "—";
-  const displayPtCode = sapOrderData?.clave || order.product?.codigo_producto || order.product?.pt_code || "—";
+  const displayTipoEmpaque = sapOrderData?.tipoEmpaque || "—";
+  const displayPtCode = sapOrderData?.clave || order.product?.pt_code || "—";
   const displayProductName = sapOrderData?.producto || sapOrderData?.frgnName || order.product?.name || "—";
   const pcNumber = order.product?.pc_number?.trim() || "";
   const poNumber = order.po_number?.trim() || "";

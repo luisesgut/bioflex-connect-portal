@@ -152,10 +152,10 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
   if (ptCodes.size > 0) {
     const { data: posByProduct } = await supabase
       .from("purchase_orders")
-      .select("po_number, sales_order_number, price_per_thousand, product:products(codigo_producto, pt_code)")
+      .select("po_number, sales_order_number, price_per_thousand, product:products(pt_code)")
       .in("status", ["pending", "confirmed", "accepted", "in_production"]);
     (posByProduct || []).forEach((po: any) => {
-      const ptCode = po.product?.codigo_producto || po.product?.pt_code;
+      const ptCode = po.product?.pt_code;
       if (ptCode && ptCodes.has(ptCode) && !poMap.has(ptCode)) {
         // Store by pt_code as fallback key
         poMap.set(`__pt__${ptCode}`, {
@@ -167,18 +167,17 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
     });
   }
 
-  // Fetch product info (bfx_spec_url, pieces_per_pallet, piezas_por_paquete, paquete_por_caja)
-  const productMap = new Map<string, { bfx_spec_url: string | null; pieces_per_pallet: number | null; piezas_por_paquete: number | null; paquete_por_caja: number | null }>();
+  // Fetch product info (pieces_per_pallet, piezas_por_paquete, paquete_por_caja)
+  const productMap = new Map<string, { pieces_per_pallet: number | null; piezas_por_paquete: number | null; paquete_por_caja: number | null }>();
   if (ptCodes.size > 0) {
     const ptArr = Array.from(ptCodes);
     const { data: products } = await supabase
       .from("products")
-      .select("codigo_producto, pt_code, bfx_spec_url, pieces_per_pallet, piezas_por_paquete, paquete_por_caja")
-      .or(ptArr.map(c => `codigo_producto.eq.${c},pt_code.eq.${c}`).join(','));
+      .select("pt_code, pieces_per_pallet, piezas_por_paquete, paquete_por_caja")
+      .in("pt_code", ptArr);
     (products || []).forEach((p: any) => {
-      const key = p.codigo_producto || p.pt_code;
+      const key = p.pt_code;
       if (key) productMap.set(key, {
-        bfx_spec_url: p.bfx_spec_url || null,
         pieces_per_pallet: p.pieces_per_pallet || null,
         piezas_por_paquete: p.piezas_por_paquete || null,
         paquete_por_caja: p.paquete_por_caja || null,
@@ -209,7 +208,7 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
         salesOrder: poInfo?.sales_order_number || null,
         poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
         releaseNumber: lp.release_number || null,
-        bfxSpecUrl: prodInfo?.bfx_spec_url || null,
+        bfxSpecUrl: null,
         ptCode: lp.pallet.pt_code || null,
         totalPallets: 0,
         totalUnits: 0,

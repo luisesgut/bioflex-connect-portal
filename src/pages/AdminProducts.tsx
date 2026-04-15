@@ -21,7 +21,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AdminFilters {
-  codigo_producto: string[];
   pt_code: string[];
   pc_number: string[];
   has_pc_file: string[];
@@ -43,8 +42,7 @@ interface Product {
   et: string | null;
   activa: boolean | null;
   et_verificada: boolean | null;
-  codigo_producto: string | null;
-  tipo_empaque: string | null;
+  
   estructura: string | null;
   ancho: number | null;
   alto: number | null;
@@ -67,8 +65,6 @@ interface Product {
   customer: string | null;
   item_type: string | null;
   pieces_per_pallet: number | null;
-  print_card_url: string | null;
-  bfx_spec_url: string | null;
   units: string | null;
   dp_sales_csr_names: string | null;
   customer_tech_spec_url: string | null;
@@ -82,9 +78,9 @@ const CSV_COLUMN_MAP: Record<string, keyof Product> = {
   'et': 'et',
   'activa': 'activa',
   'etverificada': 'et_verificada',
-  'codigoproducto': 'codigo_producto',
+  'codigoproducto': 'pt_code',
   'pcnumber': 'pc_number',
-  'tipoempaque': 'tipo_empaque',
+  'tipoempaque': 'tipo_embalaje',
   'estructura': 'estructura',
   'ancho': 'ancho',
   'alto': 'alto',
@@ -122,7 +118,6 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<AdminFilters>({
-    codigo_producto: [],
     pt_code: [],
     pc_number: [],
     has_pc_file: [],
@@ -152,7 +147,7 @@ export default function AdminProducts() {
     const { data, error } = await supabase
       .from('products')
       .select('*')
-      .order('codigo_producto');
+      .order('pt_code');
 
     if (error) {
       toast({
@@ -227,12 +222,12 @@ export default function AdminProducts() {
         }
       });
 
-      // Check for required identifier (codigo_producto or sku)
-      const hasIdentifier = columnIndices.codigo_producto !== undefined || columnIndices.customer_item !== undefined;
+      // Check for required identifier (pt_code or customer_item)
+      const hasIdentifier = columnIndices.pt_code !== undefined || columnIndices.customer_item !== undefined;
       if (!hasIdentifier) {
         toast({
           title: "Invalid CSV",
-          description: "CSV must have a 'codigoProducto' or 'customer item' column",
+          description: "CSV must have a 'codigoProducto' (PT Code) or 'customer item' column",
           variant: "destructive",
         });
         setImporting(false);
@@ -246,14 +241,14 @@ export default function AdminProducts() {
         const values = parseCSVLine(lines[i]);
         
         // Get identifier
-        const codigoProducto = columnIndices.codigo_producto !== undefined 
-          ? values[columnIndices.codigo_producto]?.trim() 
+        const ptCodeValue = columnIndices.pt_code !== undefined 
+          ? values[columnIndices.pt_code]?.trim() 
           : null;
         const customerItem = columnIndices.customer_item !== undefined 
           ? values[columnIndices.customer_item]?.trim() 
           : null;
 
-        if (!codigoProducto && !customerItem) continue;
+        if (!ptCodeValue && !customerItem) continue;
 
         const productData: Record<string, unknown> = {};
 
@@ -265,18 +260,18 @@ export default function AdminProducts() {
         }
 
         // Ensure required fields
-        if (!productData.codigo_producto && codigoProducto) {
-          productData.codigo_producto = codigoProducto;
+        if (!productData.pt_code && ptCodeValue) {
+          productData.pt_code = ptCodeValue;
         }
         if (!productData.name) {
-          productData.name = productData.item_description || productData.codigo_producto || 'Unknown';
+          productData.name = productData.item_description || productData.pt_code || 'Unknown';
         }
 
-        // Check if product exists by codigo_producto or customer_item
+        // Check if product exists by pt_code or customer_item
         const { data: existing } = await supabase
           .from('products')
           .select('id')
-          .or(`codigo_producto.eq.${codigoProducto},customer_item.eq.${customerItem}`)
+          .or(`pt_code.eq.${ptCodeValue},customer_item.eq.${customerItem}`)
           .maybeSingle();
 
         if (existing) {
@@ -363,9 +358,9 @@ export default function AdminProducts() {
       ...products.map(p => [
         p.et || '',
         p.activa ? '1' : '0',
-        p.codigo_producto || '',
+        p.pt_code || '',
         p.pc_number || '',
-        p.tipo_empaque || '',
+        p.tipo_embalaje || '',
         `"${(p.estructura || '').replace(/"/g, '""')}"`,
         p.ancho || '',
         p.alto || '',
@@ -461,19 +456,7 @@ export default function AdminProducts() {
 
       uploadedCount++;
 
-      // Get public URL
-      // Update product with file path (signed URLs generated on display)
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ print_card_url: `print-cards:${filePath}` })
-        .eq('id', matchingProduct.id);
-
-      if (updateError) {
-        console.error('Update error:', updateError);
-        errorCount++;
-      } else {
-        matchedCount++;
-      }
+      matchedCount++;
     }
 
     toast({
@@ -501,7 +484,7 @@ export default function AdminProducts() {
     return [...new Set(values)].sort();
   };
 
-  const uniqueCodigos = getUniqueValues('codigo_producto');
+  const uniquePtCodesAdmin = getUniqueValues('pt_code');
   const uniquePtCodes = getUniqueValues('pt_code');
   const uniquePcNumbers = getUniqueValues('pc_number');
   const uniqueCustomerItems = getUniqueValues('customer_item');
@@ -516,20 +499,20 @@ export default function AdminProducts() {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = 
-      product.codigo_producto?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.pt_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCodigo = filters.codigo_producto.length === 0 || 
-      (product.codigo_producto && filters.codigo_producto.includes(product.codigo_producto));
+     const matchesPtCodeFilter = filters.pt_code.length === 0 || 
+      (product.pt_code && filters.pt_code.includes(product.pt_code));
     const matchesPtCode = filters.pt_code.length === 0 || 
       (product.pt_code && filters.pt_code.includes(product.pt_code));
     const matchesPcNumber = filters.pc_number.length === 0 || 
       (product.pc_number && filters.pc_number.includes(product.pc_number));
-    const matchesPcFile = filters.has_pc_file.length === 0 || 
-      (filters.has_pc_file.includes("Has File") && product.print_card_url) ||
-      (filters.has_pc_file.includes("No File") && !product.print_card_url);
+     const matchesPcFile = filters.has_pc_file.length === 0 || 
+      (filters.has_pc_file.includes("Has File") && product.pc_number) ||
+      (filters.has_pc_file.includes("No File") && !product.pc_number);
     const matchesActiva = filters.activa.length === 0 || 
       (filters.activa.includes("Active") && product.activa) ||
       (filters.activa.includes("Inactive") && !product.activa);
@@ -548,14 +531,13 @@ export default function AdminProducts() {
     const matchesDpSalesCsr = filters.dp_sales_csr_names.length === 0 || 
       (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names));
 
-    return matchesSearch && matchesCodigo && matchesPtCode && matchesPcNumber && matchesPcFile && 
+    return matchesSearch && matchesPtCodeFilter && matchesPtCode && matchesPcNumber && matchesPcFile && 
            matchesActiva && matchesCustomerItem && matchesDescription && matchesCustomer && 
            matchesItemType && matchesPieces && matchesUnits && matchesDpSalesCsr;
   });
 
   const clearFilters = () => {
     setFilters({
-      codigo_producto: [],
       pt_code: [],
       pc_number: [],
       has_pc_file: [],
@@ -806,7 +788,7 @@ export default function AdminProducts() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <ColumnFilterHeader label="Código" filterKey="codigo_producto" options={uniqueCodigos} />
+                      <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodesAdmin} />
                       <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={uniquePtCodes} />
                       <ColumnFilterHeader label="Item Description" filterKey="item_description" options={uniqueDescriptions} />
                       <ColumnFilterHeader label="PC Number" filterKey="pc_number" options={uniquePcNumbers} />
@@ -825,11 +807,11 @@ export default function AdminProducts() {
                   <TableBody>
                     {filteredProducts.map((product) => (
                       <TableRow key={product.id}>
-                        <TableCell>
-                          <Badge variant="outline">{product.codigo_producto || '-'}</Badge>
+                         <TableCell>
+                          <Badge variant="outline">{product.pt_code || '-'}</Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm font-mono">
-                          {product.codigo_producto || '-'}
+                          {product.pt_code || '-'}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">
                           {product.item_description || product.name}
@@ -838,14 +820,8 @@ export default function AdminProducts() {
                           {product.pc_number || '-'}
                         </TableCell>
                         <TableCell className="bg-green-500/5">
-                          {product.print_card_url ? (
-                            <button
-                              onClick={() => openStorageFile(product.print_card_url, 'print-cards')}
-                              className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-                            >
-                              <FileText className="h-4 w-4" />
-                              View
-                            </button>
+                          {product.pc_number ? (
+                            <span className="font-mono text-sm">{product.pc_number}</span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}

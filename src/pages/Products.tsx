@@ -31,7 +31,6 @@ import { DestinyProduct, fetchDestinyProducts, normalizeDestinyCode, mapTipoEmpa
 
 interface Product {
   id: string;
-  codigo_producto: string | null;
   customer_item: string | null;
   item_description: string | null;
   customer: string | null;
@@ -44,9 +43,7 @@ interface Product {
   paquete_por_caja: number | null;
   piezas_totales_por_caja: number | null;
   pc_number: string | null;
-  print_card_url: string | null;
   customer_tech_spec_url: string | null;
-  bfx_spec_url: string | null;
   dp_sales_csr_names: string | null;
   activa: boolean | null;
   product_line: string | null;
@@ -161,7 +158,7 @@ export default function Products() {
     const [productsRes, requestsRes, destinyRes] = await Promise.all([
       supabase
         .from("products")
-        .select("id, codigo_producto, customer_item, item_description, customer, item_type, tipo_empaque, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, pc_number, print_card_url, customer_tech_spec_url, bfx_spec_url, dp_sales_csr_names, activa, product_line")
+        .select("id, customer_item, item_description, customer, item_type, pt_code, pieces_per_pallet, unidades_por_tarima, piezas_por_paquete, paquete_por_caja, piezas_totales_por_caja, pc_number, customer_tech_spec_url, dp_sales_csr_names, activa, product_line")
         .order("customer_item"),
       supabase
         .from("product_requests")
@@ -190,11 +187,10 @@ export default function Products() {
       const syncedProducts = (productsRes.data || []).map((product) => {
         const lookupCode =
           normalizeDestinyCode(product.pt_code) ||
-          normalizeDestinyCode(product.codigo_producto) ||
           normalizeDestinyCode(product.customer_item);
         const destiny = destinyByCode[lookupCode];
 
-        const tipoEmpaque = destiny?.tipoEmpaque || product.tipo_empaque;
+        const tipoEmpaque = destiny?.tipoEmpaque || null;
 
         // Auto-map product_line and item_type from tipo_empaque if not already set
         let productLine = product.product_line;
@@ -220,7 +216,7 @@ export default function Products() {
 
         if (needsUpdate) backfillUpdates.push(updates);
 
-        if (!destiny) return { ...product, product_line: productLine };
+        if (!destiny) return { ...product, tipo_empaque: tipoEmpaque, product_line: productLine };
 
         return {
           ...product,
@@ -229,7 +225,6 @@ export default function Products() {
           item_type: itemType || product.item_type,
           tipo_empaque: tipoEmpaque,
           pt_code: destiny.codigoProducto || product.pt_code,
-          codigo_producto: destiny.codigoProducto || product.codigo_producto,
           unidades_por_tarima: destiny.unidadesPorTarima ?? product.unidades_por_tarima,
           paquete_por_caja: destiny.paquetePorCaja ?? product.paquete_por_caja,
           piezas_por_paquete: destiny.piezasPorPaquete ?? product.piezas_por_paquete,
@@ -238,7 +233,6 @@ export default function Products() {
           pc_number: destiny.printCard || product.pc_number,
           customer: product.customer,
           customer_tech_spec_url: product.customer_tech_spec_url,
-          bfx_spec_url: product.bfx_spec_url,
           dp_sales_csr_names: product.dp_sales_csr_names,
           product_line: productLine,
         };
@@ -283,7 +277,7 @@ export default function Products() {
 
   // Apply search + filters to products
   const filteredProducts = tabProducts.filter((product) => {
-    const ptCode = product.codigo_producto || product.pt_code || "";
+    const ptCode = product.pt_code || "";
     const matchesSearch =
       !searchQuery ||
       product.customer_item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -296,7 +290,7 @@ export default function Products() {
       (filters.customer.length === 0 || (product.customer && filters.customer.includes(product.customer))) &&
       (filters.item_type.length === 0 || (product.item_type && filters.item_type.includes(product.item_type))) &&
       (filters.tipo_empaque.length === 0 || (product.tipo_empaque && filters.tipo_empaque.includes(product.tipo_empaque))) &&
-      (filters.pt_code.length === 0 || ((product.codigo_producto || product.pt_code) && filters.pt_code.includes(product.codigo_producto || product.pt_code || ""))) &&
+      (filters.pt_code.length === 0 || (product.pt_code && filters.pt_code.includes(product.pt_code))) &&
       (filters.pieces_per_pallet.length === 0 || (product.pieces_per_pallet !== null && filters.pieces_per_pallet.includes(String(product.pieces_per_pallet)))) &&
       (filters.dp_sales_csr_names.length === 0 || (product.dp_sales_csr_names && filters.dp_sales_csr_names.includes(product.dp_sales_csr_names)));
 
@@ -404,7 +398,7 @@ export default function Products() {
               <ColumnFilterHeader label="Final Customer" filterKey="customer" options={getUniqueValues("customer")} />
               <ColumnFilterHeader label="Item Type" filterKey="item_type" options={getUniqueValues("item_type")} />
               {isAdmin && <ColumnFilterHeader label="Tipo Empaque" filterKey="tipo_empaque" options={getUniqueValues("tipo_empaque")} />}
-              {isAdmin && <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={getUniqueValues("codigo_producto")} />}
+              {isAdmin && <ColumnFilterHeader label="PT Code" filterKey="pt_code" options={getUniqueValues("pt_code")} />}
               <ColumnFilterHeader label="Pieces/Pallet" filterKey="pieces_per_pallet" options={getUniqueValues("pieces_per_pallet")} className="text-right" />
               {isAdmin && <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">PC</th>}
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Customer Spec</th>
@@ -445,11 +439,6 @@ export default function Products() {
                         <FileText className="h-4 w-4" />
                         {product.pc_number || "View"}
                       </button>
-                    ) : product.bfx_spec_url ? (
-                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
-                        <FileText className="h-4 w-4" />
-                        {product.pc_number || "View"}
-                      </button>
                     ) : product.pc_number ? (
                       <span className="font-mono text-muted-foreground">{product.pc_number}</span>
                     ) : (
@@ -477,11 +466,6 @@ export default function Products() {
                         }}
                         className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
                       >
-                        <FileText className="h-4 w-4" />
-                        View
-                      </button>
-                    ) : product.bfx_spec_url ? (
-                      <button onClick={() => openStorageFile(product.bfx_spec_url, 'print-cards')} className="inline-flex items-center gap-1 text-primary hover:underline cursor-pointer bg-transparent border-none p-0">
                         <FileText className="h-4 w-4" />
                         View
                       </button>
