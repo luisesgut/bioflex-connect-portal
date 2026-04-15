@@ -2408,10 +2408,14 @@ export default function LoadDetail() {
                 // Always rebuild from live load_pallets data to get current destination/release
                 const freshProducts = await buildFromReleasedPallets(id!);
                 const enriched = await enrichWithTraceability(id!, freshProducts);
-                const totalPalletCount = enriched.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
+                const enrichedWithLabels = enriched.map((p: any) => ({
+                  ...p,
+                  destination: getDestinationLabel(p.destination),
+                }));
+                const totalPalletCount = enrichedWithLabels.reduce((s: number, p: any) => s + (p.totalPallets || 0), 0);
                 generateCustomsPDF(
                   { loadNumber: load.load_number, shippingDate: load.shipping_date },
-                  enriched,
+                  enrichedWithLabels,
                   totalPalletCount,
                   5000
                 );
