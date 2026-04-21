@@ -124,7 +124,26 @@ interface StockVerificationItem {
   stockOtrasPOs?: number;
 }
 
+interface OrderSummaryLine {
+  clave?: string | null;
+  producto?: string | null;
+  unidad?: string | null;
+  cantidad?: number | string | null;
+  enviado?: number | string | null;
+  pendiente?: number | string | null;
+}
+
+interface OrderSummaryResponse {
+  docNum?: number | string | null;
+  cliente?: string | null;
+  u_PO1?: string | null;
+  u_PO2?: string | null;
+  vendedor?: string | null;
+  lineas?: OrderSummaryLine[] | null;
+}
+
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
+const ORDER_SUMMARY_ENDPOINT = "http://172.16.10.31/api/OrderSummary";
 const PRINT_CARD_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard";
 const BFX_SPEC_PREVIEW_BASE_URL = "http://172.16.10.31/api/Printcard/ficha";
 const PURCHASE_ORDER_PREVIEW_BASE_URL = "http://172.16.10.31/api/PurchaseOrder";
@@ -215,6 +234,9 @@ export default function OrderDetail() {
   const [stockVerification, setStockVerification] = useState<StockVerificationItem[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [orderSummary, setOrderSummary] = useState<OrderSummaryResponse | null>(null);
+  const [orderSummaryLoading, setOrderSummaryLoading] = useState(false);
+  const [orderSummaryError, setOrderSummaryError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [togglingHot, setTogglingHot] = useState(false);
@@ -234,6 +256,54 @@ export default function OrderDetail() {
       fetchPendingHotRequest();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (!order?.po_number || order.status !== "closed") {
+      setOrderSummary(null);
+      setOrderSummaryError(null);
+      setOrderSummaryLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchOrderSummary = async () => {
+      try {
+        setOrderSummaryLoading(true);
+        setOrderSummaryError(null);
+
+        const url = new URL(ORDER_SUMMARY_ENDPOINT);
+        url.searchParams.set("po", order.po_number.trim());
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: { accept: "*/*" },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Order summary fetch failed with status ${response.status}`);
+        }
+
+        const payload = await response.json();
+        setOrderSummary(payload && typeof payload === "object" ? payload as OrderSummaryResponse : null);
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
+        console.error("Error loading order summary:", error);
+        setOrderSummaryError("Unable to load volume summary right now.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setOrderSummaryLoading(false);
+        }
+      }
+    };
+
+    fetchOrderSummary();
+
+    return () => {
+      controller.abort();
+    };
+  }, [order?.po_number, order?.status]);
 
   const fetchPendingHotRequest = async () => {
     if (!id) return;
@@ -1000,6 +1070,96 @@ export default function OrderDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {order.status === "closed" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Volume Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {orderSummaryLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading volume summary...
+                    </div>
+                  )}
+
+                  {orderSummaryError && (
+                    <div className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      No se pudo cargar el volumen de esta PO.
+                    </div>
+                  )}
+
+                  {!orderSummaryLoading && !orderSummaryError && (() => {
+                    const lines = orderSummary?.lineas || [];
+                    const totalRequested = lines.reduce((sum, line) => sum + (parseApiNumber(line.cantidad) || 0), 0);
+                    const totalShipped = lines.reduce((sum, line) => sum + (parseApiNumber(line.enviado) || 0), 0);
+                    const totalPending = lines.reduce((sum, line) => sum + (parseApiNumber(line.pendiente) || 0), 0);
+                    const unit = lines.find((line) => (line.unidad || "").trim())?.unidad?.trim() || "units";
+
+                    if (lines.length === 0) {
+                      return (
+                        <div className="rounded-md border border-dashed bg-muted/20 px-3 py-6 text-center text-sm text-muted-foreground">
+                          No hay volumen disponible para esta PO.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <p className="text-xs text-muted-foreground">Requested</p>
+                            <p className="mt-1 text-lg font-semibold">{totalRequested.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">{unit}</p>
+                          </div>
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <p className="text-xs text-muted-foreground">Shipped</p>
+                            <p className="mt-1 text-lg font-semibold">{totalShipped.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">{unit}</p>
+                          </div>
+                          <div className="rounded-lg border bg-muted/30 p-3">
+                            <p className="text-xs text-muted-foreground">Pending</p>
+                            <p className="mt-1 text-lg font-semibold">{totalPending.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">{unit}</p>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="px-2 py-2 text-left font-medium text-muted-foreground">Code</th>
+                                <th className="px-2 py-2 text-left font-medium text-muted-foreground">Product</th>
+                                <th className="px-2 py-2 text-left font-medium text-muted-foreground">Unit</th>
+                                <th className="px-2 py-2 text-right font-medium text-muted-foreground">Requested</th>
+                                <th className="px-2 py-2 text-right font-medium text-muted-foreground">Shipped</th>
+                                <th className="px-2 py-2 text-right font-medium text-muted-foreground">Pending</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                              {lines.map((line, index) => (
+                                <tr key={`${line.clave || "line"}-${index}`} className="hover:bg-muted/20">
+                                  <td className="px-2 py-2 font-mono text-muted-foreground">{line.clave || "—"}</td>
+                                  <td className="px-2 py-2">{line.producto || "—"}</td>
+                                  <td className="px-2 py-2 text-muted-foreground">{line.unidad || "—"}</td>
+                                  <td className="px-2 py-2 text-right">{(parseApiNumber(line.cantidad) ?? 0).toLocaleString()}</td>
+                                  <td className="px-2 py-2 text-right">{(parseApiNumber(line.enviado) ?? 0).toLocaleString()}</td>
+                                  <td className="px-2 py-2 text-right">{(parseApiNumber(line.pendiente) ?? 0).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Delivery Information */}
             <Card>

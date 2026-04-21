@@ -118,6 +118,24 @@ interface CatOrdenClosedItem {
   detallesAlmacenTotal?: Array<Record<string, unknown>>;
 }
 
+interface OrderSummaryLine {
+  clave?: string | null;
+  producto?: string | null;
+  unidad?: string | null;
+  cantidad?: number | string | null;
+  enviado?: number | string | null;
+  pendiente?: number | string | null;
+}
+
+interface OrderSummaryResponse {
+  docNum?: number | string | null;
+  cliente?: string | null;
+  u_PO1?: string | null;
+  u_PO2?: string | null;
+  vendedor?: string | null;
+  lineas?: OrderSummaryLine[] | null;
+}
+
 interface Order {
   id: string;
   po_number: string;
@@ -154,6 +172,7 @@ interface Order {
 
 const CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/open-with-orden";
 const CAT_ORDEN_CLOSED_WITH_ORDEN_ENDPOINT = "http://172.16.10.31/api/CatOrden/closed-with-orden";
+const ORDER_SUMMARY_ENDPOINT = "http://172.16.10.31/api/OrderSummary";
 const SAP_ORDERS_SYNC_ENDPOINT = "http://172.16.10.31/api/Sync/orders";
 
 interface SyncOrdersResponse {
@@ -215,6 +234,7 @@ export default function Orders() {
   const { isAdmin, isInternalUser } = useAdmin();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedClosedSapOrder, setSelectedClosedSapOrder] = useState<CatOrdenClosedItem | null>(null);
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [changeRequestDialogOpen, setChangeRequestDialogOpen] = useState(false);
@@ -864,6 +884,37 @@ export default function Orders() {
     },
   });
 
+  const selectedClosedPoNumber = selectedClosedSapOrder?.u_PO2?.trim() || "";
+
+  const {
+    data: selectedClosedOrderSummary,
+    isFetching: fetchingSelectedClosedOrderSummary,
+    error: selectedClosedOrderSummaryError,
+  } = useQuery<OrderSummaryResponse | null>({
+    queryKey: ["purchase-order-summary", selectedClosedPoNumber],
+    enabled: !!selectedClosedPoNumber,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const url = new URL(ORDER_SUMMARY_ENDPOINT);
+      url.searchParams.set("po", selectedClosedPoNumber);
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: { accept: "*/*" },
+        signal: AbortSignal.timeout(30000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Order summary fetch failed with status ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return payload && typeof payload === "object" ? payload as OrderSummaryResponse : null;
+    },
+  });
+
   const getStatusFilter = (status: string): string => {
     if (status === "pending" || status === "submitted") return "Submitted";
     if (status === "accepted") return "Accepted";
@@ -1122,7 +1173,6 @@ export default function Orders() {
   }, [activeOrders, combinedClosedOrders]);
 
   const [reactivatingId, setReactivatingId] = useState<string | null>(null);
-  const [selectedClosedSapOrder, setSelectedClosedSapOrder] = useState<CatOrdenClosedItem | null>(null);
 
   const handleReactivateOrder = async (orderId: string) => {
     setReactivatingId(orderId);
@@ -1727,6 +1777,91 @@ export default function Orders() {
                         <p className="font-medium">{selectedClosedSapOrder.u_ImpRl || "—"}</p>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Volume Summary */}
+                  <div className="rounded-lg border bg-card p-4 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Volume Summary
+                      </h3>
+                      {fetchingSelectedClosedOrderSummary && (
+                        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Loading
+                        </span>
+                      )}
+                    </div>
+
+                    {selectedClosedOrderSummaryError ? (
+                      <div className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                        No se pudo cargar el volumen de esta PO.
+                      </div>
+                    ) : null}
+
+                    {!fetchingSelectedClosedOrderSummary && !selectedClosedOrderSummaryError && (
+                      (() => {
+                        const summaryLines = selectedClosedOrderSummary?.lineas || [];
+                        const totalRequested = summaryLines.reduce((sum, line) => sum + (parseApiNumber(line.cantidad) || 0), 0);
+                        const totalShipped = summaryLines.reduce((sum, line) => sum + (parseApiNumber(line.enviado) || 0), 0);
+                        const totalPending = summaryLines.reduce((sum, line) => sum + (parseApiNumber(line.pendiente) || 0), 0);
+                        const summaryUnit = summaryLines.find((line) => (line.unidad || "").trim())?.unidad?.trim() || selectedClosedSapOrder.unidad || selectedClosedSapOrder.claveUnidad || "units";
+
+                        return summaryLines.length > 0 ? (
+                          <>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="rounded-lg border bg-muted/30 p-3">
+                                <p className="text-xs text-muted-foreground">Requested</p>
+                                <p className="mt-1 text-lg font-semibold">{totalRequested.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{summaryUnit}</p>
+                              </div>
+                              <div className="rounded-lg border bg-muted/30 p-3">
+                                <p className="text-xs text-muted-foreground">Shipped</p>
+                                <p className="mt-1 text-lg font-semibold">{totalShipped.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{summaryUnit}</p>
+                              </div>
+                              <div className="rounded-lg border bg-muted/30 p-3">
+                                <p className="text-xs text-muted-foreground">Pending</p>
+                                <p className="mt-1 text-lg font-semibold">{totalPending.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{summaryUnit}</p>
+                              </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b">
+                                    <th className="px-2 py-2 text-left font-medium text-muted-foreground">Code</th>
+                                    <th className="px-2 py-2 text-left font-medium text-muted-foreground">Product</th>
+                                    <th className="px-2 py-2 text-left font-medium text-muted-foreground">Unit</th>
+                                    <th className="px-2 py-2 text-right font-medium text-muted-foreground">Requested</th>
+                                    <th className="px-2 py-2 text-right font-medium text-muted-foreground">Shipped</th>
+                                    <th className="px-2 py-2 text-right font-medium text-muted-foreground">Pending</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                  {summaryLines.map((line, index) => (
+                                    <tr key={`${line.clave || "line"}-${index}`} className="hover:bg-muted/20">
+                                      <td className="px-2 py-2 font-mono text-muted-foreground">{line.clave || "—"}</td>
+                                      <td className="px-2 py-2">{line.producto || "—"}</td>
+                                      <td className="px-2 py-2 text-muted-foreground">{line.unidad || "—"}</td>
+                                      <td className="px-2 py-2 text-right">{(parseApiNumber(line.cantidad) ?? 0).toLocaleString()}</td>
+                                      <td className="px-2 py-2 text-right">{(parseApiNumber(line.enviado) ?? 0).toLocaleString()}</td>
+                                      <td className="px-2 py-2 text-right">{(parseApiNumber(line.pendiente) ?? 0).toLocaleString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="rounded-md border border-dashed bg-muted/20 px-3 py-6 text-center text-sm text-muted-foreground">
+                            No hay volumen disponible para esta PO.
+                          </div>
+                        );
+                      })()
+                    )}
                   </div>
 
                   {/* Dates */}
