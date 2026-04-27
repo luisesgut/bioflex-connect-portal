@@ -205,7 +205,7 @@ export default function POTRUpdate() {
       };
 
       // Convert sapOnlyAgg to sapOnlyEntries array
-      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
+      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; poDate: string | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
       for (const [poNumber, agg] of sapOnlyAgg) {
         sapOnlyEntries.push({
           poNumber,
@@ -214,6 +214,7 @@ export default function POTRUpdate() {
           shipped: agg.shipped,
           pedido: formatPedidoInfos(agg.pedidoInfos),
           precio: agg.precio,
+          poDate: agg.poDates[0] || null,
           dueDate: agg.dueDates[0] || null,
           tipoEmpaque: agg.tipoEmpaques[0] || "",
           cantidad: agg.cantidad,
@@ -245,7 +246,7 @@ export default function POTRUpdate() {
       if (missedPOs.length > 0) {
         const { data: localOrders } = await supabase
           .from("purchase_orders")
-          .select("po_number, sales_order_number, price_per_thousand, quantity, status, product_id, products(pt_code)")
+          .select("po_number, sales_order_number, price_per_thousand, po_date, quantity, status, product_id, products(pt_code)")
           .in("po_number", missedPOs);
 
         for (const lo of localOrders || []) {
@@ -261,6 +262,7 @@ export default function POTRUpdate() {
               ptCodes,
               pedidoInfos,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
+              poDate: lo.po_date || null,
               cantidad: lo.quantity != null ? Number(lo.quantity) : 0,
             });
           }
@@ -330,6 +332,7 @@ export default function POTRUpdate() {
           otherStock,
           salesOrder: sap ? formatPedidoInfos(sap.pedidoInfos) : null,
           pricePerThousand: sap?.precio ?? null,
+          poDate: sap?.poDate ?? null,
           matched: !!sap,
           isFromSAP: false,
           dueDate: null,
@@ -359,6 +362,7 @@ export default function POTRUpdate() {
           otherStock,
           salesOrder: entry.pedido,
           pricePerThousand: entry.precio,
+          poDate: entry.poDate,
           matched: true,
           isFromSAP: true,
           dueDate: entry.dueDate,
