@@ -21,6 +21,7 @@ interface POTRMatch {
   otherStock: number | null;
   salesOrder: string | null;
   pricePerThousand: number | null;
+  poDate: string | null;
   matched: boolean;
   isFromSAP: boolean;
   dueDate: string | null;
@@ -126,14 +127,14 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_documento, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
       // Track closed status per pedido: closed when cantidad_enviada >= cantidad_solicitada
       const sapOnlyPtCodes = new Set<string>();
       type PedidoInfo = { pedido: string; closed: boolean };
-      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; cantidad: number }>();
-      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
+      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; poDate: string | null; cantidad: number }>();
+      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; poDates: string[]; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -154,12 +155,13 @@ export default function POTRUpdate() {
               existing.pedidoInfos.push({ pedido, closed: isClosed });
             }
             if (precio != null && existing.precio == null) existing.precio = precio;
+            if (so.fecha_documento && !existing.poDate) existing.poDate = so.fecha_documento;
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
             const pedidoInfos: PedidoInfo[] = [];
             if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
-            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, cantidad });
+            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, poDate: so.fecha_documento || null, cantidad });
           }
         } else {
           if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
@@ -173,6 +175,7 @@ export default function POTRUpdate() {
             }
             if (precio != null && existing.precio == null) existing.precio = precio;
             if (so.producto && !existing.descriptions.includes(so.producto)) existing.descriptions.push(so.producto);
+            if (so.fecha_documento && !existing.poDates.includes(so.fecha_documento)) existing.poDates.push(so.fecha_documento);
             if (so.fecha_vencimiento && !existing.dueDates.includes(so.fecha_vencimiento)) existing.dueDates.push(so.fecha_vencimiento);
             if (so.tipo_empaque && !existing.tipoEmpaques.includes(so.tipo_empaque)) existing.tipoEmpaques.push(so.tipo_empaque);
           } else {
@@ -186,6 +189,7 @@ export default function POTRUpdate() {
               shipped,
               pedidoInfos,
               precio,
+              poDates: so.fecha_documento ? [so.fecha_documento] : [],
               dueDates: so.fecha_vencimiento ? [so.fecha_vencimiento] : [],
               tipoEmpaques: so.tipo_empaque ? [so.tipo_empaque] : [],
               cantidad,
