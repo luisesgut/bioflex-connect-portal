@@ -403,7 +403,8 @@ export default function POTRUpdate() {
     });
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
-    const priceCol = maxCol + 3;
+    const poDateCol = maxCol + 3;
+    const priceCol = maxCol + 4;
     // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
     // Item Type goes to column G (index 7, 1-based)
@@ -420,6 +421,10 @@ export default function POTRUpdate() {
     const osHeaderCell = headerRow.getCell(otherStockCol);
     osHeaderCell.value = "Other Stock (Same Product)";
     osHeaderCell.font = { bold: true };
+
+    const poDateHeaderCell = headerRow.getCell(poDateCol);
+    poDateHeaderCell.value = "PO Date";
+    poDateHeaderCell.font = { bold: true };
 
     const priceHeaderCell = headerRow.getCell(priceCol);
     priceHeaderCell.value = "Price Per Thousand";
@@ -454,6 +459,7 @@ export default function POTRUpdate() {
       oc.value = match.otherStock ?? 0;
       oc.numFmt = thousandsFmt;
 
+      row.getCell(poDateCol).value = match.poDate || "";
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
     };
 
