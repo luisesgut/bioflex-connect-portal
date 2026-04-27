@@ -605,6 +605,7 @@ export default function POTRUpdate() {
                       <TableHead className="text-right">Qty Produced</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
                       <TableHead className="text-right">Blanket Qty</TableHead>
+                      <TableHead>PO Date</TableHead>
                       <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>PO Date Due</TableHead>
                       <TableHead>Sales Order</TableHead>
@@ -659,6 +660,9 @@ export default function POTRUpdate() {
                         </TableCell>
                         <TableCell className="text-right">
                           {m.isFromSAP && m.blanketQuantity != null ? (m.blanketQuantity * 1000).toLocaleString() : "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {m.poDate || "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
