@@ -2233,6 +2233,18 @@ export type Database = {
     }
     Functions: {
       close_orphan_purchase_orders: { Args: never; Returns: number }
+      close_purchase_orders_by_ids: {
+        Args: { order_ids: string[] }
+        Returns: number
+      }
+      get_accepted_purchase_orders: {
+        Args: never
+        Returns: {
+          id: string
+          po_number: string
+          sales_order_number: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
