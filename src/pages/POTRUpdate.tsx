@@ -21,6 +21,7 @@ interface POTRMatch {
   otherStock: number | null;
   salesOrder: string | null;
   pricePerThousand: number | null;
+  poDate: string | null;
   matched: boolean;
   isFromSAP: boolean;
   dueDate: string | null;
@@ -126,14 +127,14 @@ export default function POTRUpdate() {
       // Fetch ALL sap_orders (not just the ones in Excel)
       const { data: allSapOrders } = await supabase
         .from("sap_orders")
-        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_vencimiento, tipo_empaque");
+        .select("po_number, cantidad_enviada, cantidad, cantidad_solicitada, pt_code, pedido, precio, producto, fecha_documento, fecha_vencimiento, tipo_empaque");
 
       // Aggregate multiple SAP orders per PO number
       // Track closed status per pedido: closed when cantidad_enviada >= cantidad_solicitada
       const sapOnlyPtCodes = new Set<string>();
       type PedidoInfo = { pedido: string; closed: boolean };
-      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; cantidad: number }>();
-      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
+      const sapMap = new Map<string, { shipped: number; ptCodes: Set<string>; pedidoInfos: PedidoInfo[]; precio: number | null; poDate: string | null; cantidad: number }>();
+      const sapOnlyAgg = new Map<string, { ptCodes: Set<string>; descriptions: string[]; shipped: number; pedidoInfos: PedidoInfo[]; precio: number | null; poDates: string[]; dueDates: string[]; tipoEmpaques: string[]; cantidad: number }>();
 
       for (const so of allSapOrders || []) {
         if (!so.po_number) continue;
@@ -154,12 +155,13 @@ export default function POTRUpdate() {
               existing.pedidoInfos.push({ pedido, closed: isClosed });
             }
             if (precio != null && existing.precio == null) existing.precio = precio;
+            if (so.fecha_documento && !existing.poDate) existing.poDate = so.fecha_documento;
           } else {
             const ptCodes = new Set<string>();
             if (so.pt_code) ptCodes.add(so.pt_code);
             const pedidoInfos: PedidoInfo[] = [];
             if (pedido) pedidoInfos.push({ pedido, closed: isClosed });
-            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, cantidad });
+            sapMap.set(so.po_number, { shipped, ptCodes, pedidoInfos, precio, poDate: so.fecha_documento || null, cantidad });
           }
         } else {
           if (so.pt_code) sapOnlyPtCodes.add(so.pt_code);
@@ -173,6 +175,7 @@ export default function POTRUpdate() {
             }
             if (precio != null && existing.precio == null) existing.precio = precio;
             if (so.producto && !existing.descriptions.includes(so.producto)) existing.descriptions.push(so.producto);
+            if (so.fecha_documento && !existing.poDates.includes(so.fecha_documento)) existing.poDates.push(so.fecha_documento);
             if (so.fecha_vencimiento && !existing.dueDates.includes(so.fecha_vencimiento)) existing.dueDates.push(so.fecha_vencimiento);
             if (so.tipo_empaque && !existing.tipoEmpaques.includes(so.tipo_empaque)) existing.tipoEmpaques.push(so.tipo_empaque);
           } else {
@@ -186,6 +189,7 @@ export default function POTRUpdate() {
               shipped,
               pedidoInfos,
               precio,
+              poDates: so.fecha_documento ? [so.fecha_documento] : [],
               dueDates: so.fecha_vencimiento ? [so.fecha_vencimiento] : [],
               tipoEmpaques: so.tipo_empaque ? [so.tipo_empaque] : [],
               cantidad,
@@ -201,7 +205,7 @@ export default function POTRUpdate() {
       };
 
       // Convert sapOnlyAgg to sapOnlyEntries array
-      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
+      const sapOnlyEntries: { poNumber: string; ptCode: string; description: string; shipped: number; pedido: string | null; precio: number | null; poDate: string | null; dueDate: string | null; tipoEmpaque: string; cantidad: number }[] = [];
       for (const [poNumber, agg] of sapOnlyAgg) {
         sapOnlyEntries.push({
           poNumber,
@@ -210,6 +214,7 @@ export default function POTRUpdate() {
           shipped: agg.shipped,
           pedido: formatPedidoInfos(agg.pedidoInfos),
           precio: agg.precio,
+          poDate: agg.poDates[0] || null,
           dueDate: agg.dueDates[0] || null,
           tipoEmpaque: agg.tipoEmpaques[0] || "",
           cantidad: agg.cantidad,
@@ -241,7 +246,7 @@ export default function POTRUpdate() {
       if (missedPOs.length > 0) {
         const { data: localOrders } = await supabase
           .from("purchase_orders")
-          .select("po_number, sales_order_number, price_per_thousand, quantity, status, product_id, products(pt_code)")
+          .select("po_number, sales_order_number, price_per_thousand, po_date, quantity, status, product_id, products(pt_code)")
           .in("po_number", missedPOs);
 
         for (const lo of localOrders || []) {
@@ -257,6 +262,7 @@ export default function POTRUpdate() {
               ptCodes,
               pedidoInfos,
               precio: lo.price_per_thousand != null ? Number(lo.price_per_thousand) : null,
+              poDate: lo.po_date || null,
               cantidad: lo.quantity != null ? Number(lo.quantity) : 0,
             });
           }
@@ -326,6 +332,7 @@ export default function POTRUpdate() {
           otherStock,
           salesOrder: sap ? formatPedidoInfos(sap.pedidoInfos) : null,
           pricePerThousand: sap?.precio ?? null,
+          poDate: sap?.poDate ?? null,
           matched: !!sap,
           isFromSAP: false,
           dueDate: null,
@@ -355,6 +362,7 @@ export default function POTRUpdate() {
           otherStock,
           salesOrder: entry.pedido,
           pricePerThousand: entry.precio,
+          poDate: entry.poDate,
           matched: true,
           isFromSAP: true,
           dueDate: entry.dueDate,
@@ -395,7 +403,8 @@ export default function POTRUpdate() {
     });
     const salesOrderCol = maxCol + 1;
     const otherStockCol = maxCol + 2;
-    const priceCol = maxCol + 3;
+    const poDateCol = maxCol + 3;
+    const priceCol = maxCol + 4;
     // PO Due Date goes to column K (dueDateColIdx + 1)
     const dueDateExcelCol = dueDateColIdx + 1;
     // Item Type goes to column G (index 7, 1-based)
@@ -412,6 +421,10 @@ export default function POTRUpdate() {
     const osHeaderCell = headerRow.getCell(otherStockCol);
     osHeaderCell.value = "Other Stock (Same Product)";
     osHeaderCell.font = { bold: true };
+
+    const poDateHeaderCell = headerRow.getCell(poDateCol);
+    poDateHeaderCell.value = "PO Date";
+    poDateHeaderCell.font = { bold: true };
 
     const priceHeaderCell = headerRow.getCell(priceCol);
     priceHeaderCell.value = "Price Per Thousand";
@@ -446,6 +459,7 @@ export default function POTRUpdate() {
       oc.value = match.otherStock ?? 0;
       oc.numFmt = thousandsFmt;
 
+      row.getCell(poDateCol).value = match.poDate || "";
       row.getCell(priceCol).value = match.pricePerThousand ?? "";
     };
 
@@ -591,6 +605,7 @@ export default function POTRUpdate() {
                       <TableHead className="text-right">Qty Produced</TableHead>
                       <TableHead className="text-right">Otro Stock</TableHead>
                       <TableHead className="text-right">Blanket Qty</TableHead>
+                      <TableHead>PO Date</TableHead>
                       <TableHead className="text-right">Precio/Millar</TableHead>
                       <TableHead>PO Date Due</TableHead>
                       <TableHead>Sales Order</TableHead>
@@ -645,6 +660,9 @@ export default function POTRUpdate() {
                         </TableCell>
                         <TableCell className="text-right">
                           {m.isFromSAP && m.blanketQuantity != null ? (m.blanketQuantity * 1000).toLocaleString() : "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {m.poDate || "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {m.pricePerThousand != null ? (
