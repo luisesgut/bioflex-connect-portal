@@ -215,10 +215,16 @@ export function BillingValidationCard({
                         const freshProducts = await buildFromReleasedPallets(loadId);
                         const enriched = await enrichWithTraceability(loadId, freshProducts);
                         const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                        const vd = validation?.validated_data;
+                        const savedDestOrder = vd && !Array.isArray(vd) && Array.isArray(vd.destinationOrder)
+                          ? vd.destinationOrder as string[]
+                          : undefined;
                         generateLoadChecklist(
                           { loadNumber, shippingDate },
                           enriched,
-                          totalPalletCount
+                          totalPalletCount,
+                          savedDestOrder,
+                          getDestinationLabel
                         );
                         toast.success("Checklist downloaded");
                       }}
