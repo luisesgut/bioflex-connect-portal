@@ -346,13 +346,16 @@ export function CustomsReviewDialog({
   const [freightCostInput, setFreightCostInput] = useState(String(FREIGHT_COST));
   const [exchangeRateInput, setExchangeRateInput] = useState("17.5");
   const [freightSalesOrder, setFreightSalesOrder] = useState("");
+  const [destinationOrder, setDestinationOrder] = useState<string[]>([]);
+  const { getDestinationLabel } = useCustomerLocations();
 
   useEffect(() => {
     if (!open) return;
     setEditingIndex(null);
 
-    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate }
+    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate, destinationOrder }
     let existingProducts: CustomsProductSummary[] | null = null;
+    let savedDestOrder: string[] | null = null;
     if (existingData) {
       if (Array.isArray(existingData)) {
         existingProducts = existingData;
@@ -360,18 +363,33 @@ export function CustomsReviewDialog({
         existingProducts = existingData.products;
         if (existingData.freightCost != null) setFreightCostInput(String(existingData.freightCost));
         if (existingData.exchangeRate != null) setExchangeRateInput(String(existingData.exchangeRate));
+        if (Array.isArray(existingData.destinationOrder)) savedDestOrder = existingData.destinationOrder;
       }
     }
 
     if (existingProducts && existingProducts.length > 0) {
-      enrichWithTraceability(loadId, existingProducts).then(enriched => setProducts(enriched));
+      enrichWithTraceability(loadId, existingProducts).then(enriched => {
+        setProducts(enriched);
+        if (savedDestOrder && savedDestOrder.length > 0) {
+          setDestinationOrder(savedDestOrder);
+        } else {
+          setDestinationOrder(extractUniqueDestinations(enriched));
+        }
+      });
       return;
     }
 
     // Build from released pallets
     setLoadingData(true);
     buildFromReleasedPallets(loadId)
-      .then(data => setProducts(data))
+      .then(data => {
+        setProducts(data);
+        if (savedDestOrder && savedDestOrder.length > 0) {
+          setDestinationOrder(savedDestOrder);
+        } else {
+          setDestinationOrder(extractUniqueDestinations(data));
+        }
+      })
       .catch(err => {
         console.error("Error building product summaries:", err);
         toast.error("Error loading released pallet data");
