@@ -454,7 +454,7 @@ export function CustomsReviewDialog({
         const { error } = await supabase
           .from("load_billing_validations")
           .update({
-            validated_data: { products, freightCost, exchangeRate } as any,
+            validated_data: { products, freightCost, exchangeRate, destinationOrder } as any,
             status: "approved",
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
@@ -468,7 +468,7 @@ export function CustomsReviewDialog({
             load_id: loadId,
             submitted_by: userId,
             status: "approved",
-            validated_data: { products, freightCost, exchangeRate } as any,
+            validated_data: { products, freightCost, exchangeRate, destinationOrder } as any,
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
           });
