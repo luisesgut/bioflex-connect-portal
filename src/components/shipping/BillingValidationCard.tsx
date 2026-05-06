@@ -20,6 +20,7 @@ import { CustomsReviewDialog } from "./CustomsReviewDialog";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
 import { generateLoadChecklist } from "@/utils/generateLoadChecklist";
 import { buildFromReleasedPallets, enrichWithTraceability } from "./CustomsReviewDialog";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 
 interface BillingValidation {
   id: string;
@@ -60,6 +61,7 @@ export function BillingValidationCard({
   const [undoDialogOpen, setUndoDialogOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [reviewerName, setReviewerName] = useState<string | null>(null);
+  const { getDestinationLabel } = useCustomerLocations();
 
   const fetchValidation = useCallback(async () => {
     try {
@@ -213,10 +215,16 @@ export function BillingValidationCard({
                         const freshProducts = await buildFromReleasedPallets(loadId);
                         const enriched = await enrichWithTraceability(loadId, freshProducts);
                         const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                        const vd = validation?.validated_data;
+                        const savedDestOrder = vd && !Array.isArray(vd) && Array.isArray(vd.destinationOrder)
+                          ? vd.destinationOrder as string[]
+                          : undefined;
                         generateLoadChecklist(
                           { loadNumber, shippingDate },
                           enriched,
-                          totalPalletCount
+                          totalPalletCount,
+                          savedDestOrder,
+                          getDestinationLabel
                         );
                         toast.success("Checklist downloaded");
                       }}

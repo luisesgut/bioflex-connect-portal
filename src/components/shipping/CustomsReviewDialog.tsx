@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Save, FileDown, Pencil, Check, ExternalLink } from "lucide-react";
+import { Loader2, Save, FileDown, Pencil, Check, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
+import { TruckLayoutPreview, DEST_COLOR_PALETTE } from "./TruckLayoutPreview";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { openStorageFile } from "@/hooks/useOpenStorageFile";
 
 const FREIGHT_COST = 5000;
@@ -325,6 +327,18 @@ export async function enrichWithTraceability(
   }
 }
 
+function extractUniqueDestinations(prods: CustomsProductSummary[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  prods.forEach(p => {
+    if (p.destination && !seen.has(p.destination)) {
+      seen.add(p.destination);
+      result.push(p.destination);
+    }
+  });
+  return result;
+}
+
 export function CustomsReviewDialog({
   open,
   onOpenChange,
@@ -344,13 +358,16 @@ export function CustomsReviewDialog({
   const [freightCostInput, setFreightCostInput] = useState(String(FREIGHT_COST));
   const [exchangeRateInput, setExchangeRateInput] = useState("17.5");
   const [freightSalesOrder, setFreightSalesOrder] = useState("");
+  const [destinationOrder, setDestinationOrder] = useState<string[]>([]);
+  const { getDestinationLabel } = useCustomerLocations();
 
   useEffect(() => {
     if (!open) return;
     setEditingIndex(null);
 
-    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate }
+    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate, destinationOrder }
     let existingProducts: CustomsProductSummary[] | null = null;
+    let savedDestOrder: string[] | null = null;
     if (existingData) {
       if (Array.isArray(existingData)) {
         existingProducts = existingData;
@@ -358,18 +375,33 @@ export function CustomsReviewDialog({
         existingProducts = existingData.products;
         if (existingData.freightCost != null) setFreightCostInput(String(existingData.freightCost));
         if (existingData.exchangeRate != null) setExchangeRateInput(String(existingData.exchangeRate));
+        if (Array.isArray(existingData.destinationOrder)) savedDestOrder = existingData.destinationOrder;
       }
     }
 
     if (existingProducts && existingProducts.length > 0) {
-      enrichWithTraceability(loadId, existingProducts).then(enriched => setProducts(enriched));
+      enrichWithTraceability(loadId, existingProducts).then(enriched => {
+        setProducts(enriched);
+        if (savedDestOrder && savedDestOrder.length > 0) {
+          setDestinationOrder(savedDestOrder);
+        } else {
+          setDestinationOrder(extractUniqueDestinations(enriched));
+        }
+      });
       return;
     }
 
     // Build from released pallets
     setLoadingData(true);
     buildFromReleasedPallets(loadId)
-      .then(data => setProducts(data))
+      .then(data => {
+        setProducts(data);
+        if (savedDestOrder && savedDestOrder.length > 0) {
+          setDestinationOrder(savedDestOrder);
+        } else {
+          setDestinationOrder(extractUniqueDestinations(data));
+        }
+      })
       .catch(err => {
         console.error("Error building product summaries:", err);
         toast.error("Error loading released pallet data");
@@ -386,6 +418,24 @@ export function CustomsReviewDialog({
   const totalNetWeight = products.reduce((s, p) => s + p.totalNetWeight, 0);
   const grandTotalUSD = totalProductValue + freightCost;
   const grandTotalMXN = grandTotalUSD * exchangeRate;
+
+  const palletsByDestination = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => {
+      map[p.destination] = (map[p.destination] || 0) + p.totalPallets;
+    });
+    return map;
+  }, [products]);
+
+  const hasMultipleDestinations = destinationOrder.length > 1;
+
+  const moveDestination = (index: number, direction: -1 | 1) => {
+    const newOrder = [...destinationOrder];
+    const target = index + direction;
+    if (target < 0 || target >= newOrder.length) return;
+    [newOrder[index], newOrder[target]] = [newOrder[target], newOrder[index]];
+    setDestinationOrder(newOrder);
+  };
 
   const updateProduct = (index: number, field: keyof CustomsProductSummary, value: any) => {
     setProducts(prev => {
@@ -404,7 +454,7 @@ export function CustomsReviewDialog({
         const { error } = await supabase
           .from("load_billing_validations")
           .update({
-            validated_data: { products, freightCost, exchangeRate } as any,
+            validated_data: { products, freightCost, exchangeRate, destinationOrder } as any,
             status: "approved",
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
@@ -418,7 +468,7 @@ export function CustomsReviewDialog({
             load_id: loadId,
             submitted_by: userId,
             status: "approved",
-            validated_data: { products, freightCost, exchangeRate } as any,
+            validated_data: { products, freightCost, exchangeRate, destinationOrder } as any,
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
           });
@@ -471,6 +521,58 @@ export function CustomsReviewDialog({
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Destination ordering + truck layout */}
+              {hasMultipleDestinations && (
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+                  <h4 className="font-semibold text-sm">Orden de Destinos (1° = más cerca de compuertas)</h4>
+                  <div className="flex gap-6 flex-wrap">
+                    <div className="space-y-1.5">
+                      {destinationOrder.map((dest, i) => {
+                        const c = DEST_COLOR_PALETTE[i % DEST_COLOR_PALETTE.length];
+                        return (
+                          <div key={dest} className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-sm shrink-0 ${c.bg}`} />
+                            <span className="text-sm font-medium min-w-[100px]">
+                              {i + 1}. {getDestinationLabel(dest)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ({palletsByDestination[dest] || 0} tarimas)
+                            </span>
+                            {!isReadOnly && (
+                              <div className="flex gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  disabled={i === 0}
+                                  onClick={() => moveDestination(i, -1)}
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  disabled={i === destinationOrder.length - 1}
+                                  onClick={() => moveDestination(i, 1)}
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <TruckLayoutPreview
+                      destinationOrder={destinationOrder}
+                      palletsByDestination={palletsByDestination}
+                      getDestinationLabel={getDestinationLabel}
+                    />
+                  </div>
+                </div>
+              )}
+
               {products.map((product, idx) => (
                 <div key={idx} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
