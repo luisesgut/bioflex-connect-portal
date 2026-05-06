@@ -66,7 +66,7 @@ interface CustomsReviewDialogProps {
   loadId: string;
   loadNumber: string;
   shippingDate: string;
-  existingData: CustomsProductSummary[] | null;
+  existingData: any | null;
   validationId: string | null;
   userId: string;
   isReadOnly: boolean;
