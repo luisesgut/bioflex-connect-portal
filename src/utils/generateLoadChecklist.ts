@@ -45,7 +45,9 @@ function fmt(n: number, decimals = 0): string {
 export function generateLoadChecklist(
   loadInfo: LoadInfo,
   products: ProductSummary[],
-  totalPallets: number
+  totalPallets: number,
+  destinationOrder?: string[],
+  getDestinationLabel?: (code: string) => string
 ): void {
   const doc = new jsPDF();
   let y = MARGIN;
