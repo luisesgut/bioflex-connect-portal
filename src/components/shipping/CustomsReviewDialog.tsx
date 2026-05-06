@@ -659,7 +659,7 @@ export function CustomsReviewDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          {existingData && existingData.length > 0 && (
+          {existingData && (Array.isArray(existingData) ? existingData.length > 0 : existingData.products?.length > 0) && (
             <Button variant="outline" onClick={handleDownloadPDF}>
               <FileDown className="mr-2 h-4 w-4" />
               Download PDF
