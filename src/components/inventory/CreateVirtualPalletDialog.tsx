@@ -155,16 +155,19 @@ export function CreateVirtualPalletDialog({
           )
           .eq("status", "accepted")
           .order("po_number"),
-        fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
-          method: "GET",
-          headers: { accept: "*/*" },
-        })
-          .then(async (response) => {
-            if (!response.ok) return [] as CatOrdenOpenItem[];
-            const payload = await response.json();
-            return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
+        Promise.race([
+          fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
+            method: "GET",
+            headers: { accept: "*/*" },
+            signal: AbortSignal.timeout(5000),
           })
-          .catch((error) => {
+            .then(async (response) => {
+              if (!response.ok) return [] as CatOrdenOpenItem[];
+              const payload = await response.json();
+              return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
+            }),
+          new Promise<CatOrdenOpenItem[]>((resolve) => setTimeout(() => resolve([]), 5000)),
+        ]).catch((error) => {
             console.warn("Error fetching SAP PO data for virtual pallets:", error);
             return [] as CatOrdenOpenItem[];
           }),
