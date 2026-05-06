@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, XCircle, Clock, FileDown, FileCheck, Eye, Undo2 } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, FileDown, FileCheck, Eye, Undo2, ClipboardCheck } from "lucide-react";
 import { format } from "date-fns";
 import { CustomsReviewDialog } from "./CustomsReviewDialog";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
