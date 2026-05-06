@@ -190,11 +190,15 @@ export function BillingValidationCard({
                         const freshProducts = await buildFromReleasedPallets(loadId);
                         const enriched = await enrichWithTraceability(loadId, freshProducts);
                         const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                        const vd = validation?.validated_data;
+                        const savedFreight = vd && !Array.isArray(vd) && vd.freightCost != null ? Number(vd.freightCost) : 5000;
+                        const savedExchange = vd && !Array.isArray(vd) && vd.exchangeRate != null ? Number(vd.exchangeRate) : 17.5;
                         generateCustomsPDF(
                           { loadNumber, shippingDate },
                           enriched,
                           totalPalletCount,
-                          5000
+                          savedFreight,
+                          savedExchange
                         );
                         toast.success("PDF downloaded");
                       }}
