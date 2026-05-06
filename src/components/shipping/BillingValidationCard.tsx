@@ -60,6 +60,7 @@ export function BillingValidationCard({
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [undoDialogOpen, setUndoDialogOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
+  const [reviewerName, setReviewerName] = useState<string | null>(null);
   const { getDestinationLabel } = useCustomerLocations();
 
   const fetchValidation = useCallback(async () => {
