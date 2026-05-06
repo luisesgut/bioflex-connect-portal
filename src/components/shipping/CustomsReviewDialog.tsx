@@ -327,6 +327,18 @@ export async function enrichWithTraceability(
   }
 }
 
+function extractUniqueDestinations(prods: CustomsProductSummary[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  prods.forEach(p => {
+    if (p.destination && !seen.has(p.destination)) {
+      seen.add(p.destination);
+      result.push(p.destination);
+    }
+  });
+  return result;
+}
+
 export function CustomsReviewDialog({
   open,
   onOpenChange,
