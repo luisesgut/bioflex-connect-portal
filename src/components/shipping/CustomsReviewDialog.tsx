@@ -349,9 +349,20 @@ export function CustomsReviewDialog({
     if (!open) return;
     setEditingIndex(null);
 
-    if (existingData && existingData.length > 0) {
-      // Enrich existing validated data with fresh traceability from DB
-      enrichWithTraceability(loadId, existingData).then(enriched => setProducts(enriched));
+    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate }
+    let existingProducts: CustomsProductSummary[] | null = null;
+    if (existingData) {
+      if (Array.isArray(existingData)) {
+        existingProducts = existingData;
+      } else if (existingData.products && Array.isArray(existingData.products)) {
+        existingProducts = existingData.products;
+        if (existingData.freightCost != null) setFreightCostInput(String(existingData.freightCost));
+        if (existingData.exchangeRate != null) setExchangeRateInput(String(existingData.exchangeRate));
+      }
+    }
+
+    if (existingProducts && existingProducts.length > 0) {
+      enrichWithTraceability(loadId, existingProducts).then(enriched => setProducts(enriched));
       return;
     }
 
