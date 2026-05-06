@@ -109,6 +109,100 @@ export function generateLoadChecklist(
   addText("Fecha: _______________     Verificado por: ___________________________________     Firma: ___________________________", MARGIN + 2, y, { size: 7 });
   y += 6;
 
+  // ── Truck layout diagram (only if multiple destinations) ──
+  const destOrder = destinationOrder && destinationOrder.length > 1 ? destinationOrder : null;
+  if (destOrder) {
+    const destLabel = (code: string) => (getDestinationLabel ? getDestinationLabel(code) : code);
+    const DEST_PDF_COLORS: [number, number, number][] = [
+      [59, 130, 246],   // blue
+      [245, 158, 11],   // amber
+      [16, 185, 129],   // emerald
+      [244, 63, 94],    // rose
+      [139, 92, 246],   // violet
+      [6, 182, 212],    // cyan
+    ];
+
+    // Count pallets per destination
+    const palletsByDest: Record<string, number> = {};
+    products.forEach(p => {
+      palletsByDest[p.destination] = (palletsByDest[p.destination] || 0) + p.totalPallets;
+    });
+
+    // Build slots from doors (index 0) to front
+    const slots: { dest: string; colorIdx: number }[] = [];
+    destOrder.forEach((dest, ci) => {
+      const count = palletsByDest[dest] || 0;
+      for (let i = 0; i < count && slots.length < 30; i++) {
+        slots.push({ dest, colorIdx: ci % DEST_PDF_COLORS.length });
+      }
+    });
+
+    const CELL_W = 28;
+    const CELL_H = 8;
+    const ROWS = 15;
+    const COLS = 2;
+    const truckW = COLS * CELL_W;
+    const truckH = ROWS * CELL_H;
+    const truckX = MARGIN + (CONTENT_WIDTH - truckW) / 2;
+
+    checkPage(truckH + 30);
+
+    addText("LAYOUT DEL CAMIÓN", MARGIN + 2, y, { bold: true, size: 9 });
+    y += 4;
+
+    // Legend
+    destOrder.forEach((dest, ci) => {
+      const c = DEST_PDF_COLORS[ci % DEST_PDF_COLORS.length];
+      doc.setFillColor(...c);
+      doc.rect(MARGIN + 2 + ci * 55, y - 2.5, 3, 3, "F");
+      addText(`${destLabel(dest)} (${palletsByDest[dest] || 0})`, MARGIN + 7 + ci * 55, y, { size: 6 });
+    });
+    y += 5;
+
+    // "FRENTE DEL CAMIÓN" label
+    addText("FRENTE DEL CAMIÓN", truckX + truckW / 2 - 12, y, { size: 6, bold: true });
+    y += 3;
+
+    // Draw truck border
+    doc.setDrawColor(30, 41, 59);
+    doc.setLineWidth(0.8);
+    doc.rect(truckX - 1, y - 1, truckW + 2, truckH + 2);
+
+    // Draw cells — row 0 = front (top of page), row 14 = doors (bottom)
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const slotIndex = (ROWS - 1 - row) * COLS + col; // reverse: bottom row = slot 0,1
+        const cellX = truckX + col * CELL_W;
+        const cellY = y + row * CELL_H;
+
+        if (slotIndex < slots.length) {
+          const s = slots[slotIndex];
+          const c = DEST_PDF_COLORS[s.colorIdx];
+          doc.setFillColor(...c);
+          doc.rect(cellX, cellY, CELL_W, CELL_H, "F");
+          // Label
+          const abbr = s.dest.length > 5 ? s.dest.slice(0, 5) : s.dest;
+          doc.setFontSize(5);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(255, 255, 255);
+          doc.text(abbr, cellX + CELL_W / 2, cellY + CELL_H / 2 + 1, { align: "center" });
+        } else {
+          doc.setFillColor(230, 230, 230);
+          doc.rect(cellX, cellY, CELL_W, CELL_H, "F");
+        }
+
+        // Cell border
+        doc.setDrawColor(150, 150, 150);
+        doc.setLineWidth(0.2);
+        doc.rect(cellX, cellY, CELL_W, CELL_H);
+      }
+    }
+
+    y += truckH + 2;
+    addText("← COMPUERTAS (Puertas) →", truckX + truckW / 2 - 14, y, { size: 6, bold: true });
+    y += 6;
+  }
+
   // Column positions for pallet table
   const colCheck = MARGIN + 1;
   const colNum = MARGIN + 6;
