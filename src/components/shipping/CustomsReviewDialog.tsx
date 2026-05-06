@@ -419,6 +419,24 @@ export function CustomsReviewDialog({
   const grandTotalUSD = totalProductValue + freightCost;
   const grandTotalMXN = grandTotalUSD * exchangeRate;
 
+  const palletsByDestination = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach(p => {
+      map[p.destination] = (map[p.destination] || 0) + p.totalPallets;
+    });
+    return map;
+  }, [products]);
+
+  const hasMultipleDestinations = destinationOrder.length > 1;
+
+  const moveDestination = (index: number, direction: -1 | 1) => {
+    const newOrder = [...destinationOrder];
+    const target = index + direction;
+    if (target < 0 || target >= newOrder.length) return;
+    [newOrder[index], newOrder[target]] = [newOrder[target], newOrder[index]];
+    setDestinationOrder(newOrder);
+  };
+
   const updateProduct = (index: number, field: keyof CustomsProductSummary, value: any) => {
     setProducts(prev => {
       const updated = [...prev];
