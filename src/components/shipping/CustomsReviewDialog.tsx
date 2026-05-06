@@ -521,6 +521,58 @@ export function CustomsReviewDialog({
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Destination ordering + truck layout */}
+              {hasMultipleDestinations && (
+                <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+                  <h4 className="font-semibold text-sm">Orden de Destinos (1° = más cerca de compuertas)</h4>
+                  <div className="flex gap-6 flex-wrap">
+                    <div className="space-y-1.5">
+                      {destinationOrder.map((dest, i) => {
+                        const c = DEST_COLOR_PALETTE[i % DEST_COLOR_PALETTE.length];
+                        return (
+                          <div key={dest} className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-sm shrink-0 ${c.bg}`} />
+                            <span className="text-sm font-medium min-w-[100px]">
+                              {i + 1}. {getDestinationLabel(dest)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ({palletsByDestination[dest] || 0} tarimas)
+                            </span>
+                            {!isReadOnly && (
+                              <div className="flex gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  disabled={i === 0}
+                                  onClick={() => moveDestination(i, -1)}
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  disabled={i === destinationOrder.length - 1}
+                                  onClick={() => moveDestination(i, 1)}
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <TruckLayoutPreview
+                      destinationOrder={destinationOrder}
+                      palletsByDestination={palletsByDestination}
+                      getDestinationLabel={getDestinationLabel}
+                    />
+                  </div>
+                </div>
+              )}
+
               {products.map((product, idx) => (
                 <div key={idx} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
