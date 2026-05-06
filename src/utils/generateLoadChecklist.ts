@@ -122,16 +122,7 @@ export function generateLoadChecklist(
   products.forEach((p, pIdx) => {
     checkPage(25);
 
-    // Product header bar
-    doc.setFillColor(51, 65, 85); // slate-700
-    doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 7, "F");
-    const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
-    addText(`${pIdx + 1}. ${titleText}`, MARGIN + 2, y, { bold: true, size: 8, color: [255, 255, 255] });
-    addRightText(`${p.totalPallets} tarimas`, MARGIN + CONTENT_WIDTH - 2, y, { bold: true, size: 8 });
-    doc.setTextColor(255, 255, 255);
-    y += 5;
-
-    // Product metadata row
+    // Product header bar — single row with title + metadata
     const metaParts: string[] = [];
     if (p.destination) metaParts.push(`Dest: ${p.destination}`);
     if (p.salesOrder) metaParts.push(`SO: ${p.salesOrder}`);
@@ -140,7 +131,19 @@ export function generateLoadChecklist(
     metaParts.push(`${fmt(p.totalUnits)} pzas`);
     metaParts.push(`${fmt(p.totalGrossWeight, 1)} kg bruto`);
 
-    addText(metaParts.join("   ·   "), MARGIN + 2, y, { size: 7 });
+    const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
+    const fullTitle = `${pIdx + 1}. ${titleText}`;
+    const metaStr = metaParts.join("  ·  ");
+
+    doc.setFillColor(51, 65, 85); // slate-700
+    doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 7, "F");
+    addText(fullTitle, MARGIN + 2, y, { bold: true, size: 7, color: [255, 255, 255] });
+    // Metadata right-aligned on the same line
+    addRightText(`${p.totalPallets} tarimas`, MARGIN + CONTENT_WIDTH - 2, y, { bold: true, size: 7 });
+    y += 4;
+    doc.setFillColor(71, 85, 105); // slate-600
+    doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 5, "F");
+    addText(metaStr, MARGIN + 2, y, { size: 6, color: [220, 225, 235] });
     y += 5;
 
     // Table header
