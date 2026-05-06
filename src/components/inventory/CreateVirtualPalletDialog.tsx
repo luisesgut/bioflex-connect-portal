@@ -44,7 +44,6 @@ interface ActivePO {
     id: string;
     name: string;
     pt_code: string | null;
-    codigo_producto: string | null;
     pieces_per_pallet: number | null;
     item_description: string | null;
   } | null;
@@ -77,7 +76,7 @@ const normalizePoKey = (value: string | null | undefined) => {
 };
 
 const getPOCode = (po: ActivePO) =>
-  po.sap_pt_code || po.product?.pt_code || po.product?.codigo_producto || "";
+  po.sap_pt_code || po.product?.pt_code || "";
 
 const getPODescription = (po: ActivePO) =>
   po.sap_item_description || po.product?.item_description || po.product?.name || po.sap_product_name || "";
@@ -151,7 +150,7 @@ export function CreateVirtualPalletDialog({
       const poResult = await supabase
         .from("purchase_orders")
         .select(
-          "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
+          "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, pieces_per_pallet, item_description)"
         )
         .eq("status", "accepted")
         .order("po_number");
