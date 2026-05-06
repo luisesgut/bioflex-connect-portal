@@ -78,7 +78,7 @@ export function generateLoadChecklist(
       // Mini header on continuation pages
       doc.setFillColor(30, 41, 59);
       doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 6, "F");
-      addText(`${loadInfo.loadNumber} — Load Verification Checklist (cont.)`, MARGIN + 2, y, { bold: true, size: 8, color: [255, 255, 255] });
+      addText(`${loadInfo.loadNumber} — Lista de Verificacion de Carga (cont.)`, MARGIN + 2, y, { bold: true, size: 8, color: [255, 255, 255] });
       y += 6;
     }
   };
@@ -89,7 +89,7 @@ export function generateLoadChecklist(
   doc.setFillColor(30, 41, 59); // slate-800
   doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 14, "F");
 
-  addText("LOAD VERIFICATION CHECKLIST", MARGIN + 3, y + 1, { bold: true, size: 14, color: [255, 255, 255] });
+  addText("LISTA DE VERIFICACION DE CARGA", MARGIN + 3, y + 1, { bold: true, size: 14, color: [255, 255, 255] });
   addText(`${loadInfo.loadNumber}  ·  ${date}`, MARGIN + 3, y + 7, { size: 9, color: [200, 210, 220] });
 
   // Summary badge area
@@ -97,14 +97,14 @@ export function generateLoadChecklist(
   const totalGross = products.reduce((s, p) => s + p.totalGrossWeight, 0);
   const totalNet = products.reduce((s, p) => s + p.totalNetWeight, 0);
   const summaryX = MARGIN + CONTENT_WIDTH - 2;
-  addRightText(`${totalPallets} Pallets  ·  ${fmt(totalUnits)} pcs  ·  ${fmt(totalGross)} kg gross`, summaryX, y + 1, { bold: true, size: 8 });
+  addRightText(`${totalPallets} Tarimas  ·  ${fmt(totalUnits)} pzas  ·  ${fmt(totalGross)} kg bruto`, summaryX, y + 1, { bold: true, size: 8 });
   doc.setTextColor(200, 210, 220);
-  addRightText(`${products.length} product(s)  ·  ${fmt(totalNet)} kg net`, summaryX, y + 7, { size: 8 });
+  addRightText(`${products.length} producto(s)  ·  ${fmt(totalNet)} kg neto`, summaryX, y + 7, { size: 8 });
 
   y += 15;
 
   // ── Signature / date line ──
-  addText("Date: _______________     Verified by: ___________________________________     Signature: ___________________________", MARGIN + 2, y, { size: 7 });
+  addText("Fecha: _______________     Verificado por: ___________________________________     Firma: ___________________________", MARGIN + 2, y, { size: 7 });
   y += 6;
 
   // Column positions for pallet table
@@ -127,7 +127,7 @@ export function generateLoadChecklist(
     doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 7, "F");
     const titleText = p.ptCode ? `${p.ptCode} — ${p.description}` : p.description;
     addText(`${pIdx + 1}. ${titleText}`, MARGIN + 2, y, { bold: true, size: 8, color: [255, 255, 255] });
-    addRightText(`${p.totalPallets} pallets`, MARGIN + CONTENT_WIDTH - 2, y, { bold: true, size: 8 });
+    addRightText(`${p.totalPallets} tarimas`, MARGIN + CONTENT_WIDTH - 2, y, { bold: true, size: 8 });
     doc.setTextColor(255, 255, 255);
     y += 5;
 
@@ -137,8 +137,8 @@ export function generateLoadChecklist(
     if (p.salesOrder) metaParts.push(`SO: ${p.salesOrder}`);
     if (p.poNumber) metaParts.push(`PO: ${p.poNumber}`);
     if (p.releaseNumber) metaParts.push(`Rel: ${p.releaseNumber}`);
-    metaParts.push(`${fmt(p.totalUnits)} pcs`);
-    metaParts.push(`${fmt(p.totalGrossWeight, 1)} kg gross`);
+    metaParts.push(`${fmt(p.totalUnits)} pzas`);
+    metaParts.push(`${fmt(p.totalGrossWeight, 1)} kg bruto`);
 
     addText(metaParts.join("   ·   "), MARGIN + 2, y, { size: 7 });
     y += 5;
@@ -148,13 +148,13 @@ export function generateLoadChecklist(
     doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 5, "F");
     addText("✓", colCheck + 0.5, y, { bold: true, size: 7 });
     addText("#", colNum, y, { bold: true, size: 7 });
-    addText("Traceability", colTraza, y, { bold: true, size: 7 });
-    addText("Pieces", colPiezas, y, { bold: true, size: 7 });
-    addText("Boxes", colCajas, y, { bold: true, size: 7 });
-    addText("Gross", colBruto, y, { bold: true, size: 7 });
-    addText("Net", colNeto, y, { bold: true, size: 7 });
+    addText("Trazabilidad", colTraza, y, { bold: true, size: 7 });
+    addText("Piezas", colPiezas, y, { bold: true, size: 7 });
+    addText("Cajas", colCajas, y, { bold: true, size: 7 });
+    addText("Bruto", colBruto, y, { bold: true, size: 7 });
+    addText("Neto", colNeto, y, { bold: true, size: 7 });
     addText("OK", colOk, y, { bold: true, size: 7 });
-    addText("Notes", colNotes, y, { bold: true, size: 7 });
+    addText("Notas", colNotes, y, { bold: true, size: 7 });
     y += 4;
 
     // Pallet rows
@@ -207,15 +207,15 @@ export function generateLoadChecklist(
   doc.line(MARGIN, y, MARGIN + CONTENT_WIDTH, y);
   y += 5;
 
-  addText("LOAD SUMMARY", MARGIN + 2, y, { bold: true, size: 10 });
+  addText("RESUMEN DE CARGA", MARGIN + 2, y, { bold: true, size: 10 });
   y += 5;
 
   const summaryRows: [string, string][] = [
-    ["Total Pallets", String(totalPallets)],
-    ["Total Pieces", fmt(totalUnits)],
-    ["Total Gross Weight", `${fmt(totalGross, 1)} kg`],
-    ["Total Net Weight", `${fmt(totalNet, 1)} kg`],
-    ["Products", String(products.length)],
+    ["Total Tarimas", String(totalPallets)],
+    ["Total Piezas", fmt(totalUnits)],
+    ["Peso Bruto Total", `${fmt(totalGross, 1)} kg`],
+    ["Peso Neto Total", `${fmt(totalNet, 1)} kg`],
+    ["Productos", String(products.length)],
   ];
 
   const col1X = MARGIN + 4;
@@ -238,11 +238,11 @@ export function generateLoadChecklist(
   y += 6;
 
   // Final sign-off
-  addText("Load verified and complete:   ☐ Yes   ☐ No", MARGIN + 2, y, { size: 8 });
+  addText("Carga verificada y completa:   ☐ Si   ☐ No", MARGIN + 2, y, { size: 8 });
   y += 6;
-  addText("Comments: ___________________________________________________________________________________", MARGIN + 2, y, { size: 7 });
+  addText("Comentarios: ___________________________________________________________________________________", MARGIN + 2, y, { size: 7 });
   y += 10;
-  addText("Signature: _______________________________          Date: ______________          Time: ______________", MARGIN + 2, y, { size: 7 });
+  addText("Firma: _______________________________          Fecha: ______________          Hora: ______________", MARGIN + 2, y, { size: 7 });
 
   // Download
   const fileName = `Checklist_${loadInfo.loadNumber}_${date}.pdf`;
