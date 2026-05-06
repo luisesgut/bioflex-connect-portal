@@ -147,56 +147,57 @@ export function CreateVirtualPalletDialog({
   const fetchActivePOs = async () => {
     setLoadingPOs(true);
     try {
-      const [poResult, sapItems] = await Promise.all([
-        supabase
-          .from("purchase_orders")
-          .select(
-            "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
-          )
-          .eq("status", "accepted")
-          .order("po_number"),
-        Promise.race([
+      // 1. Fetch POs from Supabase first — show them immediately
+      const poResult = await supabase
+        .from("purchase_orders")
+        .select(
+          "id, po_number, sales_order_number, quantity, product:products(id, name, pt_code, codigo_producto, pieces_per_pallet, item_description)"
+        )
+        .eq("status", "accepted")
+        .order("po_number");
+
+      if (poResult.error) throw poResult.error;
+
+      const basePOs = (poResult.data as unknown as ActivePO[]) || [];
+      setActivePOs(basePOs);
+      setLoadingPOs(false);
+
+      // 2. Try to enrich with SAP data in background (5s timeout)
+      try {
+        const sapItems = await Promise.race([
           fetch(CAT_ORDEN_OPEN_WITH_ORDEN_ENDPOINT, {
             method: "GET",
             headers: { accept: "*/*" },
             signal: AbortSignal.timeout(5000),
-          })
-            .then(async (response) => {
-              if (!response.ok) return [] as CatOrdenOpenItem[];
-              const payload = await response.json();
-              return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
-            }),
-          new Promise<CatOrdenOpenItem[]>((resolve) => setTimeout(() => resolve([]), 5000)),
-        ]).catch((error) => {
-            console.warn("Error fetching SAP PO data for virtual pallets:", error);
-            return [] as CatOrdenOpenItem[];
+          }).then(async (response) => {
+            if (!response.ok) return [] as CatOrdenOpenItem[];
+            const payload = await response.json();
+            return Array.isArray(payload) ? (payload as CatOrdenOpenItem[]) : [];
           }),
-      ]);
+          new Promise<CatOrdenOpenItem[]>((resolve) => setTimeout(() => resolve([]), 5000)),
+        ]);
 
-      if (poResult.error) throw poResult.error;
+        if (sapItems.length > 0) {
+          const sapByPo = sapItems.reduce<Record<string, Pick<ActivePO, "sap_pt_code" | "sap_product_name" | "sap_item_description">>>((acc, item) => {
+            const key = normalizePoKey(item.u_PO2);
+            if (!key || acc[key]) return acc;
+            acc[key] = {
+              sap_pt_code: toCleanString(item.clave) || null,
+              sap_product_name: toCleanString(item.producto) || toCleanString(item.frgnName) || null,
+              sap_item_description: toCleanString(item.frgnName) || toCleanString(item.producto) || null,
+            };
+            return acc;
+          }, {});
 
-      const sapByPo = sapItems.reduce<Record<string, Pick<ActivePO, "sap_pt_code" | "sap_product_name" | "sap_item_description">>>((acc, item) => {
-        const key = normalizePoKey(item.u_PO2);
-        if (!key || acc[key]) return acc;
-
-        acc[key] = {
-          sap_pt_code: toCleanString(item.clave) || null,
-          sap_product_name: toCleanString(item.producto) || toCleanString(item.frgnName) || null,
-          sap_item_description: toCleanString(item.frgnName) || toCleanString(item.producto) || null,
-        };
-
-        return acc;
-      }, {});
-
-      const mergedPOs = ((poResult.data as unknown as ActivePO[]) || []).map((po) => ({
-        ...po,
-        ...sapByPo[normalizePoKey(po.po_number)],
-      }));
-
-      setActivePOs(mergedPOs);
+          setActivePOs((prev) =>
+            prev.map((po) => ({ ...po, ...sapByPo[normalizePoKey(po.po_number)] }))
+          );
+        }
+      } catch (sapErr) {
+        console.warn("SAP enrichment skipped:", sapErr);
+      }
     } catch (err) {
       console.error("Error fetching active POs:", err);
-    } finally {
       setLoadingPOs(false);
     }
   };
