@@ -66,7 +66,7 @@ interface CustomsReviewDialogProps {
   loadId: string;
   loadNumber: string;
   shippingDate: string;
-  existingData: CustomsProductSummary[] | null;
+  existingData: any | null;
   validationId: string | null;
   userId: string;
   isReadOnly: boolean;
@@ -349,9 +349,20 @@ export function CustomsReviewDialog({
     if (!open) return;
     setEditingIndex(null);
 
-    if (existingData && existingData.length > 0) {
-      // Enrich existing validated data with fresh traceability from DB
-      enrichWithTraceability(loadId, existingData).then(enriched => setProducts(enriched));
+    // Parse existingData: could be array (legacy) or { products, freightCost, exchangeRate }
+    let existingProducts: CustomsProductSummary[] | null = null;
+    if (existingData) {
+      if (Array.isArray(existingData)) {
+        existingProducts = existingData;
+      } else if (existingData.products && Array.isArray(existingData.products)) {
+        existingProducts = existingData.products;
+        if (existingData.freightCost != null) setFreightCostInput(String(existingData.freightCost));
+        if (existingData.exchangeRate != null) setExchangeRateInput(String(existingData.exchangeRate));
+      }
+    }
+
+    if (existingProducts && existingProducts.length > 0) {
+      enrichWithTraceability(loadId, existingProducts).then(enriched => setProducts(enriched));
       return;
     }
 
@@ -393,7 +404,7 @@ export function CustomsReviewDialog({
         const { error } = await supabase
           .from("load_billing_validations")
           .update({
-            validated_data: products as any,
+            validated_data: { products, freightCost, exchangeRate } as any,
             status: "approved",
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
@@ -407,7 +418,7 @@ export function CustomsReviewDialog({
             load_id: loadId,
             submitted_by: userId,
             status: "approved",
-            validated_data: products as any,
+            validated_data: { products, freightCost, exchangeRate } as any,
             reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
           });
@@ -648,7 +659,7 @@ export function CustomsReviewDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          {existingData && existingData.length > 0 && (
+          {existingData && (Array.isArray(existingData) ? existingData.length > 0 : existingData.products?.length > 0) && (
             <Button variant="outline" onClick={handleDownloadPDF}>
               <FileDown className="mr-2 h-4 w-4" />
               Download PDF
