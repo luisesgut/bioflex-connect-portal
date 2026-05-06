@@ -20,6 +20,7 @@ import { CustomsReviewDialog } from "./CustomsReviewDialog";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
 import { generateLoadChecklist } from "@/utils/generateLoadChecklist";
 import { buildFromReleasedPallets, enrichWithTraceability } from "./CustomsReviewDialog";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 
 interface BillingValidation {
   id: string;
