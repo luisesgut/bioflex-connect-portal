@@ -182,25 +182,45 @@ export function BillingValidationCard({
                 </Button>
 
                 {isApproved && validation?.validated_data && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const freshProducts = await buildFromReleasedPallets(loadId);
-                      const enriched = await enrichWithTraceability(loadId, freshProducts);
-                      const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
-                      generateCustomsPDF(
-                        { loadNumber, shippingDate },
-                        enriched,
-                        totalPalletCount,
-                        5000
-                      );
-                      toast.success("PDF downloaded");
-                    }}
-                  >
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const freshProducts = await buildFromReleasedPallets(loadId);
+                        const enriched = await enrichWithTraceability(loadId, freshProducts);
+                        const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                        generateCustomsPDF(
+                          { loadNumber, shippingDate },
+                          enriched,
+                          totalPalletCount,
+                          5000
+                        );
+                        toast.success("PDF downloaded");
+                      }}
+                    >
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Download PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        const freshProducts = await buildFromReleasedPallets(loadId);
+                        const enriched = await enrichWithTraceability(loadId, freshProducts);
+                        const totalPalletCount = enriched.reduce((s: number, p: any) => s + p.totalPallets, 0);
+                        generateLoadChecklist(
+                          { loadNumber, shippingDate },
+                          enriched,
+                          totalPalletCount
+                        );
+                        toast.success("Checklist downloaded");
+                      }}
+                    >
+                      <ClipboardCheck className="mr-2 h-4 w-4" />
+                      Floor Checklist
+                    </Button>
+                  </>
                 )}
 
                 {(isAdmin || isBillingTeam) && validation && (
