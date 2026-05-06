@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Save, FileDown, Pencil, Check, ExternalLink } from "lucide-react";
+import { Loader2, Save, FileDown, Pencil, Check, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomsPDF } from "@/utils/generateCustomsPDF";
+import { TruckLayoutPreview, DEST_COLOR_PALETTE } from "./TruckLayoutPreview";
+import { useCustomerLocations } from "@/hooks/useCustomerLocations";
 import { openStorageFile } from "@/hooks/useOpenStorageFile";
 
 const FREIGHT_COST = 5000;
