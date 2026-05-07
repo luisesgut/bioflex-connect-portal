@@ -619,18 +619,21 @@ export function CustomsReviewDialog({
                     <FieldRow
                       label="Sales Order"
                       value={product.salesOrder || "-"}
+                      rawValue={product.salesOrder || ""}
                       editing={editingIndex === idx}
                       onChange={v => updateProduct(idx, "salesOrder", v || null)}
                     />
                     <FieldRow
                       label="Customer PO"
                       value={product.poNumber || "-"}
+                      rawValue={product.poNumber || ""}
                       editing={editingIndex === idx}
                       onChange={v => updateProduct(idx, "poNumber", v || null)}
                     />
                     <FieldRow
                       label="Total Pallets"
                       value={String(product.totalPallets)}
+                      rawValue={String(product.totalPallets)}
                       editing={editingIndex === idx}
                       type="number"
                       onChange={v => updateProduct(idx, "totalPallets", Number(v))}
@@ -638,6 +641,7 @@ export function CustomsReviewDialog({
                     <FieldRow
                       label="Total Units"
                       value={product.totalUnits.toLocaleString()}
+                      rawValue={String(product.totalUnits)}
                       editing={editingIndex === idx}
                       type="number"
                       onChange={v => updateProduct(idx, "totalUnits", Number(v))}
@@ -648,6 +652,7 @@ export function CustomsReviewDialog({
                     <FieldRow
                       label="Price / Thousand"
                       value={fmt(product.pricePerThousand)}
+                      rawValue={String(product.pricePerThousand)}
                       editing={editingIndex === idx}
                       type="number"
                       onChange={v => updateProduct(idx, "pricePerThousand", Number(v))}
@@ -659,6 +664,7 @@ export function CustomsReviewDialog({
                     <FieldRow
                       label="Gross Weight"
                       value={fmt(product.totalGrossWeight)}
+                      rawValue={String(product.totalGrossWeight)}
                       editing={editingIndex === idx}
                       type="number"
                       onChange={v => updateProduct(idx, "totalGrossWeight", Number(v))}
@@ -666,6 +672,7 @@ export function CustomsReviewDialog({
                     <FieldRow
                       label="Net Weight"
                       value={fmt(product.totalNetWeight)}
+                      rawValue={String(product.totalNetWeight)}
                       editing={editingIndex === idx}
                       type="number"
                       onChange={v => updateProduct(idx, "totalNetWeight", Number(v))}
@@ -789,16 +796,26 @@ export function CustomsReviewDialog({
 function FieldRow({
   label,
   value,
+  rawValue,
   editing,
   type = "text",
   onChange,
 }: {
   label: string;
   value: string;
+  rawValue?: string;
   editing: boolean;
   type?: string;
   onChange: (v: string) => void;
 }) {
+  const [localValue, setLocalValue] = useState(rawValue ?? value);
+
+  useEffect(() => {
+    if (editing) {
+      setLocalValue(rawValue ?? value);
+    }
+  }, [editing, rawValue, value]);
+
   if (editing) {
     return (
       <div>
@@ -806,8 +823,12 @@ function FieldRow({
         <Input
           className="h-8 text-sm mt-0.5"
           type={type}
-          value={value}
-          onChange={e => onChange(e.target.value)}
+          step={type === "number" ? "any" : undefined}
+          value={localValue}
+          onChange={e => {
+            setLocalValue(e.target.value);
+            onChange(e.target.value);
+          }}
         />
       </div>
     );
