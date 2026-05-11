@@ -450,7 +450,15 @@ export function CustomsReviewDialog({
   const palletsByDestination = useMemo(() => {
     const map: Record<string, number> = {};
     products.forEach(p => {
-      map[p.destination] = (map[p.destination] || 0) + p.totalPallets;
+      if (p.palletDetails?.length) {
+        p.palletDetails.forEach(pd => {
+          const d = pd.destination || p.destination || "TBD";
+          map[d] = (map[d] || 0) + 1;
+        });
+      } else {
+        const d = p.destination || "TBD";
+        map[d] = (map[d] || 0) + p.totalPallets;
+      }
     });
     return map;
   }, [products]);
