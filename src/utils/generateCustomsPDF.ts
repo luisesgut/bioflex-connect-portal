@@ -214,8 +214,18 @@ export function generateCustomsPDF(
 
   const freightWithoutIVA = freightCost / 1.16;
 
+  // Totales de cajas y bobinas
+  const totalCajas = products
+    .filter(p => p.unit !== "MIL")
+    .reduce((s, p) => s + (p.palletDetails?.reduce((a, d) => a + (d.boxes || 0), 0) || 0), 0);
+  const totalBobinas = products
+    .filter(p => p.unit === "MIL")
+    .reduce((s, p) => s + p.totalPallets, 0);
+
   const summary: [string, string][] = [
     ["Total Tarimas", String(totalPallets)],
+    ...(totalCajas > 0 ? [["Total Cajas", fmt(totalCajas, 0)] as [string, string]] : []),
+    ...(totalBobinas > 0 ? [["Total Bobinas", fmt(totalBobinas, 0)] as [string, string]] : []),
     ["$ Producto", `$${fmt(totalProductValue)}`],
     ["Flete", `$${fmt(freightCost)}`],
     ["Flete sin IVA", `$${fmt(freightWithoutIVA)}`],
