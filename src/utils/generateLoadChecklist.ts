@@ -7,6 +7,7 @@ interface PalletDetail {
   pieces: number;
   boxes?: number;
   traceability?: string;
+  destination?: string;
 }
 
 interface ProductSummary {
