@@ -353,10 +353,16 @@ function extractUniqueDestinations(prods: CustomsProductSummary[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   prods.forEach(p => {
-    if (p.destination && !seen.has(p.destination)) {
-      seen.add(p.destination);
-      result.push(p.destination);
-    }
+    // Per-pallet destinations (preferred) — fall back to splitting concatenated string
+    const dests = p.palletDetails?.length
+      ? p.palletDetails.map(pd => pd.destination).filter((d): d is string => !!d)
+      : (p.destination || "").split(",").map(s => s.trim()).filter(Boolean);
+    dests.forEach(d => {
+      if (!seen.has(d)) {
+        seen.add(d);
+        result.push(d);
+      }
+    });
   });
   return result;
 }
