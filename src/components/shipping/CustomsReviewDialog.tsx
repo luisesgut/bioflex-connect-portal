@@ -327,14 +327,10 @@ export async function enrichWithTraceability(
       }
     });
 
-    // Merge traceability, destination, and release into products
+    // Merge traceability into products. Destination/release are now built as
+    // concatenated values upstream — preserve them as-is.
     return products.map(p => {
       const ptEntries = palletsByPtCode[p.ptCode || ""] || [];
-      // Update destination: use first non-null from live data
-      const liveDestination = ptEntries.find(e => e.destination)?.destination;
-      // Update release: use first non-null from live data
-      const liveRelease = ptEntries.find(e => e.releaseNumber)?.releaseNumber;
-
       const enrichedDetails = p.palletDetails?.map((pd, i) => ({
         ...pd,
         traceability: pd.traceability || ptEntries[i]?.traceability || undefined,
@@ -342,8 +338,6 @@ export async function enrichWithTraceability(
 
       return {
         ...p,
-        destination: liveDestination || p.destination,
-        releaseNumber: liveRelease || p.releaseNumber,
         palletDetails: enrichedDetails || p.palletDetails,
       };
     });
