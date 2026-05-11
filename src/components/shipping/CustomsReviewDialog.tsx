@@ -187,18 +187,26 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
     });
   }
 
-  // Group by description + destination
+  // Group by product only (pt_code, fallback to description).
+  // Same product across multiple destinations / POs gets billed in a single line.
   const grouped = new Map<string, CustomsProductSummary>();
+  // Track unique destinations / POs / SOs / prices per product
+  const meta = new Map<string, {
+    destinations: Set<string>;
+    poNumbers: Set<string>;
+    salesOrders: Set<string>;
+    releaseNumbers: Set<string>;
+    prices: number[]; // candidate price_per_thousand values
+  }>();
 
   pallets.forEach(lp => {
     const dest = lp.destination || "TBD";
-    const key = `${lp.pallet.description}__${dest}`;
+    const key = lp.pallet.pt_code || lp.pallet.description;
     // Try customer_lot first, then bfx_order, then pt_code fallback
     const poInfo = (lp.pallet.customer_lot ? poMap.get(lp.pallet.customer_lot) : null)
       || (lp.pallet.bfx_order ? poMap.get(lp.pallet.bfx_order) : null)
       || poMap.get(`__pt__${lp.pallet.pt_code}`) || null;
     const prodInfo = productMap.get(lp.pallet.pt_code);
-    const pricePerThousand = poInfo?.price_per_thousand || 0;
     const piecesPerPallet = prodInfo?.pieces_per_pallet || 50000;
     const piecesPerPackage = prodInfo?.piezas_por_paquete || 1000;
     const packagesPerBox = prodInfo?.paquete_por_caja || 50;
@@ -206,17 +214,17 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
     if (!grouped.has(key)) {
       grouped.set(key, {
         description: lp.pallet.description,
-        destination: dest,
-        salesOrder: poInfo?.sales_order_number || null,
-        poNumber: lp.pallet.customer_lot || poInfo?.po_number || null,
-        releaseNumber: lp.release_number || null,
+        destination: "",
+        salesOrder: null,
+        poNumber: null,
+        releaseNumber: null,
         bfxSpecUrl: null,
         ptCode: lp.pallet.pt_code || null,
         totalPallets: 0,
         totalUnits: 0,
         totalGrossWeight: 0,
         totalNetWeight: 0,
-        pricePerThousand,
+        pricePerThousand: 0,
         totalPrice: 0,
         ce: 0,
         ceTruncated: 0,
@@ -224,25 +232,41 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
         unit: lp.pallet.unit,
         palletDetails: [],
         // Legacy
-        sapNumber: poInfo?.sales_order_number || null,
+        sapNumber: null,
         piecesPerPallet: piecesPerPackage,
         palletsPerBox: packagesPerBox,
         totalPiecesPerPallet: piecesPerPallet,
         totalBoxesOrRolls: 0,
         totalPieces: 0,
-        pricePerPiece: pricePerThousand / 1000,
+        pricePerPiece: 0,
         customsEquivalent: 0,
+      });
+      meta.set(key, {
+        destinations: new Set(),
+        poNumbers: new Set(),
+        salesOrders: new Set(),
+        releaseNumbers: new Set(),
+        prices: [],
       });
     }
 
     const group = grouped.get(key)!;
+    const m = meta.get(key)!;
+
+    m.destinations.add(dest);
+    const poNum = lp.pallet.customer_lot || poInfo?.po_number || null;
+    if (poNum) m.poNumbers.add(poNum);
+    if (poInfo?.sales_order_number) m.salesOrders.add(poInfo.sales_order_number);
+    if (lp.release_number) m.releaseNumbers.add(lp.release_number);
+    if (poInfo?.price_per_thousand && poInfo.price_per_thousand > 0) {
+      m.prices.push(poInfo.price_per_thousand);
+    }
 
     group.totalPallets += 1;
     group.totalUnits += lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity;
     group.totalGrossWeight += lp.pallet.gross_weight || 0;
     group.totalNetWeight += lp.pallet.net_weight || 0;
 
-    // Collect pallet detail for PDF breakdown
     group.palletDetails = group.palletDetails || [];
     group.palletDetails.push({
       palletIndex: group.palletDetails.length + 1,
@@ -254,16 +278,18 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
-
-    // Keep first non-null release number
-    if (!group.releaseNumber && lp.release_number) {
-      group.releaseNumber = lp.release_number;
-    }
   });
 
-  // Calculate derived fields
+  // Finalize: pick lowest price, concat destinations/POs/SOs, recalc derived
   const results: CustomsProductSummary[] = [];
-  grouped.forEach(product => {
+  grouped.forEach((product, key) => {
+    const m = meta.get(key)!;
+    product.destination = Array.from(m.destinations).join(", ");
+    product.poNumber = m.poNumbers.size > 0 ? Array.from(m.poNumbers).join(", ") : null;
+    product.salesOrder = m.salesOrders.size > 0 ? Array.from(m.salesOrders).join(", ") : null;
+    product.sapNumber = product.salesOrder;
+    product.releaseNumber = m.releaseNumbers.size > 0 ? Array.from(m.releaseNumbers).join(", ") : null;
+    product.pricePerThousand = m.prices.length > 0 ? Math.min(...m.prices) : 0;
     recalcDerived(product);
     results.push(product);
   });
