@@ -30,6 +30,7 @@ export interface PalletDetail {
   pieces: number;
   boxes?: number;
   traceability?: string;
+  destination?: string;
 }
 
 export interface CustomsProductSummary {
