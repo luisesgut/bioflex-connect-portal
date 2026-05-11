@@ -276,6 +276,7 @@ export async function buildFromReleasedPallets(loadId: string): Promise<CustomsP
       pieces: lp.pallet.unit === "MIL" ? lp.quantity * 1000 : lp.quantity,
       boxes: lp.pallet.pieces || 0,
       traceability: (lp.pallet as any).traceability || undefined,
+      destination: dest,
     });
 
     group.totalBoxesOrRolls += lp.pallet.pieces || 0;
