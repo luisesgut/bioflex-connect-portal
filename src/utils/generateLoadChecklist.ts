@@ -123,10 +123,17 @@ export function generateLoadChecklist(
       [6, 182, 212],    // cyan
     ];
 
-    // Count pallets per destination
+    // Count pallets per destination — prefer per-pallet destinations
     const palletsByDest: Record<string, number> = {};
     products.forEach(p => {
-      palletsByDest[p.destination] = (palletsByDest[p.destination] || 0) + p.totalPallets;
+      if (p.palletDetails?.length) {
+        p.palletDetails.forEach(pd => {
+          const d = pd.destination || p.destination;
+          if (d) palletsByDest[d] = (palletsByDest[d] || 0) + 1;
+        });
+      } else if (p.destination) {
+        palletsByDest[p.destination] = (palletsByDest[p.destination] || 0) + p.totalPallets;
+      }
     });
 
     // Build slots from doors (index 0) to front
