@@ -31,6 +31,7 @@ import ProductRequests from "./pages/ProductRequests";
 import NewProductRequest from "./pages/NewProductRequest";
 import ProductRequestDetail from "./pages/ProductRequestDetail";
 import CreateRFQ from "./pages/CreateRFQ";
+import DestinyPlan from "./pages/DestinyPlan";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/release-requests" element={<ProtectedRoute><ShippingLoads /></ProtectedRoute>} />
                 <Route path="/potr-import" element={<ProtectedRoute><POTRImport /></ProtectedRoute>} />
                 <Route path="/potr-update" element={<ProtectedRoute><POTRUpdate /></ProtectedRoute>} />
+                <Route path="/destiny-plan" element={<ProtectedRoute><DestinyPlan /></ProtectedRoute>} />
                 
                 {/* Legacy redirects */}
                 <Route path="/product-requests" element={<ProtectedRoute><ProductRequests /></ProtectedRoute>} />

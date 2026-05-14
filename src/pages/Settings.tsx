@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { DropdownOptionsManagement } from "@/components/settings/DropdownOptionsManagement";
 import { CustomerLocationsManagement } from "@/components/settings/CustomerLocationsManagement";
 import { StructureLayerOptionsManagement } from "@/components/settings/StructureLayerOptionsManagement";
+import { DestinyFamiliesManagement } from "@/components/settings/DestinyFamiliesManagement";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { isActualAdmin } = useAdmin();
@@ -105,6 +106,13 @@ export default function Settings() {
         {isActualAdmin && (
           <div style={{ animationDelay: "0.18s" }}>
             <StructureLayerOptionsManagement />
+          </div>
+        )}
+
+        {/* Destiny Families - Admin Only */}
+        {isActualAdmin && (
+          <div style={{ animationDelay: "0.19s" }}>
+            <DestinyFamiliesManagement />
           </div>
         )}
 
