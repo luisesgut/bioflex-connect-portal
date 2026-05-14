@@ -97,6 +97,154 @@ export type Database = {
           },
         ]
       }
+      destiny_families: {
+        Row: {
+          created_at: string
+          default_weekly_capacity: number
+          id: string
+          is_active: boolean
+          item_type_mapping: string[]
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_weekly_capacity?: number
+          id?: string
+          is_active?: boolean
+          item_type_mapping?: string[]
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_weekly_capacity?: number
+          id?: string
+          is_active?: boolean
+          item_type_mapping?: string[]
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      destiny_week_status: {
+        Row: {
+          created_at: string
+          frozen_at: string | null
+          frozen_by: string | null
+          id: string
+          is_frozen: boolean
+          notes: string | null
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          frozen_at?: string | null
+          frozen_by?: string | null
+          id?: string
+          is_frozen?: boolean
+          notes?: string | null
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          frozen_at?: string | null
+          frozen_by?: string | null
+          id?: string
+          is_frozen?: boolean
+          notes?: string | null
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
+      destiny_weekly_assignments: {
+        Row: {
+          assigned_quantity: number
+          created_at: string
+          created_by: string
+          family_id: string
+          id: string
+          notes: string | null
+          purchase_order_id: string
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          assigned_quantity: number
+          created_at?: string
+          created_by: string
+          family_id: string
+          id?: string
+          notes?: string | null
+          purchase_order_id: string
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          assigned_quantity?: number
+          created_at?: string
+          created_by?: string
+          family_id?: string
+          id?: string
+          notes?: string | null
+          purchase_order_id?: string
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "destiny_weekly_assignments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "destiny_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      destiny_weekly_capacity: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          notes: string | null
+          updated_at: string
+          week_start: string
+          weekly_capacity: number
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          week_start: string
+          weekly_capacity: number
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          week_start?: string
+          weekly_capacity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "destiny_weekly_capacity_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "destiny_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dp_contacts: {
         Row: {
           created_at: string
@@ -257,6 +405,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      facility_closures: {
+        Row: {
+          closure_date: string
+          created_at: string
+          facility: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          closure_date: string
+          created_at?: string
+          facility?: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          closure_date?: string
+          created_at?: string
+          facility?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
       }
       inventory_pallets: {
         Row: {
