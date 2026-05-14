@@ -12,6 +12,7 @@ import {
   Users,
   Globe,
   FileSpreadsheet,
+  CalendarRange,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navigation = [
 const adminNavigation = [
   { nameKey: "nav.users", href: "/users", icon: Users },
   { nameKey: "nav.inventory", href: "/inventory", icon: Warehouse },
+  { nameKey: "nav.destinyPlan", href: "/destiny-plan", icon: CalendarRange },
   { nameKey: "nav.potrUpdate", href: "/potr-update", icon: FileSpreadsheet },
 ];
 
