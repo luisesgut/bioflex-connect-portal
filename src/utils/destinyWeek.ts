@@ -15,11 +15,6 @@ export const addWeeks = (d: Date, n: number): Date => {
   return r;
 };
 
-export const getWeekEnd = (weekStart: Date): Date => addWeeks(weekStart, 1).getTime() - 86400000 as unknown as Date
-  // The above coercion is unsafe; replace with proper Date below.
-;
-
-// Proper getWeekEnd returning a Date object (Thursday)
 export const getWeekEndDate = (weekStart: Date): Date => {
   const r = new Date(weekStart);
   r.setDate(r.getDate() + 6);
